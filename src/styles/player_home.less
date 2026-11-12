@@ -39,6 +39,209 @@
   }
 }
 
+#player-home {
+  --mission-panel: #181b20;
+  --mission-edge: #393a40;
+  --mission-text: #f8efe6;
+  --mission-muted: #bdb1a7;
+  --mission-heat: #ffa17c;
+  --mission-air: #c3d69f;
+  --mission-water: #8ccadf;
+
+  padding-right: clamp(12px, 3vw, 48px);
+  background-color: #111217;
+  background-image: linear-gradient(180deg, rgba(32, 22, 21, 0.76), #111217 800px), url(./assets/stars.jpg);
+
+  .mission-status,
+  .mission-play,
+  .top-bar-container {
+    max-width: 1600px;
+    margin-inline: auto;
+  }
+
+  .top-bar-container {
+    margin-top: -20px;
+  }
+
+  .mission-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: 18px 36px;
+    margin-block: 20px 16px;
+    padding: 10px 0 14px;
+    border-bottom: 1px solid var(--mission-edge);
+    color: var(--mission-text);
+  }
+
+  .mission-status h1 {
+    margin: 0;
+    color: inherit;
+    font-family: Ubuntu, "Segoe UI", sans-serif;
+    font-size: clamp(2rem, 4vw, 3.6rem);
+    font-weight: 650;
+    line-height: 0.95;
+    letter-spacing: -0.045em;
+    text-transform: capitalize;
+  }
+
+  .mission-status__generation {
+    margin: 0 0 8px;
+    color: var(--mission-heat);
+    font-size: 0.72rem;
+    font-weight: 650;
+  }
+
+  .mission-status__metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(12px, 3vw, 34px);
+    flex: 0 1 520px;
+    margin: 0;
+  }
+
+  .mission-status__metric {
+    --metric-accent: var(--mission-heat);
+
+    &--oxygen {
+      --metric-accent: var(--mission-air);
+    }
+
+    &--oceans {
+      --metric-accent: var(--mission-water);
+    }
+
+    dt {
+      color: var(--mission-muted);
+      font-size: 0.65rem;
+      font-weight: 500;
+    }
+
+    dd {
+      margin: 0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    progress {
+      display: block;
+      width: 100%;
+      height: 5px;
+      margin-top: 5px;
+      accent-color: var(--metric-accent);
+    }
+  }
+
+  .mission-status__value {
+    color: var(--metric-accent);
+    font-size: clamp(0.9rem, 2vw, 1.35rem);
+    font-weight: 700;
+  }
+
+  .mission-status__target {
+    margin-inline-start: 0.3em;
+    color: var(--mission-muted);
+    font-size: 0.62rem;
+    white-space: nowrap;
+  }
+
+  .mission-play__surface {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .mission-play__map,
+  .mission-play__actions,
+  .mission-play__hand {
+    min-width: 0;
+    border: 1px solid var(--mission-edge);
+    border-radius: 12px;
+    background: var(--mission-panel);
+  }
+
+  .mission-play__map {
+    container-type: inline-size;
+    overflow-x: auto;
+    margin: 0;
+    padding: 12px;
+    background: radial-gradient(ellipse at 48% 45%, #42251e 0%, #241c1e 48%, #14161c 82%);
+    text-align: center;
+
+    .board-cont {
+      margin-top: 0;
+      text-align: left;
+      zoom: min(1, calc(100cqi / 670px));
+    }
+
+    .board-cont--large {
+      zoom: min(1, calc(100cqi / 740px));
+    }
+
+    .player_home_block--milestones-and-awards {
+      text-align: left;
+    }
+  }
+
+  .mission-play__actions {
+    margin: 0;
+    padding: 18px;
+    box-shadow: inset 0 2px var(--mission-heat);
+
+    h2 {
+      margin: 0 0 14px;
+      color: var(--mission-text);
+      font-size: 1.12rem;
+      font-weight: 700;
+    }
+
+    .wf-options > div > .form-radio {
+      padding: 0.45rem 0.5rem 0.45rem 1.6rem;
+      border: 1px solid transparent;
+      border-radius: 7px;
+      line-height: 1.3;
+
+      &:hover,
+      &:focus-within {
+        border-color: var(--mission-muted);
+      }
+
+      &:has(input:checked) {
+        border-color: var(--mission-heat);
+        background: #392923;
+      }
+
+      .form-icon {
+        top: 50%;
+        left: 0.5rem;
+        transform: translateY(-50%);
+      }
+    }
+  }
+
+  .mission-play__hand {
+    padding: 14px;
+
+    .hiding-card-button-row {
+      flex-wrap: wrap;
+    }
+  }
+}
+
+@media (min-width: 1150px) {
+  #player-home .mission-play__surface:has(.mission-play__actions) {
+    grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  #player-home {
+    background-attachment: scroll;
+  }
+}
+
 .terraformed-banner {
   background: linear-gradient(to right, #e28c22, #ffcc64, #e28c22);
   color: #000;

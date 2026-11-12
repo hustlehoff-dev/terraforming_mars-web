@@ -27,30 +27,46 @@
       :discardPileSize="game.discardPileSize"
       :otherDeckSizes="game.otherDeckSizes" />
 
-    <div v-if="thisPlayer.tableau.length > 0">
-      <div class="player_home_block">
-        <GameBoardView
-          ref="gameBoardView"
-          :game="game"
-          :tileView="tileView"
-          :players="playerView.players"
-          @toggleTileView="cycleTileView()"
-        />
+    <header class="mission-status">
+      <div>
+        <p class="mission-status__generation">
+          <span v-i18n>Generation</span> {{ game.generation }}<template v-if="playerView.players.length === 1"> / {{ game.lastSoloGeneration }}</template>
+        </p>
+        <h1>{{ $t(game.gameOptions.boardName) }}</h1>
       </div>
+      <dl class="mission-status__metrics">
+        <div v-for="metric in missionMetrics" :key="metric.label" class="mission-status__metric" :class="'mission-status__metric--' + metric.key">
+          <dt v-i18n>{{ metric.label }}</dt>
+          <dd>
+            <span class="mission-status__value">{{ metric.value }}{{ metric.unit }}</span>
+            <span class="mission-status__target">/ {{ metric.max }}{{ metric.unit }}</span>
+            <progress
+              :value="metric.value - metric.min"
+              :max="metric.max - metric.min"
+              :aria-label="$t(metric.label)"
+              :aria-valuetext="`${metric.value}${metric.unit} / ${metric.max}${metric.unit}`"></progress>
+          </dd>
+        </div>
+      </dl>
+    </header>
 
-      <a class="hotkey-target"></a>
-      <PlayersOverview class="player_home_block player_home_block--players nofloat" :playerView="playerView" id="shortkey-playersoverview" />
+    <div v-if="thisPlayer.tableau.length > 0" class="mission-play">
+      <div class="mission-play__surface">
+        <div class="mission-play__map player_home_block">
+          <GameBoardView
+            ref="gameBoardView"
+            :game="game"
+            :tileView="tileView"
+            :players="playerView.players"
+            @toggleTileView="cycleTileView()"
+          />
+        </div>
 
-      <a class="hotkey-target"></a>
-      <div class="player_home_block nofloat">
-        <LogPanel :viewModel="playerView" :step="game.step" @spaceClicked="onSpaceClicked" />
-      </div>
-
-      <a class="hotkey-target"></a>
-      <div class="player_home_block player_home_block--actions nofloat">
-        <a name="actions" class="player_home_anchor"></a>
-        <DynamicTitle title="Actions" :color="thisPlayer.color" />
-        <WaitingFor v-if="game.phase !== 'end'" :playerView="playerView" :waitingfor="playerView.waitingFor" :requestId="playerView.requestId" />
+        <section v-if="game.phase !== 'end'" class="mission-play__actions player_home_block player_home_block--actions nofloat">
+          <a name="actions" class="player_home_anchor hotkey-target"></a>
+          <h2 v-i18n>Actions</h2>
+          <WaitingFor :playerView="playerView" :waitingfor="playerView.waitingFor" :requestId="playerView.requestId" />
+        </section>
       </div>
 
       <div class="player_home_block player_home_block--hand" v-if="playerView.draftedCards.length > 0">
@@ -61,17 +77,24 @@
       </div>
 
       <a name="cards" class="player_home_anchor"></a>
-      <div class="player_home_block player_home_block--hand" v-if="cardsInHandCount > 0" id="shortkey-hand">
+      <div class="mission-play__hand player_home_block player_home_block--hand" v-if="cardsInHandCount > 0" id="shortkey-hand">
         <div class="hiding-card-button-row">
           <DynamicTitle title="Cards In Hand" :color="thisPlayer.color" />
           <div :class="getHideButtonClass('HAND')" @click.prevent="toggle('HAND')">
             <div class="played-cards-count">{{ cardsInHandCount.toString() }}</div>
             <div class="played-cards-selection" v-i18n>{{ getToggleLabel('HAND') }}</div>
           </div>
-          <div class="text-overview" v-i18n>[ toggle cards in hand ]</div>
           <CardSortButtons v-model:sortOrder="handSortOrder" />
         </div>
         <SortableCards v-show="isVisible('HAND')" :playerId="playerView.id" :cards="allCardsInHand" v-model:sortOrder="handSortOrder" />
+      </div>
+
+      <a class="hotkey-target"></a>
+      <PlayersOverview class="player_home_block player_home_block--players nofloat" :playerView="playerView" id="shortkey-playersoverview" />
+
+      <a class="hotkey-target"></a>
+      <div class="player_home_block nofloat">
+        <LogPanel :viewModel="playerView" :step="game.step" @spaceClicked="onSpaceClicked" />
       </div>
 
       <div class="player_home_block player_home_block--cards">
@@ -180,6 +203,8 @@ import {sortActiveCards} from '@/client/utils/ActiveCardsSortingOrder';
 import {CardModel} from '@/common/models/CardModel';
 import {getCardOrThrow} from '../cards/ClientCardManifest';
 import {HomeMixin} from '@/client/mixins/HomeMixin';
+import {MIN_OXYGEN_LEVEL, MIN_TEMPERATURE} from '@/common/constants';
+import {getGlobalParameterMaximums} from '@/common/boards/GlobalParameterMaximums';
 
 type PlayerHomeModel = {
   showHand: boolean;
@@ -233,6 +258,15 @@ export default defineComponent({
     },
   },
   computed: {
+    missionMetrics() {
+      const {temperature, oxygenLevel, oceans, gameOptions} = this.game;
+      const max = getGlobalParameterMaximums(gameOptions.boardName);
+      return [
+        {key: 'temperature', label: 'Temperature', value: temperature, unit: '°C', min: MIN_TEMPERATURE, max: max.temperature},
+        {key: 'oxygen', label: 'Oxygen Level', value: oxygenLevel, unit: '%', min: MIN_OXYGEN_LEVEL, max: max.oxygen},
+        {key: 'oceans', label: 'Oceans', value: oceans, unit: '', min: 0, max: max.oceans},
+      ];
+    },
     thisPlayer(): PublicPlayerModel {
       return this.playerView.thisPlayer;
     },
