@@ -5,6 +5,7 @@
 #player-home.mission-cinematic {
   .atlas-stage {
     --orbit-height: 0px;
+    --map-orbit-clearance: var(--orbit-height);
     background: radial-gradient(ellipse at 52% 43%, #332823, #101a25 46%, #080d14 83%);
   }
 
@@ -14,14 +15,14 @@
 
   .atlas-stage__map {
     container-type: size;
-    top: clamp(70px, 11dvh, 110px);
-    bottom: calc(var(--dock-height) + var(--orbit-height) + 17px);
+    top: clamp(74px, 9dvh, 100px);
+    bottom: calc(var(--dock-height) + var(--map-orbit-clearance) + 15px);
   }
 
   .atlas-stage .board-cont.atlas-board {
     top: 50%;
     transform: translate(calc(-1 * var(--atlas-center-x)), calc(-1 * var(--atlas-center-y)));
-    zoom: min(1.85, calc(100cqi / (var(--atlas-diameter) + 35px)), calc(100cqh / (var(--atlas-diameter) + 40px)));
+    zoom: min(2, calc(100cqi / (var(--atlas-diameter) + 16px)), calc(100cqh / (var(--atlas-diameter) + 18px)));
   }
 
   .atlas-stage--tracks .board-cont.atlas-board {
@@ -127,6 +128,21 @@
 
   .atlas-stage--complete {
     background: radial-gradient(ellipse at 50% 44%, #436863, #132e38 37%, #0b131e 69%);
+  }
+}
+
+@media (min-width: 1100px) {
+  #player-home.mission-cinematic {
+    .atlas-stage {
+      --map-orbit-clearance: 0px;
+    }
+
+    .atlas-orbit {
+      right: clamp(12px, 2.8vw, 42px);
+      left: auto;
+      max-width: min(300px, 24vw);
+      transform: none;
+    }
   }
 }
 
