@@ -166,42 +166,6 @@
       }
     }
 
-    .mission-hand__slot {
-      transition: translate 160ms ease-out, border-color 160ms ease-out, filter 160ms ease-out;
-
-      &:hover,
-      &:focus-within {
-        translate: 0 -3px;
-        filter: brightness(1.16);
-      }
-    }
-
-    .mission-preview-enter-active,
-    .mission-preview-leave-active {
-      transition: opacity 180ms ease-out, translate 210ms ease-out, scale 210ms ease-out;
-      transform-origin: bottom center;
-    }
-
-    .mission-preview-enter-from,
-    .mission-preview-leave-to {
-      opacity: 0;
-      translate: 0 12px;
-      scale: 0.95;
-    }
-
-    .mission-draw-enter-active {
-      animation: mission-card-in 420ms ease-out both;
-    }
-
-    .mission-draw-leave-active {
-      transition: opacity 160ms ease-out, scale 160ms ease-out;
-    }
-
-    .mission-draw-leave-to {
-      opacity: 0;
-      scale: 0.95;
-    }
-
     .mission-dock__button:active,
     .mission-sound:active {
       scale: 0.96;
@@ -255,9 +219,4 @@
 @keyframes mission-land {
   from { opacity: 0.28; scale: 0.78; filter: brightness(1.8); }
   to { opacity: 1; scale: 1; filter: brightness(1); }
-}
-
-@keyframes mission-card-in {
-  from { opacity: 0; translate: 18px 8px; }
-  to { opacity: 1; translate: 0; }
 }

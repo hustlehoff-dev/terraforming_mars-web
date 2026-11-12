@@ -99,10 +99,6 @@
   top: auto;
   bottom: 18px;
   grid-template-columns: minmax(86px, 1fr) minmax(0, 8fr) minmax(90px, 1fr);
-
-  .mission-hand__thumbnail {
-    --thumbnail-height: clamp(44px, 6vw, 68px);
-  }
 }
 
 @media (max-width: 760px) {
@@ -139,17 +135,6 @@
 
       .mission-hand {
         grid-column: 1 / -1;
-      }
-
-      .mission-hand__thumbnail {
-        --thumbnail-height: 35px;
-      }
-
-      .mission-hand__title > span {
-        display: -webkit-box;
-        overflow: hidden;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2;
       }
     }
   }

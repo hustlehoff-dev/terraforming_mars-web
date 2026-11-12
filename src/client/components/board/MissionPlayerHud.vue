@@ -19,7 +19,7 @@
         <strong :key="player[resource]" class="mission-status__value">{{ player[resource] }}</strong>
       </li>
     </ul>
-    <MissionHand :cards="cards" :playableCards="playableCards" @openActions="emit('openActions')" />
+    <MissionHand :cards="cards" :playableCards="playableCards" />
     <dialog ref="dialog" class="mission-player-hud__dialog" :aria-label="selected && $t(selected.name)" @close="selected = undefined">
       <form method="dialog"><button type="submit" autofocus v-i18n>Close</button></form>
       <Card v-if="selected" :card="selected" autoTall />
@@ -48,7 +48,6 @@ const props = defineProps<{
   playableCards: ReadonlySet<CardName>;
   actionCards: ReadonlySet<CardName>;
 }>();
-const emit = defineEmits<{openActions: []}>();
 const corporations = computed(() => getCardsByType(props.player.tableau, [CardType.CORPORATION]));
 const dialog = ref<HTMLDialogElement>();
 const selected = ref<CardModel>();

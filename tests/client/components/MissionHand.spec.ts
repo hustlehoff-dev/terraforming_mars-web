@@ -8,17 +8,27 @@ import {Tag} from '@/common/cards/Tag';
 import {globalConfig} from './getLocalVue';
 
 describe('MissionHand', () => {
-  it('uses the same card model in the miniature and preview and opens the actions panel', async () => {
+  it('raises and lowers the same card instead of rendering a second copy', async () => {
     const card: CardModel = {name: CardName.ANTS, calculatedCost: 4, cloneTag: Tag.MICROBE};
-    const wrapper = shallowMount(MissionHand, {...globalConfig, props: {cards: [card]}});
+    const wrapper = shallowMount(MissionHand, {
+      ...globalConfig,
+      props: {cards: [card], playableCards: new Set([card.name])},
+    });
+    const original = wrapper.getComponent(Card);
+    const hit = wrapper.get('button');
+    expect(original.props('card')).deep.eq(card);
+    expect(hit.attributes('aria-label')).eq('Ants · Playable now');
+    await hit.trigger('pointerenter', {pointerType: 'mouse'});
+    expect(wrapper.get('.mission-hand__face--raised').getComponent(Card).element).eq(original.element);
+    await hit.trigger('pointerleave');
+    expect(hit.attributes('aria-expanded')).eq('false');
 
-    expect(wrapper.get('.mission-hand__title').text()).contains('4');
-    expect(wrapper.get('.mission-hand__thumbnail').getComponent(Card).props('card')).deep.eq(card);
-    await wrapper.get('.mission-hand__card').trigger('click');
-    expect(wrapper.get('.mission-hand__preview').getComponent(Card).props('card')).deep.eq(card);
-    await wrapper.get('.mission-hand__preview a').trigger('click');
-    expect(wrapper.emitted('openActions')).has.length(1);
-    expect(wrapper.find('.mission-hand__preview').exists()).is.false;
+    await hit.trigger('click');
+    expect(hit.attributes('aria-expanded')).eq('true');
+    expect(wrapper.findAllComponents(Card)).has.length(1);
+    expect(wrapper.getComponent(Card).element).eq(original.element);
+    await hit.trigger('keydown', {key: 'Escape'});
+    expect(hit.attributes('aria-expanded')).eq('false');
     wrapper.unmount();
   });
 });

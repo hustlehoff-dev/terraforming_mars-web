@@ -1,0 +1,130 @@
+.mission-hand {
+  --hand-scale: 0.38;
+  --hand-card-width: 240px;
+
+  display: flex;
+  min-width: 0;
+  gap: 3px;
+  overflow: auto hidden;
+  overscroll-behavior-x: contain;
+  padding: 7px 10px 1px;
+  scrollbar-width: thin;
+  scrollbar-color: #8f7960 transparent;
+
+  &::before,
+  &::after {
+    flex: 1 0 0;
+    content: '';
+  }
+}
+
+.mission-hand__slot {
+  position: relative;
+  height: calc(325px * var(--hand-scale) + 6px);
+  flex: 0 0 calc(var(--hand-card-width) * var(--hand-scale));
+}
+
+.mission-hand__face {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: var(--hand-card-width);
+  rotate: var(--card-tilt);
+  translate: 0 calc(var(--card-drop) / var(--hand-scale));
+  transform-origin: center bottom;
+  zoom: var(--hand-scale);
+  pointer-events: none;
+
+  > .card-container {
+    margin: 0;
+    transform: none;
+  }
+
+  > .mission-card-available {
+    outline: 4px solid #95ffce;
+    outline-offset: 2px;
+    box-shadow: 0 0 15px 5px #53fac390;
+  }
+}
+
+.mission-hand__face--raised {
+  position: fixed;
+  z-index: 2;
+  inset: var(--lift-y) auto auto var(--lift-x);
+  rotate: none;
+  scale: var(--lift-scale);
+  translate: none;
+  transform-origin: top left;
+  zoom: 1;
+
+  > .card-container {
+    box-shadow: 0 12px 30px #050b12e8, 0 0 0 1px #f1be80;
+  }
+
+  > .mission-card-available {
+    box-shadow: 0 12px 30px #050b12e8, 0 0 18px 5px #53fac390;
+  }
+}
+
+.mission-hand__face--pinned {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.mission-hand__hit {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid #f1be80;
+    outline-offset: -2px;
+  }
+}
+
+@media (max-width: 760px) {
+  .mission-hand {
+    --hand-scale: 0.30;
+  }
+
+  .mission-hand__face:not(.mission-hand__face--raised) {
+    rotate: calc(var(--card-tilt) * 0.6);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mission-hand__face--raised {
+    animation: mission-hand-lift 170ms cubic-bezier(0.18, 0.72, 0.3, 1) both;
+  }
+
+  .mission-draw-enter-active > .mission-hand__face:not(.mission-hand__face--raised) {
+    animation: mission-hand-deal 310ms ease-out both;
+  }
+
+  .mission-draw-leave-active {
+    transition: opacity 150ms ease-out;
+  }
+
+  .mission-draw-leave-to {
+    opacity: 0;
+  }
+}
+
+@keyframes mission-hand-lift {
+  from {
+    rotate: var(--card-tilt);
+    scale: var(--hand-scale);
+    translate: var(--lift-from-x) var(--lift-from-y);
+  }
+}
+
+@keyframes mission-hand-deal {
+  from {
+    opacity: 0;
+    translate: 18px calc(var(--card-drop) / var(--hand-scale) + 14px);
+  }
+}

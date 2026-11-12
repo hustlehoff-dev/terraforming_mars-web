@@ -87,8 +87,7 @@
             :player="thisPlayer"
             :cards="allCardsInHand"
             :playableCards="cardAvailability.projects"
-            :actionCards="cardAvailability.actions"
-            @openActions="showMissionPanel('actions')" />
+            :actionCards="cardAvailability.actions" />
           <div class="mission-dock__commands">
             <button type="button" class="mission-dock__button" :aria-expanded="missionPanel === 'details'" @click="toggleMissionPanel('details')" v-i18n>Game details</button>
             <button type="button" class="mission-dock__button mission-dock__button--primary" :aria-expanded="missionPanel === 'actions'" @click="toggleMissionPanel('actions')" v-i18n>Actions</button>
