@@ -130,6 +130,33 @@ describe('ApiGameLogs', () => {
     expect(JSON.parse(refreshed.content)).deep.eq(history);
   });
 
+  it('returns concise public activity with stable keys and drops private and unrelated logs', async () => {
+    const [game, player, rival] = testGame(2);
+    await scaffolding.ctx.gameLoader.add(game);
+    game.gameLog.length = 0;
+    game.log('Generation ${0}', (b) => b.forNewGeneration().number(2));
+    game.log('${0} played ${1} [ ${2} ]', (b) => b.player(rival).cardName(CardName.BIRDS).markdown('payment'));
+    game.log('${0} ${1} ${2} at ${3}', (b) => b.player(player).string('placed').string('ocean tile').space(game.board.spaces[0]));
+    game.log('${0} played ${1}', (b) => b.player(player).cardName(CardName.FISH), {reservedFor: player});
+    game.log('${0} drew ${1}', (b) => b.player(rival).cardName(CardName.FISH));
+    game.log('${0} ended turn', (b) => b.player(rival));
+
+    scaffolding.url = '/api/game/logs?id=' + player.id + '&view=activity';
+    await scaffolding.get(ApiGameLogs.INSTANCE, res);
+    const history = JSON.parse(res.content);
+    expect(history.map(({key: _key, ...event}: {key: string}) => event)).deep.eq([
+      {kind: 'ended', player: rival.color},
+      {kind: 'placed', player: player.color, subject: 'ocean tile', space: game.board.spaces[0].id},
+      {kind: 'played', player: rival.color, card: CardName.BIRDS},
+      {kind: 'generation', subject: '2'},
+    ]);
+
+    const refreshed = new MockResponse();
+    game.log('An unrelated update');
+    await scaffolding.get(ApiGameLogs.INSTANCE, refreshed);
+    expect(JSON.parse(refreshed.content)).deep.eq(history);
+  });
+
   [{idx: 0, color: 'Yellow'}, {idx: 1, color: 'Orange'}, {idx: 2, color: 'Blue'}].forEach((entry) => {
     it('omits private logs for other players: ' + entry.color, async () => {
       const yellowPlayer = TestPlayer.YELLOW.newPlayer();

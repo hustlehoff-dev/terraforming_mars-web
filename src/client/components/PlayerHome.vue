@@ -79,7 +79,7 @@
           atlas
           @toggleTileView="cycleTileView()"
         />
-        <PlayedCardHistory v-if="cinematic" :viewModel="playerView" />
+        <ActivityFeed v-if="cinematic" :viewModel="playerView" @spaceClicked="jumpToLogSpace" />
         <RivalPanel v-if="cinematic" :players="playerView.players" :playerColor="thisPlayer.color" :activeColor="activeTurnColor" />
         <div class="mission-dock">
           <button type="button" class="mission-dock__button" :aria-expanded="missionPanel === 'played'" @click="toggleMissionPanel('played')" v-i18n>Played Cards</button>
@@ -241,7 +241,7 @@ import WaitingFor from '@/client/components/WaitingFor.vue';
 import Sidebar from '@/client/components/Sidebar.vue';
 import Colony from '@/client/components/colonies/Colony.vue';
 import LogPanel from '@/client/components/logpanel/LogPanel.vue';
-import PlayedCardHistory from '@/client/components/logpanel/PlayedCardHistory.vue';
+import ActivityFeed from '@/client/components/logpanel/ActivityFeed.vue';
 import GameBoardView from '@/client/components/GameBoardView.vue';
 import PlayerSetupView from '@/client/components/PlayerSetupView.vue';
 import DynamicTitle from '@/client/components/common/DynamicTitle.vue';
@@ -481,7 +481,7 @@ export default defineComponent({
     Sidebar,
     Colony,
     LogPanel,
-    PlayedCardHistory,
+    ActivityFeed,
     SortableCards,
     CardSortButtons,
     TopBar,
