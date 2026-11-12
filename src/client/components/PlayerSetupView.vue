@@ -1,5 +1,8 @@
 <template>
-  <div class="player_home_block player_home_block--setup nofloat">
+  <div class="mission-setup player_home_block player_home_block--setup nofloat">
+    <a name="board" class="player_home_anchor hotkey-target"></a>
+    <AtlasBoard :game="game" :tileView="tileView" @toggleTileView="$emit('toggleTileView')" />
+    <slot></slot>
     <template v-if="isInitialDraftingPhase">
       <div v-for="card in playerView.dealtCorporationCards" :key="card.name" class="cardbox">
         <Card :card="card" />
@@ -48,6 +51,7 @@
       </div>
     </template>
 
+    <a name="actions" class="player_home_anchor hotkey-target"></a>
     <DynamicTitle v-if="playerView.pickedCorporationCard.length === 0" title="Select initial cards:" :color="thisPlayer.color" />
     <WaitingFor v-if="game.phase !== 'end'" :playerView="playerView" :waitingfor="playerView.waitingFor" :requestId="playerView.requestId" />
 
@@ -68,30 +72,20 @@
       </div>
     </div>
 
-    <details class="accordion board-accordion" open>
+    <details v-if="game.turmoil || game.gameOptions.expansions.pathfinders || game.moon || game.gameOptions.expansions.deltaProject" class="accordion board-accordion" open>
       <summary class="accordion-header">
         <div class="is-action">
           <i class="icon icon-arrow-right mr-1"></i>
-          <span v-i18n>Board</span>
+          <span v-i18n>Expansions</span>
         </div>
       </summary>
       <div class="accordion-body">
-        <Board
-          :spaces="game.spaces"
-          :expansions="game.gameOptions.expansions"
-          :venusScaleLevel="game.venusScaleLevel"
-          :boardName="game.gameOptions.boardName"
-          :aresData="game.aresData"
-          :altVenusBoard="game.gameOptions.altVenusBoard"
-          :tileView="tileView"
-          @toggleTileView="$emit('toggleTileView')" />
-
         <Turmoil v-if="game.turmoil" :turmoil="game.turmoil" />
 
         <PlanetaryTracks v-if="game.gameOptions.expansions.pathfinders" :tracks="game.pathfinders" :gameOptions="game.gameOptions" />
 
         <a name="moonBoard" class="player_home_anchor"></a>
-        <MoonBoard v-if="game.moon !== undefined" :model="game.moon" :tileView="tileView" />
+        <MoonBoard v-if="game.moon !== undefined" :model="game.moon" :tileView="tileView" id="shortkey-moonBoard" />
         <DeltaProjectBoard v-if="game.gameOptions.expansions.deltaProject" :players="playerView.players" />
       </div>
     </details>
@@ -101,7 +95,7 @@
 <script lang="ts">
 import {defineComponent} from 'vue';
 
-import Board from '@/client/components/Board.vue';
+import AtlasBoard from '@/client/components/board/AtlasBoard.vue';
 import Card from '@/client/components/card/Card.vue';
 import DeltaProjectBoard from '@/client/components/delta/DeltaProjectBoard.vue';
 import DynamicTitle from '@/client/components/common/DynamicTitle.vue';
@@ -142,7 +136,7 @@ export default defineComponent({
     },
   },
   components: {
-    Board,
+    AtlasBoard,
     Card,
     DeltaProjectBoard,
     DynamicTitle,

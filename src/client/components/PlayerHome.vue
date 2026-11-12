@@ -1,7 +1,5 @@
 <template>
   <div id="player-home" :class="(game.turmoil ? 'with-turmoil': '')">
-    <TopBar :playerView="playerView" />
-
     <div v-if="game.phase === 'end'">
       <div class="player_home_block">
         <DynamicTitle title="This game is over!" :color="thisPlayer.color" />
@@ -32,7 +30,10 @@
         <p class="mission-status__generation">
           <span v-i18n>Generation</span> {{ game.generation }}<template v-if="playerView.players.length === 1"> / {{ game.lastSoloGeneration }}</template>
         </p>
-        <h1>{{ $t(game.gameOptions.boardName) }}</h1>
+        <div class="mission-status__title">
+          <h1>{{ $t(game.gameOptions.boardName) }}</h1>
+          <a v-if="game.phase !== 'end'" href="#actions" v-i18n>Actions</a>
+        </div>
       </div>
       <dl class="mission-status__metrics">
         <div v-for="metric in missionMetrics" :key="metric.label" class="mission-status__metric" :class="'mission-status__metric--' + metric.key">
@@ -51,42 +52,46 @@
     </header>
 
     <div v-if="thisPlayer.tableau.length > 0" class="mission-play">
-      <div class="mission-play__surface">
-        <div class="mission-play__map player_home_block">
-          <GameBoardView
-            ref="gameBoardView"
-            :game="game"
-            :tileView="tileView"
-            :players="playerView.players"
-            @toggleTileView="cycleTileView()"
-          />
-        </div>
+      <div class="mission-play__map player_home_block">
+        <GameBoardView
+          ref="gameBoardView"
+          :game="game"
+          :tileView="tileView"
+          :players="playerView.players"
+          atlas
+          @toggleTileView="cycleTileView()"
+        />
+      </div>
 
+      <TopBar :playerView="playerView" />
+
+      <div class="mission-play__controls">
         <section v-if="game.phase !== 'end'" class="mission-play__actions player_home_block player_home_block--actions nofloat">
           <a name="actions" class="player_home_anchor hotkey-target"></a>
           <h2 v-i18n>Actions</h2>
           <WaitingFor :playerView="playerView" :waitingfor="playerView.waitingFor" :requestId="playerView.requestId" />
         </section>
-      </div>
-
-      <div class="player_home_block player_home_block--hand" v-if="playerView.draftedCards.length > 0">
-        <DynamicTitle title="Drafted cards" :color="thisPlayer.color" />
-        <div v-for="card in playerView.draftedCards" :key="card.name" class="cardbox">
-          <Card :card="card" />
-        </div>
-      </div>
-
-      <a name="cards" class="player_home_anchor"></a>
-      <div class="mission-play__hand player_home_block player_home_block--hand" v-if="cardsInHandCount > 0" id="shortkey-hand">
-        <div class="hiding-card-button-row">
-          <DynamicTitle title="Cards In Hand" :color="thisPlayer.color" />
-          <div :class="getHideButtonClass('HAND')" @click.prevent="toggle('HAND')">
-            <div class="played-cards-count">{{ cardsInHandCount.toString() }}</div>
-            <div class="played-cards-selection" v-i18n>{{ getToggleLabel('HAND') }}</div>
+        <div>
+          <div class="player_home_block player_home_block--hand" v-if="playerView.draftedCards.length > 0">
+            <DynamicTitle title="Drafted cards" :color="thisPlayer.color" />
+            <div v-for="card in playerView.draftedCards" :key="card.name" class="cardbox">
+              <Card :card="card" />
+            </div>
           </div>
-          <CardSortButtons v-model:sortOrder="handSortOrder" />
+
+          <a name="cards" class="player_home_anchor"></a>
+          <div class="mission-play__hand player_home_block player_home_block--hand" v-if="cardsInHandCount > 0" id="shortkey-hand">
+            <div class="hiding-card-button-row">
+              <DynamicTitle title="Cards In Hand" :color="thisPlayer.color" />
+              <button type="button" :class="getHideButtonClass('HAND')" :aria-expanded="isVisible('HAND')" @click="toggle('HAND')">
+                <span class="played-cards-count">{{ cardsInHandCount }}</span>
+                <span class="played-cards-selection" v-i18n>{{ getToggleLabel('HAND') }}</span>
+              </button>
+              <CardSortButtons v-model:sortOrder="handSortOrder" />
+            </div>
+            <SortableCards v-show="isVisible('HAND')" :playerId="playerView.id" :cards="allCardsInHand" v-model:sortOrder="handSortOrder" />
+          </div>
         </div>
-        <SortableCards v-show="isVisible('HAND')" :playerId="playerView.id" :cards="allCardsInHand" v-model:sortOrder="handSortOrder" />
       </div>
 
       <a class="hotkey-target"></a>
@@ -148,7 +153,9 @@
     </div>
 
     <template v-if="thisPlayer.tableau.length === 0">
-      <PlayerSetupView :playerView="playerView" :tileView="tileView" @toggleTileView="cycleTileView()" />
+      <PlayerSetupView :playerView="playerView" :tileView="tileView" @toggleTileView="cycleTileView()">
+        <TopBar :playerView="playerView" />
+      </PlayerSetupView>
     </template>
 
     <div v-if="game.colonies.length > 0" class="player_home_block" ref="colonies" id="shortkey-colonies">
@@ -175,7 +182,7 @@
 </template>
 
 <script lang="ts">
-import {defineComponent} from 'vue';
+import {defineComponent, onBeforeUnmount, onMounted, provide, shallowRef} from 'vue';
 
 import Card from '@/client/components/card/Card.vue';
 import PlayersOverview from '@/client/components/overview/PlayersOverview.vue';
@@ -205,6 +212,8 @@ import {getCardOrThrow} from '../cards/ClientCardManifest';
 import {HomeMixin} from '@/client/mixins/HomeMixin';
 import {MIN_OXYGEN_LEVEL, MIN_TEMPERATURE} from '@/common/constants';
 import {getGlobalParameterMaximums} from '@/common/boards/GlobalParameterMaximums';
+import {mapPlacementKey} from '@/client/components/board/MapPlacement';
+import {SelectSpaceModel} from '@/common/models/PlayerInputModel';
 
 type PlayerHomeModel = {
   showHand: boolean;
@@ -227,6 +236,20 @@ const typeToDataModel: Record<ToggleableCardType, {key: Exclude<keyof PlayerHome
 export default defineComponent({
   name: 'PlayerHome',
   mixins: [HomeMixin],
+  setup() {
+    provide(mapPlacementKey, {input: shallowRef<SelectSpaceModel>()});
+    let previousViewport: string | null = null;
+    onMounted(() => {
+      const viewport = document.querySelector('meta[name="viewport"]');
+      previousViewport = viewport?.getAttribute('content') ?? null;
+      viewport?.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover');
+    });
+    onBeforeUnmount(() => {
+      if (previousViewport !== null) {
+        document.querySelector('meta[name="viewport"]')?.setAttribute('content', previousViewport);
+      }
+    });
+  },
   data(): PlayerHomeModel {
     const preferences = getPreferences();
     return {
@@ -238,6 +261,11 @@ export default defineComponent({
     };
   },
   watch: {
+    'thisPlayer.tableau.length'(count: number, previous: number) {
+      if (previous === 0 && count > 0) {
+        this.$nextTick(() => window.scrollTo({top: 0}));
+      }
+    },
     showHand: function hide_hand() {
       PreferencesManager.INSTANCE.set('hide_hand', !this.showHand);
     },

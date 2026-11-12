@@ -1,7 +1,9 @@
 <!-- Common widgets between player and spectator views -->
 <template>
   <a name="board" class="player_home_anchor hotkey-target"></a>
+  <AtlasBoard v-if="atlas" ref="atlasBoard" :game="game" :tileView="tileView" @toggleTileView="$emit('toggleTileView')" />
   <Board
+    v-else
     :spaces="game.spaces"
     :expansions="game.gameOptions.expansions"
     :venusScaleLevel="game.venusScaleLevel"
@@ -47,6 +49,7 @@ import {GameModel} from '@/common/models/GameModel';
 import {PublicPlayerModel} from '@/common/models/PlayerModel';
 import {SpaceId} from '@/common/Types';
 import Board from '@/client/components/Board.vue';
+import AtlasBoard from '@/client/components/board/AtlasBoard.vue';
 import DeltaProjectBoard from '@/client/components/delta/DeltaProjectBoard.vue';
 import Milestones from '@/client/components/Milestones.vue';
 import Awards from '@/client/components/Awards.vue';
@@ -71,9 +74,11 @@ export default defineComponent({
       type: Array as PropType<ReadonlyArray<PublicPlayerModel>>,
       required: true,
     },
+    atlas: Boolean,
   },
   emits: ['toggleTileView'],
   components: {
+    AtlasBoard,
     Board,
     DeltaProjectBoard,
     Milestones,
@@ -85,6 +90,9 @@ export default defineComponent({
   methods: {
     highlightSpace(spaceId: SpaceId) {
       scrollToSpace(spaceId);
+      if (this.atlas && !spaceId.startsWith('m')) {
+        (this.$refs.atlasBoard as InstanceType<typeof AtlasBoard> | undefined)?.inspectSpace(spaceId);
+      }
 
       const regions = ['main_board', 'moon_board', 'moon_board_outer_spaces'];
       for (const region of regions) {

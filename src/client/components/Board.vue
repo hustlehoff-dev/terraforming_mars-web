@@ -1,5 +1,5 @@
 <template>
-  <div :class="gameBoardClassName">
+  <div :class="gameBoardClassName" @pointerover="inspectFromEvent" @focusin="inspectFromEvent" @click="inspectFromEvent" @keydown="navigateAtlas">
     <div class="hide-tile-button-container">
       <div class="hide-tile-button" @click="$emit('toggleTileView')" data-test="hide-tiles-button" v-i18n>
         {{ tileView }} tiles
@@ -80,6 +80,10 @@
         :space="curSpace"
         :aresExtension="expansions.ares"
         :tileView="tileView"
+        :class="{'atlas-sector--inspected': atlas && inspectedSpace === curSpace.id}"
+        :tabindex="atlas ? (atlasTabStop === curSpace.id ? 0 : -1) : undefined"
+        :role="atlas ? 'button' : undefined"
+        :aria-label="atlas ? $t('Sector') + ' ' + (curSpace.a9 ?? curSpace.id) : undefined"
         data-test="board-space"
       />
 
@@ -373,8 +377,10 @@ class GlobalParamLevel {
 
 export default defineComponent({
   name: 'Board',
-  emits: ['toggleTileView'],
+  emits: ['toggleTileView', 'inspectSpace'],
   props: {
+    atlas: Boolean,
+    inspectedSpace: String as () => SpaceId | undefined,
     spaces: {
       type: Array as () => ReadonlyArray<SpaceModel>,
       required: true,
@@ -419,6 +425,34 @@ export default defineComponent({
     BoardSpace,
   },
   methods: {
+    inspectFromEvent(event: Event) {
+      if (!this.atlas || !(event.target instanceof Element)) {
+        return;
+      }
+      const sector = event.target.closest('[data_space_id]');
+      const id = sector?.getAttribute('data_space_id');
+      if (id) {
+        this.$emit('inspectSpace', id as SpaceId);
+      }
+    },
+    navigateAtlas(event: KeyboardEvent) {
+      if (!this.atlas || !(event.target instanceof HTMLElement) || !event.target.hasAttribute('data_space_id')) {
+        return;
+      }
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        event.target.click();
+        return;
+      }
+      if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') {
+        return;
+      }
+      const direction = event.key === 'ArrowRight' ? 1 : -1;
+      event.preventDefault();
+      const sectors = Array.from(this.$el.querySelectorAll('#main_board > [data_space_id]')) as HTMLElement[];
+      const index = sectors.indexOf(event.target);
+      sectors[index + direction]?.focus({preventScroll: true});
+    },
     hasSpace(spaceId: SpaceId): boolean {
       return spacesById(this.spaces).has(spaceId);
     },
@@ -495,6 +529,9 @@ export default defineComponent({
     },
   },
   computed: {
+    atlasTabStop(): SpaceId | undefined {
+      return this.allSpacesOnMars.find((space) => space.id === this.inspectedSpace)?.id ?? this.allSpacesOnMars[0]?.id;
+    },
     // The per-map maximum values of the global parameters (the larger maps raise them).
     globalParameterMaximums() {
       return getGlobalParameterMaximums(this.boardName);
@@ -521,8 +558,12 @@ export default defineComponent({
         .toSorted((space1, space2) => parseInt(space1.id) - parseInt(space2.id));
     },
     gameBoardClassName(): string {
-      const css = this.expansions.venus ? 'board-cont board-with-venus' : 'board-cont board-without-venus';
-      return this.isLargeBoard ? css + ' board-cont--large' : css;
+      return [
+        'board-cont',
+        this.expansions.venus ? 'board-with-venus' : 'board-without-venus',
+        this.isLargeBoard ? 'board-cont--large' : '',
+        this.atlas ? 'atlas-board' : '',
+      ].join(' ');
     },
   },
 });

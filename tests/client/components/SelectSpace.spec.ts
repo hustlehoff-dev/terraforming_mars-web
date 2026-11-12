@@ -4,6 +4,9 @@ import {globalConfig} from './getLocalVue';
 import SelectSpace from '@/client/components/SelectSpace.vue';
 import {useFakeLocalStorage} from './FakeLocalStorage';
 import {PlayerViewModel} from '@/common/models/PlayerModel';
+import {shallowRef} from 'vue';
+import {SelectSpaceModel} from '@/common/models/PlayerInputModel';
+import {mapPlacementKey} from '@/client/components/board/MapPlacement';
 
 describe('SelectSpace', () => {
   useFakeLocalStorage();
@@ -28,6 +31,7 @@ describe('SelectSpace', () => {
   });
 
   it('clears board highlights and click handlers on unmount', () => {
+    const input = shallowRef<SelectSpaceModel>();
     const board = document.createElement('div');
     board.id = 'main_board';
     const tile = document.createElement('div');
@@ -37,7 +41,7 @@ describe('SelectSpace', () => {
     document.body.appendChild(board);
 
     const wrapper = shallowMount(SelectSpace, {
-      ...globalConfig,
+      global: {...globalConfig.global, provide: {[mapPlacementKey]: {input}}},
       props: {
         playerView: {} as PlayerViewModel,
         playerinput: {
@@ -54,11 +58,13 @@ describe('SelectSpace', () => {
 
     expect(tile.classList.contains('board-space--available')).is.true;
     expect(tile.onclick).is.not.null;
+    expect(input.value?.spaces).to.deep.eq(['03']);
 
     wrapper.unmount();
 
     expect(tile.classList.contains('board-space--available')).is.false;
     expect(tile.onclick).is.null;
+    expect(input.value).is.undefined;
 
     board.remove();
   });

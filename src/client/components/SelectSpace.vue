@@ -19,7 +19,7 @@
 </template>
 
 <script lang="ts">
-import {defineComponent} from 'vue';
+import {defineComponent, inject} from 'vue';
 import {SelectSpaceModel} from '@/common/models/PlayerInputModel';
 import {PlayerViewModel} from '@/common/models/PlayerModel';
 import {getPreferences, PreferencesManager} from '@/client/utils/PreferencesManager';
@@ -27,6 +27,7 @@ import {SelectSpaceResponse} from '@/common/inputs/InputResponse';
 import ConfirmDialog from '@/client/components/common/ConfirmDialog.vue';
 import GoToMap from '@/client/components/waitingFor/GoToMap.vue';
 import {SpaceId} from '@/common/Types';
+import {mapPlacementKey} from '@/client/components/board/MapPlacement';
 
 
 type Refs = {
@@ -42,6 +43,9 @@ type DataModel = {
 
 export default defineComponent({
   name: 'SelectSpace',
+  setup() {
+    return {mapPlacement: inject(mapPlacementKey, undefined)};
+  },
   props: {
     playerView: {
       type: Object as () => PlayerViewModel,
@@ -167,6 +171,9 @@ export default defineComponent({
     },
   },
   mounted() {
+    if (this.mapPlacement !== undefined) {
+      this.mapPlacement.input.value = this.playerinput;
+    }
     this.disableAnimation();
     const tiles = this.getSelectableSpaces();
     this.animateSpaces(tiles);
@@ -182,6 +189,9 @@ export default defineComponent({
     }
   },
   beforeUnmount() {
+    if (this.mapPlacement?.input.value === this.playerinput) {
+      this.mapPlacement.input.value = undefined;
+    }
     this.disableAnimation();
     for (const tile of this.getSelectableSpaces()) {
       tile.onclick = null;

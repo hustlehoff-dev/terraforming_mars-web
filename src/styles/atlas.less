@@ -1,0 +1,480 @@
+#player-home {
+  --atlas-bg: #0b1016;
+  --atlas-panel: #121b23;
+  --atlas-line: #31414b;
+  --atlas-text: #f3eee7;
+  --atlas-muted: #abb9c1;
+  --atlas-rust: #ffb08b;
+  --atlas-ice: #a2eeff;
+
+  min-height: 100vh;
+  padding: clamp(12px, 2vw, 30px);
+  color: var(--atlas-text);
+  background: var(--atlas-bg);
+
+  &::before {
+    display: none;
+  }
+
+  .sidebar {
+    top: 0;
+    border-right: 1px solid var(--atlas-line);
+    background: #101821;
+
+    &.preferences_acting_player {
+      box-shadow: inset 2px 0 var(--atlas-rust);
+    }
+
+    .sidebar_item {
+      background: var(--atlas-panel);
+    }
+  }
+
+  .mission-status,
+  .mission-play,
+  .mission-setup {
+    max-width: 1640px;
+    margin-inline: auto;
+  }
+
+  .mission-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: 14px 28px;
+    margin-bottom: 14px;
+  }
+
+  .mission-status__generation {
+    margin: 0 0 4px;
+    color: var(--atlas-rust);
+    font-size: 0.68rem;
+  }
+
+  .mission-status__title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 18px;
+
+    h1 {
+      margin: 0;
+      color: inherit;
+      font-size: clamp(1.65rem, 3vw, 2.7rem);
+      line-height: 1;
+      letter-spacing: -0.05em;
+      text-transform: capitalize;
+    }
+
+    a {
+      color: var(--atlas-ice);
+      font-size: 0.68rem;
+      text-underline-offset: 0.18em;
+    }
+  }
+
+  .mission-status__metrics {
+    display: grid;
+    flex: 0 1 420px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(10px, 2vw, 24px);
+    margin: 0;
+  }
+
+  .mission-status__metric {
+    --metric-accent: var(--atlas-rust);
+
+    &--oxygen {
+      --metric-accent: #cbe9b5;
+    }
+
+    &--oceans {
+      --metric-accent: var(--atlas-ice);
+    }
+
+    dt {
+      color: var(--atlas-muted);
+      font-size: 0.62rem;
+    }
+
+    dd {
+      margin: 0;
+      line-height: 1.25;
+      font-variant-numeric: tabular-nums;
+    }
+
+    progress {
+      display: block;
+      width: 100%;
+      height: 3px;
+      margin-top: 5px;
+      accent-color: var(--metric-accent);
+    }
+  }
+
+  .mission-status__value {
+    color: var(--metric-accent);
+    font-size: clamp(0.85rem, 1.6vw, 1.2rem);
+    font-weight: 700;
+  }
+
+  .mission-status__target {
+    margin-inline-start: 0.3em;
+    color: var(--atlas-muted);
+    font-size: 0.58rem;
+    white-space: nowrap;
+  }
+
+  .mission-play__map {
+    margin-bottom: 10px;
+  }
+
+  .top-bar-container {
+    top: 0;
+    margin: 10px 0 14px;
+  }
+
+  .top-bar .player-info,
+  .top-bar .top-bar-collapser {
+    background: var(--atlas-panel) !important;
+  }
+
+  .mission-play__controls {
+    display: grid;
+    align-items: start;
+    gap: 16px;
+
+    > div {
+      min-width: 0;
+    }
+  }
+
+  .mission-play__actions,
+  .mission-play__hand {
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid var(--atlas-line);
+    border-radius: 8px;
+    background: var(--atlas-panel);
+
+    h2 {
+      margin: 0 0 10px;
+      color: var(--atlas-text);
+      font-size: 1rem;
+      font-weight: 700;
+    }
+  }
+
+  .mission-play__actions {
+    overflow-wrap: anywhere;
+
+    .wf-options > div > .form-radio {
+      padding: 0.4rem 0.45rem 0.4rem 1.55rem;
+      border: 1px solid transparent;
+      border-radius: 5px;
+      line-height: 1.3;
+
+      &:hover,
+      &:focus-within {
+        border-color: var(--atlas-muted);
+      }
+
+      &:has(input:checked) {
+        border-color: var(--atlas-ice);
+        background: #1c303b;
+      }
+
+      .form-icon {
+        top: 50%;
+        left: 0.5rem;
+        transform: translateY(-50%);
+      }
+    }
+
+    .wf-select-space {
+      padding: 0.6rem;
+      border: 1px solid var(--atlas-ice);
+      border-radius: 5px;
+      font-size: 0.8rem;
+    }
+  }
+
+  .mission-play__hand .hiding-card-button-row {
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px;
+  }
+}
+
+.atlas-stage {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--atlas-line);
+  border-radius: 10px;
+  background: radial-gradient(ellipse at 42% 50%, #2b2225, transparent 63%), #0e151d;
+}
+
+.atlas-stage__map {
+  container-type: inline-size;
+  min-width: 0;
+  overflow: clip;
+  text-align: center;
+}
+
+.board-cont.atlas-board {
+  --atlas-diameter: 447px;
+  --atlas-center-x: 317px;
+  --atlas-center-y: 310px;
+  --atlas-image: url(./assets/board/mars-without-venus.png);
+  --atlas-frame-width: 700px;
+  --atlas-frame-height: 580px;
+
+  position: relative;
+  display: flow-root;
+  isolation: isolate;
+  margin: 0 auto;
+  background: none;
+  text-align: left;
+  zoom: min(1.66, calc(100cqi / var(--atlas-frame-width)), calc(78svh / var(--atlas-frame-height)));
+
+  &::before {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background: var(--atlas-image) no-repeat;
+    clip-path: circle(calc(var(--atlas-diameter) / 2) at var(--atlas-center-x) var(--atlas-center-y));
+    content: '';
+  }
+
+  &.board-cont--large {
+    --atlas-diameter: 547px;
+    --atlas-center-x: 369px;
+    --atlas-center-y: 364px;
+    --atlas-image: url(./assets/board/mars-large-without-venus.png);
+    --atlas-frame-width: 765px;
+    --atlas-frame-height: 680px;
+  }
+
+  .hide-tile-button-container,
+  .global-numbers {
+    display: none;
+  }
+
+  .board-caption {
+    fill: #f4e1d3;
+  }
+
+  #main_board > .board-space {
+    cursor: crosshair;
+  }
+
+  #main_board > .board-space::after,
+  .board-outer-spaces > .board-space::after {
+    position: absolute;
+    z-index: 6;
+    inset: 0;
+    background: currentColor;
+    clip-path: polygon(evenodd, 50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%, 50% 0%, 50% 8%, 8% 29%, 8% 71%, 50% 92%, 92% 71%, 92% 29%, 50% 8%);
+    color: transparent;
+    content: '';
+    pointer-events: none;
+  }
+
+  .board-space--available {
+    animation: none;
+  }
+
+  #main_board > .board-space--available,
+  .board-outer-spaces > .board-space--available {
+    cursor: pointer;
+
+    &::after {
+      color: var(--atlas-ice);
+    }
+
+    &:hover {
+      background: none !important;
+    }
+  }
+
+  #main_board > .atlas-sector--inspected::after,
+  .board-outer-spaces > .board-space:hover::after,
+  #main_board > .board-space:focus-visible::after {
+    background: linear-gradient(#ffdcaa, #ffc18e);
+  }
+
+  .board-log-highlight.highlight {
+    animation: none;
+    background: #ffdcaa88;
+  }
+}
+
+.atlas-stage--tracks .board-cont.atlas-board {
+  &.board-with-venus {
+    --atlas-image: url(./assets/board/mars.png);
+  }
+
+  &.board-with-venus.board-cont--large {
+    --atlas-image: url(./assets/board/mars-large.png);
+  }
+
+  &::before {
+    clip-path: none;
+  }
+
+  .global-numbers {
+    display: block;
+  }
+}
+
+.atlas-inspector {
+  align-self: center;
+  min-width: 0;
+  margin: 0 12px 12px;
+  color: var(--atlas-text);
+  font-size: 0.78rem;
+}
+
+.atlas-inspector__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+
+  button {
+    padding: 4px 9px;
+    border: 1px solid var(--atlas-line);
+    border-radius: 4px;
+    background: var(--atlas-panel);
+    color: inherit;
+    font-size: 0.65rem;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible,
+    &[aria-pressed='true'] {
+      border-color: var(--atlas-ice);
+      color: var(--atlas-ice);
+    }
+  }
+}
+
+.atlas-inspector__readout {
+  min-height: 168px;
+  padding: 12px;
+  border-top: 2px solid var(--atlas-rust);
+  background: var(--atlas-panel);
+
+  p {
+    margin: 0;
+  }
+}
+
+.atlas-inspector__sector {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 0 0 6px;
+  color: var(--atlas-muted);
+  font-size: 0.65rem;
+
+  strong {
+    color: var(--atlas-text);
+    font-family: "Courier New", monospace;
+    font-size: 1.2rem;
+    line-height: 1;
+  }
+}
+
+.atlas-inspector__terrain {
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.atlas-inspector__caption,
+.atlas-inspector__hint {
+  color: var(--atlas-muted);
+  font-size: 0.66rem;
+}
+
+.atlas-inspector__bonuses,
+.atlas-inspector__action {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--atlas-line);
+}
+
+.atlas-inspector__bonuses ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 2px 0 0;
+  padding: 0;
+  color: var(--atlas-ice);
+  list-style: none;
+
+  li {
+    margin: 0;
+  }
+}
+
+.atlas-inspector__action small {
+  color: var(--atlas-muted);
+}
+
+.atlas-inspector__action--ready small {
+  color: var(--atlas-ice);
+}
+
+@media (min-width: 960px) {
+  .atlas-stage {
+    grid-template-columns: minmax(0, 1fr) clamp(200px, 18vw, 265px);
+  }
+
+  .atlas-inspector {
+    margin: 0 16px 0 0;
+  }
+
+  #player-home .mission-play__controls:has(.mission-play__actions) {
+    grid-template-columns: minmax(320px, 1fr) minmax(0, 1.5fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .topmost-player-home > .main-container:has(#player-home) {
+    margin-left: 42px;
+  }
+
+  .topmost-player-home > .notice {
+    position: static;
+    margin: 0 10px 10px 52px;
+    text-align: left;
+  }
+
+  #player-home {
+    overflow-x: clip;
+    padding: 10px;
+
+    .sidebar_cont {
+      zoom: 0.7;
+    }
+
+    .top-bar-container {
+      overflow: auto hidden;
+      scrollbar-width: thin;
+      scrollbar-color: var(--atlas-line) var(--atlas-bg);
+    }
+
+    .mission-play__actions,
+    .mission-play__hand {
+      overflow-x: auto;
+      padding: 8px;
+    }
+  }
+
+  .atlas-inspector__readout {
+    min-height: 94px;
+  }
+}
