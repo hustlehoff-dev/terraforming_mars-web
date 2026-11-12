@@ -80,7 +80,11 @@
         :space="curSpace"
         :aresExtension="expansions.ares"
         :tileView="tileView"
-        :class="{'atlas-sector--inspected': atlas && inspectedSpace === curSpace.id}"
+        :class="{
+          'atlas-sector--inspected': atlas && inspectedSpace === curSpace.id,
+          'atlas-sector--legal': legalSpaces?.includes(curSpace.id),
+          'atlas-sector--placed': placedSpaces?.has(curSpace.id),
+        }"
         :tabindex="atlas ? (atlasTabStop === curSpace.id ? 0 : -1) : undefined"
         :role="atlas ? 'button' : undefined"
         :aria-label="atlas ? $t('Sector') + ' ' + (curSpace.a9 ?? curSpace.id) : undefined"
@@ -369,6 +373,7 @@ import {BoardName} from '@/common/boards/BoardName';
 import {LEGENDS} from '@/client/components/Legends';
 import {Expansion} from '@/common/cards/GameModule';
 import {SpaceName} from '@/common/boards/SpaceName';
+import {SoundManager} from '@/client/utils/SoundManager';
 
 class GlobalParamLevel {
   constructor(public value: number, public isActive: boolean, public strValue: string) {
@@ -381,6 +386,8 @@ export default defineComponent({
   props: {
     atlas: Boolean,
     inspectedSpace: String as () => SpaceId | undefined,
+    legalSpaces: Array as () => ReadonlyArray<SpaceId>,
+    placedSpaces: Object as () => ReadonlySet<SpaceId>,
     spaces: {
       type: Array as () => ReadonlyArray<SpaceModel>,
       required: true,
@@ -433,6 +440,9 @@ export default defineComponent({
       const id = sector?.getAttribute('data_space_id');
       if (id) {
         this.$emit('inspectSpace', id as SpaceId);
+        if (event.type === 'click') {
+          SoundManager.mission('sector');
+        }
       }
     },
     navigateAtlas(event: KeyboardEvent) {

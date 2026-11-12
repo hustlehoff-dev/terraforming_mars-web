@@ -1,77 +1,124 @@
+import {getPreferences} from '@/client/utils/PreferencesManager';
+
 export namespace SoundManager {
-  const Notes = {
-    G3: 196.00,
-    A3: 220.00,
-    B3: 246.94,
-    C4: 261.63,
-    D4: 293.66,
-    E4: 329.63,
-    F4: 349.23,
-    G4: 392.00,
-    A4: 440.00,
-    B4: 493.88,
-    C5: 523.25,
-    D5: 587.33,
-    E5: 659.25,
-    F5: 698.46,
-    G5: 783.99,
-    A5: 880.00,
-    B5: 987.77,
-    C6: 1046.50,
-  } as const;
+  type MissionCue = 'sector' | 'card' | 'project' | 'placement' | 'turn';
 
-  function setupGainNode(audioCtx: AudioContext, time: number, value: number) {
-    time += audioCtx.currentTime;
+  let context: AudioContext | undefined;
+  let windBuffer: AudioBuffer | undefined;
+  let ambience: AudioBufferSourceNode | undefined;
+  let ambienceRequested = false;
 
-    const gainNode = audioCtx.createGain();
-    gainNode.connect(audioCtx.destination);
-    gainNode.gain.setValueAtTime(0, time);
-    gainNode.gain.linearRampToValueAtTime(value, time + 0.01);
-
-    return gainNode;
-  }
-
-  function setupOscillator(audioCtx: AudioContext, frequency: number, gainNode: GainNode) {
-    const oscillator = audioCtx.createOscillator();
-    oscillator.type = 'sine';
-    oscillator.frequency.value = frequency;
-    oscillator.connect(gainNode);
-
-    return oscillator;
-  }
-
-  function playSound(audioCtx: AudioContext, frequency: number, time: number, len: number, gainValue: number = 1) {
-    const gainNode = setupGainNode(audioCtx, time, gainValue);
-    const oscillator = setupOscillator(audioCtx, frequency, gainNode);
-
-    oscillator.start(time);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, time + len);
-    oscillator.stop(time + len);
-  }
-
-  function playInContext(cb: (audioCtx: AudioContext) => void) {
-    if (!window.AudioContext) {
-      console.log('This web browser does not support Web Audio API');
+  function playInContext(play: (audio: AudioContext) => void, allowResume = false) {
+    if (!getPreferences().enable_sounds || !window.AudioContext) {
       return;
     }
+    const canResume = allowResume || navigator.userActivation?.hasBeenActive;
+    if (context === undefined && !canResume) {
+      return;
+    }
+    const audio = context ??= new AudioContext();
+    if (audio.state === 'running') {
+      play(audio);
+    } else if (canResume) {
+      void audio.resume().then(() => {
+        if (getPreferences().enable_sounds) {
+          play(audio);
+        }
+      }).catch(() => {});
+    }
+  }
 
-    const audioCtx = new AudioContext();
+  function tone(audio: AudioContext, from: number, to: number, delay: number, duration: number, volume: number) {
+    const start = audio.currentTime + delay;
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    oscillator.frequency.setValueAtTime(from, start);
+    oscillator.frequency.exponentialRampToValueAtTime(to, start + duration);
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(volume, start + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    oscillator.connect(gain).connect(audio.destination);
+    oscillator.start(start);
+    oscillator.stop(start + duration);
+  }
 
-    audioCtx.resume().then(() => {
-      cb(audioCtx);
-    });
+  function noise(audio: AudioContext, frequency: number, volume: number, duration?: number) {
+    if (windBuffer === undefined) {
+      windBuffer = audio.createBuffer(1, audio.sampleRate * 2, audio.sampleRate);
+      const samples = windBuffer.getChannelData(0);
+      for (let i = 0; i < samples.length; i++) {
+        samples[i] = Math.random() * 2 - 1;
+      }
+    }
+    const source = audio.createBufferSource();
+    source.buffer = windBuffer;
+    source.loop = duration === undefined;
+    const filter = audio.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = frequency;
+    const gain = audio.createGain();
+    const start = audio.currentTime;
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(volume, start + (duration === undefined ? 0.7 : 0.015));
+    source.connect(filter).connect(gain).connect(audio.destination);
+    source.start(start);
+    if (duration !== undefined) {
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      source.stop(start + duration);
+    }
+    return source;
+  }
+
+  export function startMissionAmbience() {
+    ambienceRequested = true;
+    playInContext((audio) => {
+      if (ambienceRequested && ambience === undefined && !document.hidden) {
+        ambience = noise(audio, 190, 0.12);
+      }
+    }, true);
+  }
+
+  export function stopMissionAmbience() {
+    ambienceRequested = false;
+    ambience?.stop();
+    ambience = undefined;
+  }
+
+  export function mission(cue: MissionCue) {
+    playInContext((audio) => {
+      switch (cue) {
+      case 'sector':
+        tone(audio, 520, 355, 0, 0.095, 0.10);
+        break;
+      case 'card':
+        noise(audio, 1600, 0.20, 0.19);
+        tone(audio, 300, 610, 0.025, 0.16, 0.075);
+        break;
+      case 'project':
+        tone(audio, 220, 180, 0, 0.24, 0.14);
+        tone(audio, 392, 523, 0.06, 0.26, 0.09);
+        break;
+      case 'placement':
+        noise(audio, 680, 0.42, 0.38);
+        tone(audio, 115, 43, 0, 0.40, 0.25);
+        tone(audio, 330, 440, 0.13, 0.32, 0.09);
+        break;
+      case 'turn':
+        tone(audio, 330, 440, 0, 0.18, 0.08);
+        tone(audio, 440, 660, 0.10, 0.26, 0.08);
+        break;
+      }
+    }, cue === 'sector' || cue === 'card');
   }
 
   export function playActivePlayerSound() {
-    playInContext((audioCtx) => {
-      playSound(audioCtx, Notes.C5, 0, 0.4);
-      playSound(audioCtx, Notes.A4, 0.2, 0.4);
+    playInContext((audio) => {
+      tone(audio, 523.25, 523.25, 0, 0.4, 0.28);
+      tone(audio, 440, 440, 0.2, 0.4, 0.28);
     });
   }
 
   export function newLog() {
-    playInContext((audioCtx) => {
-      playSound(audioCtx, Notes.G3, 0.02, 0.05, .1);
-    });
+    playInContext((audio) => tone(audio, 196, 196, 0.02, 0.05, 0.10));
   }
 }

@@ -1,5 +1,5 @@
 <template>
-  <div id="player-home" :class="{'with-turmoil': game.turmoil, 'mission-cinematic': thisPlayer.tableau.length > 0 && game.phase !== 'end'}">
+  <div id="player-home" :class="{'with-turmoil': game.turmoil, 'mission-cinematic': cinematic}" @click="startMissionAudio" @keydown="startMissionAudio">
     <div v-if="game.phase === 'end'">
       <div class="player_home_block">
         <DynamicTitle title="This game is over!" :color="thisPlayer.color" />
@@ -7,7 +7,17 @@
       </div>
     </div>
 
-    <details class="mission-menu" :open="thisPlayer.tableau.length === 0 || game.phase === 'end'">
+    <button
+      v-if="cinematic"
+      type="button"
+      class="mission-sound"
+      :aria-label="$t('Enable sounds')"
+      :title="$t('Enable sounds')"
+      :aria-pressed="soundsEnabled"
+      @click.stop="toggleMissionAudio">
+      <span aria-hidden="true">♪</span>
+    </button>
+    <details class="mission-menu" :open="!cinematic">
       <summary :aria-label="$t('Player Settings')" :title="$t('Player Settings')">⚙</summary>
       <Sidebar
         :actingPlayer="isPlayerActing(playerView)"
@@ -42,7 +52,7 @@
         <div v-for="metric in missionMetrics" :key="metric.label" class="mission-status__metric" :class="'mission-status__metric--' + metric.key">
           <dt v-i18n>{{ metric.label }}</dt>
           <dd>
-            <span class="mission-status__value">{{ metric.value }}{{ metric.unit }}</span>
+            <span :key="metric.value" class="mission-status__value">{{ metric.value }}{{ metric.unit }}</span>
             <span class="mission-status__target">/ {{ metric.max }}{{ metric.unit }}</span>
             <progress
               :value="metric.value - metric.min"
@@ -231,8 +241,10 @@ import {getGlobalParameterMaximums} from '@/common/boards/GlobalParameterMaximum
 import {mapPlacementKey} from '@/client/components/board/MapPlacement';
 import MissionHand from '@/client/components/board/MissionHand.vue';
 import {SelectSpaceModel} from '@/common/models/PlayerInputModel';
+import {SoundManager} from '@/client/utils/SoundManager';
 
 type PlayerHomeModel = {
+  missionAudioStarted: boolean;
   showHand: boolean;
   showActiveCards: boolean;
   showAutomatedCards: boolean;
@@ -243,7 +255,7 @@ type PlayerHomeModel = {
 
 type ToggleableCardType = 'HAND' | 'ACTIVE' | 'AUTOMATED' | 'EVENT';
 
-const typeToDataModel: Record<ToggleableCardType, {key: Exclude<keyof PlayerHomeModel, 'handSortOrder'>, preference: keyof Preferences}> = {
+const typeToDataModel: Record<ToggleableCardType, {key: 'showHand' | 'showActiveCards' | 'showAutomatedCards' | 'showEventCards', preference: keyof Preferences}> = {
   HAND: {key: 'showHand', preference: 'hide_hand'},
   ACTIVE: {key: 'showActiveCards', preference: 'hide_active_cards'},
   AUTOMATED: {key: 'showAutomatedCards', preference: 'hide_automated_cards'},
@@ -270,6 +282,7 @@ export default defineComponent({
   data(): PlayerHomeModel {
     const preferences = getPreferences();
     return {
+      missionAudioStarted: false,
       showHand: !preferences.hide_hand,
       showActiveCards: !preferences.hide_active_cards,
       showAutomatedCards: !preferences.hide_automated_cards,
@@ -278,9 +291,18 @@ export default defineComponent({
     };
   },
   watch: {
+    cinematic: 'syncMissionAmbience',
+    soundsEnabled: 'syncMissionAmbience',
+    'game.generation'(generation: number, previous: number) {
+      if (this.cinematic && generation > previous) {
+        SoundManager.mission('turn');
+      }
+    },
     'thisPlayer.tableau.length'(count: number, previous: number) {
       if (previous === 0 && count > 0) {
         this.$nextTick(() => window.scrollTo({top: 0}));
+      } else if (count > previous && this.cinematic) {
+        SoundManager.mission('project');
       }
     },
     showHand: function hide_hand() {
@@ -303,6 +325,12 @@ export default defineComponent({
     },
   },
   computed: {
+    cinematic(): boolean {
+      return this.thisPlayer.tableau.length > 0 && this.game.phase !== 'end';
+    },
+    soundsEnabled(): boolean {
+      return getPreferences().enable_sounds;
+    },
     soloCorporation(): string | undefined {
       return getCardsByType(this.thisPlayer.tableau, [CardType.CORPORATION])[0]?.name;
     },
@@ -391,7 +419,32 @@ export default defineComponent({
     UndergroundTokens,
     KeyboardShortcuts,
   },
+  mounted() {
+    document.addEventListener('visibilitychange', this.syncMissionAmbience);
+  },
+  beforeUnmount() {
+    document.removeEventListener('visibilitychange', this.syncMissionAmbience);
+    SoundManager.stopMissionAmbience();
+  },
   methods: {
+    startMissionAudio() {
+      if (this.cinematic && this.soundsEnabled && !this.missionAudioStarted) {
+        this.missionAudioStarted = true;
+        this.syncMissionAmbience();
+      }
+    },
+    syncMissionAmbience() {
+      if (this.missionAudioStarted && this.cinematic && this.soundsEnabled && !document.hidden) {
+        SoundManager.startMissionAmbience();
+      } else {
+        SoundManager.stopMissionAmbience();
+      }
+    },
+    toggleMissionAudio() {
+      PreferencesManager.INSTANCE.set('enable_sounds', !this.soundsEnabled);
+      this.startMissionAudio();
+      this.syncMissionAmbience();
+    },
     endTurn() {
       if (this.endTurnIndex !== -1) {
         (this.$refs.waitingFor as InstanceType<typeof WaitingFor> | undefined)?.onsave({

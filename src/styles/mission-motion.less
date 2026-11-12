@@ -1,0 +1,227 @@
+#player-home.mission-cinematic {
+  .mission-sound {
+    position: absolute;
+    z-index: 110;
+    top: 14px;
+    right: calc(clamp(14px, 2.5vw, 36px) + 44px);
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    padding: 0;
+    border: 1px solid #a9bdc337;
+    border-radius: 4px;
+    background: #10171bdc;
+    color: var(--atlas-ice);
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+
+    &[aria-pressed='false'] {
+      color: var(--atlas-muted);
+      text-decoration: line-through;
+    }
+
+    &:hover,
+    &:focus-visible {
+      border-color: var(--mission-gold);
+    }
+  }
+
+  .mission-status__generation {
+    right: calc(clamp(14px, 2.5vw, 36px) + 90px);
+  }
+
+  .mission-status__metrics {
+    width: min(70%, 650px);
+  }
+
+  .atlas-stage:not(.atlas-stage--tracks) .board-cont.atlas-board {
+    #main_board > .atlas-sector--legal::after {
+      color: var(--atlas-ice);
+    }
+
+    #main_board > .atlas-sector--legal:not(.atlas-sector--inspected):hover::after {
+      color: #e6fbff;
+    }
+  }
+}
+
+@media (max-width: 760px) {
+  #player-home.mission-cinematic {
+    .mission-status__metrics {
+      width: min(100%, 460px);
+    }
+
+    .mission-status__generation {
+      right: 102px;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  #player-home.mission-cinematic {
+    .mission-status__brand {
+      font-size: 0.76rem;
+      letter-spacing: 0.18em;
+    }
+
+    .mission-status__generation > span {
+      position: absolute;
+      clip-path: inset(50%);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  #player-home.mission-cinematic {
+    .atlas-stage {
+      overflow: clip;
+    }
+
+    .atlas-stage::before,
+    .atlas-stage::after {
+      position: absolute;
+      z-index: 0;
+      inset: 0;
+      overflow: hidden;
+      content: '';
+      pointer-events: none;
+    }
+
+    .atlas-stage::before {
+      background:
+        radial-gradient(ellipse at 85% 22%, #ffd3a43f, transparent 31%),
+        radial-gradient(ellipse at 35% 62%, #f5a16c48, transparent 45%);
+      animation: mission-light 11s ease-in-out infinite alternate;
+    }
+
+    .atlas-stage::after {
+      inset: -38px;
+      background:
+        radial-gradient(circle, #ffc292a6 0 1px, transparent 2px) 0 0 / 113px 127px,
+        radial-gradient(circle, #ffdbab78 0 1px, transparent 2px) 32px 21px / 173px 149px;
+      opacity: 0.32;
+      mask-image: linear-gradient(transparent 24%, #000 58%, transparent 94%);
+      animation: mission-dust 12s ease-in-out infinite alternate;
+    }
+
+    .atlas-stage__map {
+      z-index: 1;
+    }
+
+    .mission-status__value,
+    .atlas-inspector__sector strong {
+      display: inline-block;
+      animation: mission-readout 380ms ease-out both;
+    }
+
+    .atlas-stage:not(.atlas-stage--tracks) .board-cont.atlas-board {
+      #main_board > .atlas-sector--legal:not(.atlas-sector--inspected)::after {
+        animation: mission-beacon 1.9s ease-in-out infinite alternate;
+      }
+
+      #main_board > .atlas-sector--inspected::after {
+        animation: mission-target 270ms ease-out both;
+      }
+
+      #main_board > .atlas-sector--placed {
+        &::before {
+          position: absolute;
+          z-index: 7;
+          inset: 0;
+          background: radial-gradient(circle, #ffffff 0%, #ffe2a5dc 36%, #92edffd9 64%, transparent 80%);
+          content: '';
+          pointer-events: none;
+          animation: mission-impact 900ms ease-out both;
+        }
+
+        > [data-test='tile']:not(.board-hidden-tile) {
+          animation: mission-land 570ms cubic-bezier(0.2, 0.7, 0.25, 1.15) both;
+        }
+      }
+    }
+
+    .mission-hand__card {
+      transition: translate 160ms ease-out, border-color 160ms ease-out, filter 160ms ease-out;
+
+      &:hover,
+      &:focus-visible {
+        translate: 0 -3px;
+        filter: brightness(1.16);
+      }
+    }
+
+    .mission-preview-enter-active,
+    .mission-preview-leave-active {
+      transition: opacity 180ms ease-out, translate 210ms ease-out, scale 210ms ease-out;
+      transform-origin: bottom center;
+    }
+
+    .mission-preview-enter-from,
+    .mission-preview-leave-to {
+      opacity: 0;
+      translate: 0 12px;
+      scale: 0.95;
+    }
+
+    .mission-draw-enter-active {
+      animation: mission-card-in 420ms ease-out both;
+    }
+
+    .mission-draw-leave-active {
+      transition: opacity 160ms ease-out, scale 160ms ease-out;
+    }
+
+    .mission-draw-leave-to {
+      opacity: 0;
+      scale: 0.95;
+    }
+
+    .mission-dock__button:active,
+    .mission-sound:active {
+      scale: 0.96;
+    }
+  }
+}
+
+@keyframes mission-light {
+  from { opacity: 0.33; }
+  to { opacity: 0.95; }
+}
+
+@keyframes mission-dust {
+  from { translate: -24px 18px; }
+  to { translate: 28px -25px; }
+}
+
+@keyframes mission-readout {
+  from { opacity: 0.5; translate: 0 3px; filter: brightness(1.8); }
+  to { opacity: 1; translate: 0; filter: brightness(1); }
+}
+
+@keyframes mission-beacon {
+  from { opacity: 0.58; }
+  to { opacity: 1; }
+}
+
+@keyframes mission-target {
+  from { opacity: 0.55; scale: 0.87; }
+  to { opacity: 1; scale: 1; }
+}
+
+@keyframes mission-impact {
+  from { opacity: 1; scale: 0.3; }
+  35% { opacity: 0.9; scale: 1; }
+  to { opacity: 0; scale: 1.6; }
+}
+
+@keyframes mission-land {
+  from { opacity: 0.28; scale: 0.78; filter: brightness(1.8); }
+  to { opacity: 1; scale: 1; filter: brightness(1); }
+}
+
+@keyframes mission-card-in {
+  from { opacity: 0; translate: 18px 8px; }
+  to { opacity: 1; translate: 0; }
+}

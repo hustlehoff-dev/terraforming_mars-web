@@ -1,18 +1,20 @@
 <template>
   <div v-if="cards.length" class="mission-hand">
-    <div v-if="selectedCard" class="mission-hand__preview">
-      <button type="button" :aria-label="$t('Close')" @click="selected = undefined">×</button>
-      <Card :card="selectedCard" />
-      <a href="#actions" @click="selected = undefined" v-i18n>Actions</a>
-    </div>
-    <div class="mission-hand__strip" :aria-label="$t('Cards In Hand')" @keydown.esc="selected = undefined">
+    <Transition name="mission-preview">
+      <div v-if="selectedCard" class="mission-hand__preview" @keydown.esc="selected = undefined">
+        <button type="button" :aria-label="$t('Close')" @click="selected = undefined">×</button>
+        <Card :key="selectedCard.name" :card="selectedCard" />
+        <a href="#actions" @click="selected = undefined" v-i18n>Actions</a>
+      </div>
+    </Transition>
+    <TransitionGroup name="mission-draw" tag="div" class="mission-hand__strip" :aria-label="$t('Cards In Hand')" @keydown.esc="selected = undefined">
       <button
         v-for="card in previews"
         :key="card.name"
         type="button"
         class="mission-hand__card"
         :aria-expanded="selected === card.name"
-        @click="selected = selected === card.name ? undefined : card.name">
+        @click="inspectCard(card.name)">
         <span class="mission-hand__title">
           <strong v-if="card.cost !== undefined">{{ card.cost }}</strong>
           <span>{{ $t(card.name) }}</span>
@@ -20,7 +22,7 @@
         <span class="mission-hand__art" :class="'mission-hand__art--' + card.art" aria-hidden="true"></span>
         <span v-if="card.description" class="mission-hand__effect">{{ $t(card.description) }}</span>
       </button>
-    </div>
+    </TransitionGroup>
   </div>
 </template>
 
@@ -31,10 +33,18 @@ import {getCardOrThrow} from '@/client/cards/ClientCardManifest';
 import {CardModel} from '@/common/models/CardModel';
 import {CardName} from '@/common/cards/CardName';
 import {Tag} from '@/common/cards/Tag';
+import {SoundManager} from '@/client/utils/SoundManager';
 
 const props = defineProps<{cards: ReadonlyArray<CardModel>}>();
 const selected = ref<CardName>();
 const selectedCard = computed(() => props.cards.find((card) => card.name === selected.value));
+
+function inspectCard(name: CardName) {
+  selected.value = selected.value === name ? undefined : name;
+  if (selected.value !== undefined) {
+    SoundManager.mission('card');
+  }
+}
 const previews = computed(() => props.cards.map((card) => {
   const definition = getCardOrThrow(card.name);
   const tags = definition.tags;

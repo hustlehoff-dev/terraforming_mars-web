@@ -14,6 +14,8 @@
         :aresData="game.aresData"
         :tileView="tileView"
         :inspectedSpace="inspectedSpace"
+        :legalSpaces="activePlacement?.spaces"
+        :placedSpaces="placedSpaces"
         atlas
         @inspectSpace="inspectSpace"
         @toggleTileView="$emit('toggleTileView')" />
@@ -27,7 +29,7 @@
       <div class="atlas-inspector__readout" aria-live="polite">
         <h2 class="atlas-inspector__sector">
           <span v-i18n>Sector</span>
-          <strong v-if="sector">{{ sector.a9 ?? sector.id }}</strong>
+          <strong v-if="sector" :key="sector.id">{{ sector.a9 ?? sector.id }}</strong>
         </h2>
         <template v-if="sector">
           <p class="atlas-inspector__terrain" v-i18n>{{ terrain }}</p>
@@ -64,6 +66,7 @@ import {SpaceModel} from '@/common/models/SpaceModel';
 import {GameModel} from '@/common/models/GameModel';
 import {tileTypeToString} from '@/common/TileType';
 import {SpaceId} from '@/common/Types';
+import {SoundManager} from '@/client/utils/SoundManager';
 
 const terrainNames: Record<SpaceType, string> = {
   [SpaceType.LAND]: 'Land',
@@ -93,7 +96,12 @@ export default defineComponent({
     return {mapPlacement: inject(mapPlacementKey, undefined)?.input};
   },
   data() {
-    return {inspectedSpace: undefined as SpaceId | undefined, showTracks: false};
+    return {
+      inspectedSpace: undefined as SpaceId | undefined,
+      showTracks: false,
+      placedSpaces: new Set<SpaceId>(),
+      placementTimer: undefined as number | undefined,
+    };
   },
   computed: {
     spaces(): ReadonlyArray<SpaceModel> {
@@ -134,6 +142,18 @@ export default defineComponent({
     },
   },
   watch: {
+    spaces(next: ReadonlyArray<SpaceModel>, previous: ReadonlyArray<SpaceModel>) {
+      const before = spacesById(previous);
+      const placed = next.filter((space) => space.tileType !== undefined && space.tileType !== before.get(space.id)?.tileType);
+      if (placed.length > 0) {
+        for (const space of placed) {
+          this.placedSpaces.add(space.id);
+        }
+        SoundManager.mission('placement');
+        window.clearTimeout(this.placementTimer);
+        this.placementTimer = window.setTimeout(() => this.placedSpaces.clear(), 950);
+      }
+    },
     activePlacement: {
       flush: 'post',
       handler(input: SelectSpaceModel | undefined) {
@@ -146,6 +166,9 @@ export default defineComponent({
         }
       },
     },
+  },
+  beforeUnmount() {
+    window.clearTimeout(this.placementTimer);
   },
   methods: {
     inspectSpace(id: SpaceId) {
