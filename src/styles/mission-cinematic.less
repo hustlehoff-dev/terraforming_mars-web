@@ -1,0 +1,524 @@
+.topmost-player-home:has(.mission-cinematic) {
+  > .main-container {
+    margin: 0;
+  }
+
+  > .notice {
+    position: static;
+    background: #0b1016;
+    text-align: right;
+  }
+}
+
+#player-home .mission-menu > summary,
+#player-home .mission-scoreboard,
+#player-home .mission-dock,
+#player-home .mission-status__brand {
+  display: none;
+}
+
+#player-home.mission-cinematic {
+  --scene-height: max(650px, 100svh);
+  --dock-height: 147px;
+  --mission-gold: #f1be80;
+  --mission-glass: #10191fe8;
+
+  position: relative;
+  padding: 0 0 24px;
+
+  .mission-play {
+    max-width: none;
+  }
+
+  .mission-play > :not(.mission-play__map) {
+    margin-inline: clamp(14px, 3vw, 42px);
+  }
+
+  .mission-menu {
+    position: absolute;
+    z-index: 110;
+    top: 14px;
+    right: clamp(14px, 2.5vw, 36px);
+
+    > summary {
+      display: grid;
+      width: 36px;
+      height: 36px;
+      place-items: center;
+      border: 1px solid #a9bdc337;
+      border-radius: 4px;
+      background: #10171bdc;
+      color: #dfe8ec;
+      cursor: pointer;
+      list-style: none;
+    }
+  }
+
+  .mission-status {
+    position: absolute;
+    z-index: 9;
+    top: 0;
+    left: 0;
+    display: grid;
+    width: 100%;
+    max-width: none;
+    grid-template-columns: minmax(165px, 1fr) minmax(300px, 2.1fr);
+    align-items: center;
+    gap: 18px;
+    padding: 14px clamp(62px, 8vw, 118px) 20px clamp(16px, 3vw, 50px);
+    background: linear-gradient(#080d11ee, #080d1175 72%, transparent);
+  }
+
+  .mission-status__brand {
+    display: block;
+    max-width: 14ch;
+    font-size: clamp(0.85rem, 1.45vw, 1.3rem);
+    font-weight: 500;
+    line-height: 1.16;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+
+  .mission-status__board,
+  .mission-status__title a {
+    display: none;
+  }
+
+  .mission-status__generation {
+    position: absolute;
+    right: clamp(62px, 7vw, 105px);
+    margin: 0;
+    padding: 7px 12px;
+    border: 1px solid #c6a77760;
+    background: #10161bd9;
+    color: #ebddd0;
+    font-size: 0.63rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .mission-status__metrics {
+    width: min(77%, 650px);
+    justify-self: start;
+  }
+
+  .mission-status__metric dt {
+    color: #d0d9dc;
+  }
+
+  .mission-status__metric progress {
+    height: 4px;
+    accent-color: #92d9ed;
+  }
+
+  .mission-status__value {
+    color: #f6f4ef;
+  }
+
+  .mission-play__map {
+    position: relative;
+    margin-bottom: 0;
+  }
+
+  .atlas-stage {
+    position: relative;
+    display: block;
+    height: var(--scene-height);
+    border: 0;
+    border-radius: 0;
+    background:
+      linear-gradient(0deg, #0b1016 0%, #0b1016c7 10%, transparent 35%),
+      radial-gradient(ellipse at 53% 48%, transparent 42%, #090e15b5 100%),
+      url(./assets/board/mars-orbit.jpg) center 43% / cover,
+      #211c1e;
+  }
+
+  .atlas-stage__map {
+    position: absolute;
+    inset: 60px 0 calc(var(--dock-height) - 14px);
+  }
+
+  .board-cont.atlas-board {
+    --scene-board-width: 680px;
+    --scene-board-height: 345px;
+
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin: 0;
+    transform: translate(-50%, -52%);
+    zoom: min(3.05, calc(97cqi / var(--scene-board-width)), calc((var(--scene-height) - 225px) / var(--scene-board-height)));
+
+    &.board-cont--large {
+      --scene-board-width: 760px;
+      --scene-board-height: 400px;
+    }
+  }
+
+  .atlas-stage:not(.atlas-stage--tracks) .board-cont.atlas-board {
+    &::before {
+      display: none;
+    }
+
+    #main_board {
+      transform: translateY(-17px) perspective(850px) rotateX(38deg);
+      transform-origin: 40% 52%;
+    }
+
+    .board-outer-spaces .board-space-c01,
+    .board-outer-spaces .board-space-c02 {
+      transform: translate(18px, 85px) scale(0.65);
+    }
+
+    .board-legend {
+      opacity: 0.65;
+    }
+
+    #main_board > .board-space::after {
+      clip-path: polygon(evenodd, 50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%, 50% 0%, 50% 3%, 3% 27%, 3% 73%, 50% 97%, 97% 73%, 97% 27%, 50% 3%);
+      color: #f7e9d6a6;
+    }
+
+    #main_board > .board-space--available::after {
+      color: var(--atlas-ice);
+    }
+
+    .board-space-type-land:not(.board-space-type-land-volcanic, .board-space-type-land-noctis) {
+      background-image: none;
+    }
+
+    .board-space-type-ocean {
+      background: #28586746;
+    }
+
+    .board-space-tile--ocean {
+      background: #155c76 url(./assets/board/mars-biomes.jpg) left center / 200% 100% no-repeat;
+    }
+
+    .board-space-tile--greenery {
+      background: #52602b url(./assets/board/mars-biomes.jpg) right center / 200% 100% no-repeat;
+    }
+
+    .board-space-tile--city {
+      background: url(./assets/board/mars-dome.png) center / contain no-repeat;
+    }
+
+    .board-space-bonuses {
+      opacity: 0.72;
+    }
+  }
+
+  .atlas-stage--tracks .board-cont.atlas-board {
+    zoom: min(1.2, calc(97cqi / var(--atlas-frame-width)), calc((var(--scene-height) - 215px) / var(--atlas-frame-height)));
+  }
+
+  .atlas-inspector {
+    position: absolute;
+    z-index: 7;
+    top: 23%;
+    right: clamp(12px, 2.8vw, 42px);
+    width: clamp(155px, 15vw, 235px);
+    margin: 0;
+  }
+
+  .atlas-inspector__tools {
+    justify-content: end;
+  }
+
+  .atlas-inspector__readout {
+    min-height: 0;
+    border: 1px solid #879ca963;
+    border-top-color: var(--mission-gold);
+    border-radius: 4px;
+    background: var(--mission-glass);
+  }
+
+  .atlas-inspector__readout:has(.atlas-inspector__hint) {
+    display: none;
+  }
+
+  .mission-scoreboard {
+    position: absolute;
+    z-index: 6;
+    top: 14%;
+    left: clamp(16px, 3vw, 50px);
+    display: grid;
+    width: clamp(150px, 16vw, 245px);
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+      display: grid;
+      grid-template-columns: 8px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+      padding: 6px 10px;
+      border: 1px solid #9fb0ba32;
+      background: var(--mission-glass);
+      font-size: 0.68rem;
+    }
+
+    .mission-scoreboard__active {
+      border-color: #e6ae6d8c;
+      color: #ffdcaf;
+    }
+  }
+
+  .mission-scoreboard__marker {
+    width: 7px;
+    height: 7px;
+    border-radius: 1px;
+  }
+
+  .mission-scoreboard__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mission-dock {
+    position: absolute;
+    z-index: 8;
+    top: calc(var(--scene-height) - var(--dock-height) - 18px);
+    left: 0;
+    display: grid;
+    width: 100%;
+    height: var(--dock-height);
+    grid-template-columns: minmax(120px, 1fr) minmax(0, 3fr) minmax(120px, 1fr);
+    align-items: end;
+    gap: 12px;
+    padding: 0 clamp(16px, 3vw, 50px);
+    pointer-events: none;
+
+    > * {
+      pointer-events: auto;
+    }
+  }
+
+  .mission-dock__button {
+    justify-self: start;
+    padding: 9px 13px;
+    border: 1px solid #a5b8bd67;
+    border-radius: 4px;
+    background: #111a22e8;
+    color: #e7e9e8;
+    font-size: 0.65rem;
+    letter-spacing: 0.06em;
+    text-align: center;
+    text-transform: uppercase;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      border-color: var(--mission-gold);
+      text-decoration: none;
+    }
+  }
+
+  .mission-dock__button--primary {
+    grid-column: 3;
+    justify-self: end;
+    border-color: #f1be80b3;
+    background: linear-gradient(145deg, #392b20, #121a20 70%);
+    color: #ffdbb0;
+  }
+}
+
+.mission-hand {
+  position: relative;
+  min-width: 0;
+}
+
+.mission-hand__strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px;
+  scrollbar-width: thin;
+  scrollbar-color: #8f7960 #141c21;
+
+  &::before,
+  &::after {
+    flex: 1 0 0;
+    content: '';
+  }
+}
+
+.mission-hand__card {
+  flex: 0 0 clamp(96px, 10vw, 155px);
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid #a5b8bd74;
+  border-radius: 7px;
+  background: #142028;
+  color: #f2eee6;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible,
+  &[aria-expanded='true'] {
+    border-color: #f1be80;
+  }
+}
+
+.mission-hand__title {
+  display: grid;
+  min-height: 37px;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  font-size: 0.58rem;
+  line-height: 1.16;
+
+  strong {
+    padding: 3px 5px;
+    border-radius: 2px;
+    background: #dec5a4;
+    color: #1b2227;
+  }
+}
+
+.mission-hand__art {
+  display: block;
+  height: clamp(54px, 8vw, 82px);
+  background-image: url(./assets/board/mars-projects.jpg);
+  background-size: 200% 200%;
+
+  &--city { background-position: left top; }
+  &--power { background-position: right top; }
+  &--greenhouse { background-position: left bottom; }
+  &--research { background-position: right bottom; }
+}
+
+.mission-hand__effect {
+  display: block;
+  overflow: hidden;
+  padding: 4px 6px;
+  color: #d6d5cb;
+  font-size: 0.51rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mission-hand__preview {
+  position: absolute;
+  z-index: 1;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #a5b8bd74;
+  border-radius: 6px;
+  background: #10191f;
+  font-size: 0.7rem;
+  transform: translateX(-50%);
+
+  button {
+    border: 0;
+    background: transparent;
+    color: #f2eee6;
+    cursor: pointer;
+  }
+}
+
+@media (max-width: 760px) {
+  .topmost-player-home:has(.mission-cinematic) > .main-container:has(#player-home) {
+    margin-left: 0;
+  }
+
+  #player-home.mission-cinematic {
+    --scene-height: max(690px, 90svh);
+    --dock-height: 116px;
+
+    .mission-status {
+      grid-template-columns: 1fr;
+      gap: 10px;
+      padding: 13px 14px 22px;
+    }
+
+    .mission-status__metrics {
+      width: min(100%, 460px);
+    }
+
+    .mission-status__generation {
+      top: 16px;
+      right: 60px;
+      padding: 4px 6px;
+    }
+
+    .atlas-stage__map {
+      inset: 126px 0 255px;
+    }
+
+    .board-cont.atlas-board {
+      top: calc(50% - 15px);
+      zoom: min(1.25, calc(121cqi / var(--scene-board-width)), calc((var(--scene-height) - 360px) / var(--scene-board-height)));
+    }
+
+    .atlas-inspector {
+      inset: auto 9px 138px;
+      width: auto;
+    }
+
+    .atlas-inspector__readout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.65fr);
+      align-items: start;
+      column-gap: 10px;
+      padding: 6px 8px;
+      font-size: 0.65rem;
+    }
+
+    .atlas-inspector__sector,
+    .atlas-inspector__terrain,
+    .atlas-inspector__bonuses {
+      grid-column: 1;
+    }
+
+    .atlas-inspector__bonuses,
+    .atlas-inspector__action {
+      margin-top: 3px;
+      padding-top: 3px;
+    }
+
+    .atlas-inspector__action {
+      grid-column: 2;
+      grid-row: 1 / span 3;
+      margin: 0;
+      padding: 0 0 0 8px;
+      border-top: 0;
+      border-left: 1px solid var(--atlas-line);
+    }
+
+    .mission-scoreboard {
+      top: 133px;
+      left: 9px;
+      width: 114px;
+
+      li {
+        gap: 5px;
+        padding: 3px 5px;
+        font-size: 0.56rem;
+      }
+    }
+
+    .mission-dock {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 5px;
+      padding-inline: 8px;
+    }
+
+    .mission-dock__button {
+      max-width: 91px;
+      padding: 7px;
+      font-size: 0.51rem;
+    }
+  }
+}

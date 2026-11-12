@@ -1,5 +1,5 @@
 <template>
-  <div id="player-home" :class="(game.turmoil ? 'with-turmoil': '')">
+  <div id="player-home" :class="{'with-turmoil': game.turmoil, 'mission-cinematic': thisPlayer.tableau.length > 0 && game.phase !== 'end'}">
     <div v-if="game.phase === 'end'">
       <div class="player_home_block">
         <DynamicTitle title="This game is over!" :color="thisPlayer.color" />
@@ -7,23 +7,26 @@
       </div>
     </div>
 
-    <Sidebar
-      :actingPlayer="isPlayerActing(playerView)"
-      :playerColor="thisPlayer.color"
-      :generation="game.generation"
-      :coloniesCount="game.colonies.length"
-      :temperature="game.temperature"
-      :oxygen="game.oxygenLevel"
-      :oceans="game.oceans"
-      :venus="game.venusScaleLevel"
-      :turmoil="game.turmoil"
-      :moonData="game.moon"
-      :gameOptions="game.gameOptions"
-      :playerNumber="playerView.players.length"
-      :lastSoloGeneration="game.lastSoloGeneration"
-      :deckSize="game.deckSize"
-      :discardPileSize="game.discardPileSize"
-      :otherDeckSizes="game.otherDeckSizes" />
+    <details class="mission-menu" :open="thisPlayer.tableau.length === 0 || game.phase === 'end'">
+      <summary :aria-label="$t('Player Settings')" :title="$t('Player Settings')">⚙</summary>
+      <Sidebar
+        :actingPlayer="isPlayerActing(playerView)"
+        :playerColor="thisPlayer.color"
+        :generation="game.generation"
+        :coloniesCount="game.colonies.length"
+        :temperature="game.temperature"
+        :oxygen="game.oxygenLevel"
+        :oceans="game.oceans"
+        :venus="game.venusScaleLevel"
+        :turmoil="game.turmoil"
+        :moonData="game.moon"
+        :gameOptions="game.gameOptions"
+        :playerNumber="playerView.players.length"
+        :lastSoloGeneration="game.lastSoloGeneration"
+        :deckSize="game.deckSize"
+        :discardPileSize="game.discardPileSize"
+        :otherDeckSizes="game.otherDeckSizes" />
+    </details>
 
     <header class="mission-status">
       <div>
@@ -31,7 +34,7 @@
           <span v-i18n>Generation</span> {{ game.generation }}<template v-if="playerView.players.length === 1"> / {{ game.lastSoloGeneration }}</template>
         </p>
         <div class="mission-status__title">
-          <h1>{{ $t(game.gameOptions.boardName) }}</h1>
+          <h1 :title="$t(game.gameOptions.boardName)"><span class="mission-status__brand" v-i18n>Terraforming Mars</span><span class="mission-status__board">{{ $t(game.gameOptions.boardName) }}</span></h1>
           <a v-if="game.phase !== 'end'" href="#actions" v-i18n>Actions</a>
         </div>
       </div>
@@ -61,6 +64,19 @@
           atlas
           @toggleTileView="cycleTileView()"
         />
+        <ul class="mission-scoreboard" :aria-label="$t('Players')">
+          <li v-for="player in playerView.players" :key="player.color" :class="{'mission-scoreboard__active': player.isActive}">
+            <span class="mission-scoreboard__marker" :class="'player_bg_color_' + player.color" aria-hidden="true"></span>
+            <span class="mission-scoreboard__name">{{ playerView.players.length === 1 ? $t(soloCorporation ?? player.name) : player.name }}</span>
+            <strong :title="$t('Terraform Rating')">{{ player.terraformRating }}</strong>
+          </li>
+        </ul>
+        <div class="mission-dock">
+          <a href="#played-cards" class="mission-dock__button" v-i18n>Played Cards</a>
+          <MissionHand :cards="allCardsInHand" />
+          <button v-if="endTurnIndex !== -1" type="button" class="mission-dock__button mission-dock__button--primary" @click="endTurn" v-i18n>End Turn</button>
+          <a v-else href="#actions" class="mission-dock__button mission-dock__button--primary" v-i18n>Actions</a>
+        </div>
       </div>
 
       <TopBar :playerView="playerView" />
@@ -69,7 +85,7 @@
         <section v-if="game.phase !== 'end'" class="mission-play__actions player_home_block player_home_block--actions nofloat">
           <a name="actions" class="player_home_anchor hotkey-target"></a>
           <h2 v-i18n>Actions</h2>
-          <WaitingFor :playerView="playerView" :waitingfor="playerView.waitingFor" :requestId="playerView.requestId" />
+          <WaitingFor ref="waitingFor" :playerView="playerView" :waitingfor="playerView.waitingFor" :requestId="playerView.requestId" />
         </section>
         <div>
           <div class="player_home_block player_home_block--hand" v-if="playerView.draftedCards.length > 0">
@@ -102,7 +118,7 @@
         <LogPanel :viewModel="playerView" :step="game.step" @spaceClicked="onSpaceClicked" />
       </div>
 
-      <div class="player_home_block player_home_block--cards">
+      <div id="played-cards" class="player_home_block player_home_block--cards">
         <div class="hiding-card-button-row">
           <DynamicTitle title="Played Cards" :color="thisPlayer.color" />
           <div class="played-cards-filters">
@@ -213,6 +229,7 @@ import {HomeMixin} from '@/client/mixins/HomeMixin';
 import {MIN_OXYGEN_LEVEL, MIN_TEMPERATURE} from '@/common/constants';
 import {getGlobalParameterMaximums} from '@/common/boards/GlobalParameterMaximums';
 import {mapPlacementKey} from '@/client/components/board/MapPlacement';
+import MissionHand from '@/client/components/board/MissionHand.vue';
 import {SelectSpaceModel} from '@/common/models/PlayerInputModel';
 
 type PlayerHomeModel = {
@@ -286,6 +303,16 @@ export default defineComponent({
     },
   },
   computed: {
+    soloCorporation(): string | undefined {
+      return getCardsByType(this.thisPlayer.tableau, [CardType.CORPORATION])[0]?.name;
+    },
+    endTurnIndex(): number {
+      const input = this.playerView.waitingFor;
+      if (input?.type !== 'or' || input.optional) {
+        return -1;
+      }
+      return input.options.findIndex((option) => option.type === 'option' && option.title === 'End Turn');
+    },
     missionMetrics() {
       const {temperature, oxygenLevel, oceans, gameOptions} = this.game;
       const max = getGlobalParameterMaximums(gameOptions.boardName);
@@ -346,6 +373,7 @@ export default defineComponent({
   },
 
   components: {
+    MissionHand,
     DynamicTitle,
     Card,
     PlayersOverview,
@@ -364,6 +392,13 @@ export default defineComponent({
     KeyboardShortcuts,
   },
   methods: {
+    endTurn() {
+      if (this.endTurnIndex !== -1) {
+        (this.$refs.waitingFor as InstanceType<typeof WaitingFor> | undefined)?.onsave({
+          type: 'or', index: this.endTurnIndex, response: {type: 'option'},
+        });
+      }
+    },
     isPlayerActing(playerView: PlayerViewModel) : boolean {
       return playerView.players.length > 1 && playerView.waitingFor !== undefined && !playerView.waitingFor.optional;
     },
