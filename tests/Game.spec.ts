@@ -41,8 +41,64 @@ import {Spacefarer} from '../src/server/milestones/terraCimmeria/Spacefarer';
 import {Suburbian} from '../src/server/awards/modular/Suburbian';
 import {SpaceName} from '../src/common/boards/SpaceName';
 import {SpaceType} from '../src/common/boards/SpaceType';
+import {BeginnerCorporation} from '../src/server/cards/corporation/BeginnerCorporation';
+import {Server as ServerModel} from '../src/server/models/ServerModel';
 
 describe('Game', () => {
+  it('keeps an all-beginner game in its first action turn', () => {
+    const first = TestPlayer.BLUE.newPlayer({beginner: true});
+    const second = TestPlayer.RED.newPlayer({beginner: true});
+    const game = Game.newInstance('game-beginners', [first, second], first, 'spectatorid');
+
+    expect(game.phase).to.eq(Phase.ACTION);
+    expect(ServerModel.getGameModel(game).turn).to.eq(1);
+    expect(game.activePlayer.getWaitingFor()).to.be.instanceOf(OrOptions);
+  });
+
+  it('counts only action turns and restores the same number when loading a game', () => {
+    const [game, first, second] = testGame(2, {draftVariant: false});
+    first.playedCards.push(new BeginnerCorporation());
+    second.playedCards.push(new BeginnerCorporation());
+
+    expect(ServerModel.getGameModel(game).turn).to.be.undefined;
+    game.playerIsFinishedWithResearchPhase(first);
+    game.playerIsFinishedWithResearchPhase(second);
+    expect(ServerModel.getGameModel(game).turn).to.eq(1);
+
+    first.popWaitingFor();
+    first.actionsTakenThisRound = 1;
+    first.takeAction();
+    expect(game.turn).to.eq(1);
+
+    first.popWaitingFor();
+    game.playerIsFinishedTakingActions();
+    expect(game.turn).to.eq(2);
+    expect(game.activePlayer).to.eq(second);
+    second.popWaitingFor();
+    game.playerHasPassed(second);
+    game.playerIsFinishedTakingActions();
+    expect(game.turn).to.eq(3);
+    expect(game.activePlayer).to.eq(first);
+
+    first.popWaitingFor();
+    game.playerIsFinishedTakingActions();
+    expect(game.turn).to.eq(4);
+    expect(game.activePlayer).to.eq(first);
+
+    const save = game.serialize();
+    expect(ServerModel.getGameModel(Game.deserialize(save)).turn).to.eq(4);
+    const legacySave = {...save, turn: undefined, turnStarted: undefined};
+    expect(ServerModel.getGameModel(Game.deserialize(legacySave)).turn).to.eq(1);
+
+    first.popWaitingFor();
+    game.playerHasPassed(first);
+    game.playerIsFinishedTakingActions();
+    expect(ServerModel.getGameModel(game).turn).to.be.undefined;
+    game.playerIsFinishedWithResearchPhase(first);
+    game.playerIsFinishedWithResearchPhase(second);
+    expect(ServerModel.getGameModel(game).turn).to.eq(1);
+  });
+
   it('should initialize with right defaults', () => {
     const player = TestPlayer.BLUE.newPlayer();
     const player2 = TestPlayer.RED.newPlayer();

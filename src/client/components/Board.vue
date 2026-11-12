@@ -1,24 +1,34 @@
 <template>
-  <div :class="gameBoardClassName" @pointerover="inspectFromEvent" @focusin="inspectFromEvent" @click="inspectFromEvent" @keydown="navigateAtlas">
+  <div :class="gameBoardClassName">
     <div class="hide-tile-button-container">
       <div class="hide-tile-button" @click="$emit('toggleTileView')" data-test="hide-tiles-button" v-i18n>
         {{ tileView }} tiles
       </div>
     </div>
-    <div class="board-outer-spaces" id="colony_spaces">
-      <BoardSpace v-if="hasSpace(SpaceName.GANYMEDE_COLONY)" :space="getSpace(SpaceName.GANYMEDE_COLONY)" text="Ganymede Colony" :tileView="tileView" />
-      <BoardSpace v-if="hasSpace(SpaceName.PHOBOS_SPACE_HAVEN)" :space="getSpace(SpaceName.PHOBOS_SPACE_HAVEN)" text="Phobos Space Haven" :tileView="tileView" />
-      <BoardSpace v-if="hasSpace(SpaceName.STANFORD_TORUS)" :space="getSpace(SpaceName.STANFORD_TORUS)" text="Stanford Torus" :tileView="tileView" />
-      <BoardSpace v-if="hasSpace(SpaceName.LUNA_METROPOLIS)" :space="getSpace(SpaceName.LUNA_METROPOLIS)" text="Luna Metropolis" :tileView="tileView" />
-      <BoardSpace v-if="hasSpace(SpaceName.DAWN_CITY)" :space="getSpace(SpaceName.DAWN_CITY)" text="Dawn City" :tileView="tileView" />
-      <BoardSpace v-if="hasSpace(SpaceName.STRATOPOLIS)" :space="getSpace(SpaceName.STRATOPOLIS)" text="Stratopolis" :tileView="tileView" />
-      <BoardSpace v-if="hasSpace(SpaceName.MAXWELL_BASE)" :space="getSpace(SpaceName.MAXWELL_BASE)" text="Maxwell Base" :tileView="tileView" />
-      <!-- <board-space :space="getSpace('c74')" text="Martian Transhipment Station" :tileView="tileView"></board-space> -->
-      <BoardSpace v-if="hasSpace(SpaceName.CERES_SPACEPORT)" :space="getSpace(SpaceName.CERES_SPACEPORT)" text="Ceres Spaceport" :tileView="tileView" />
-      <BoardSpace v-if="hasSpace(SpaceName.DYSON_SCREENS)" :space="getSpace(SpaceName.DYSON_SCREENS)" text="Dyson Screens" :tileView="tileView" />
-      <BoardSpace v-if="hasSpace(SpaceName.LUNAR_EMBASSY)" :space="getSpace(SpaceName.LUNAR_EMBASSY)" text="Lunar Embassy" :tileView="tileView" />
-      <BoardSpace v-if="hasSpace(SpaceName.VENERA_BASE)" :space="getSpace(SpaceName.VENERA_BASE)" text="Venera Base" :tileView="tileView" />
-    </div>
+    <Teleport :to="orbitDock ?? 'body'" :disabled="!orbitDock">
+      <div
+        id="colony_spaces"
+        class="board-outer-spaces"
+        :class="{'board-outer-spaces--dock': orbitDock}"
+        @pointerover="inspectFromEvent"
+        @pointerout="leaveSector"
+        @focusin="inspectFromEvent"
+        @focusout="leaveSector"
+        @click="inspectFromEvent"
+        @keydown="navigateAtlas">
+        <BoardSpace
+          v-for="station in orbitalSpaces"
+          :key="station.id"
+          :space="station"
+          :text="orbitalName(station)"
+          :tileView="tileView"
+          :class="atlasSpaceClasses(station.id)"
+          :tabindex="atlas ? 0 : undefined"
+          :role="atlas ? 'button' : undefined"
+          :aria-label="atlas ? $t(orbitalName(station)) : undefined"
+          :aria-describedby="inspectedSpace === station.id ? sectorDescriptionId : undefined" />
+      </div>
+    </Teleport>
 
     <div class="global-numbers" :class="{'global-numbers--large': isLargeBoard}">
       <div class="global-numbers-temperature">
@@ -73,21 +83,27 @@
       </div>
     </div>
 
-    <div class="board" :class="{'board--large': isLargeBoard}" id="main_board">
+    <div
+      id="main_board"
+      class="board"
+      :class="{'board--large': isLargeBoard}"
+      @pointerover="inspectFromEvent"
+      @pointerout="leaveSector"
+      @focusin="inspectFromEvent"
+      @focusout="leaveSector"
+      @click="inspectFromEvent"
+      @keydown="navigateAtlas">
       <BoardSpace
         v-for="curSpace in allSpacesOnMars"
         :key="curSpace.id"
         :space="curSpace"
         :aresExtension="expansions.ares"
         :tileView="tileView"
-        :class="{
-          'atlas-sector--inspected': atlas && inspectedSpace === curSpace.id,
-          'atlas-sector--legal': legalSpaces?.includes(curSpace.id),
-          'atlas-sector--placed': placedSpaces?.has(curSpace.id),
-        }"
+        :class="atlasSpaceClasses(curSpace.id)"
         :tabindex="atlas ? (atlasTabStop === curSpace.id ? 0 : -1) : undefined"
         :role="atlas ? 'button' : undefined"
         :aria-label="atlas ? $t('Sector') + ' ' + (curSpace.a9 ?? curSpace.id) : undefined"
+        :aria-describedby="inspectedSpace === curSpace.id ? sectorDescriptionId : undefined"
         data-test="board-space"
       />
 
@@ -367,13 +383,31 @@ import {AresData} from '@/common/ares/AresData';
 import {SpaceModel} from '@/common/models/SpaceModel';
 import {SpaceType} from '@/common/boards/SpaceType';
 import {SpaceId} from '@/common/Types';
-import {spacesById} from '@/client/utils/spacesById';
 import {TileView} from '@/client/components/board/TileView';
 import {BoardName} from '@/common/boards/BoardName';
 import {LEGENDS} from '@/client/components/Legends';
 import {Expansion} from '@/common/cards/GameModule';
 import {SpaceName} from '@/common/boards/SpaceName';
 import {SoundManager} from '@/client/utils/SoundManager';
+
+const orbitalNames: Partial<Record<SpaceId, string>> = {
+  [SpaceName.GANYMEDE_COLONY]: 'Ganymede Colony',
+  [SpaceName.PHOBOS_SPACE_HAVEN]: 'Phobos Space Haven',
+  [SpaceName.STANFORD_TORUS]: 'Stanford Torus',
+  [SpaceName.LUNA_METROPOLIS]: 'Luna Metropolis',
+  [SpaceName.DAWN_CITY]: 'Dawn City',
+  [SpaceName.STRATOPOLIS]: 'Stratopolis',
+  [SpaceName.MAXWELL_BASE]: 'Maxwell Base',
+  'c74': 'Martian Transhipment Station',
+  [SpaceName.CERES_SPACEPORT]: 'Ceres Spaceport',
+  [SpaceName.DYSON_SCREENS]: 'Dyson Screens',
+  [SpaceName.LUNAR_EMBASSY]: 'Lunar Embassy',
+  [SpaceName.VENERA_BASE]: 'Venera Base',
+};
+
+function sectorForTarget(target: EventTarget | null): HTMLElement | null {
+  return target instanceof Element ? target.closest<HTMLElement>('[data_space_id]') : null;
+}
 
 class GlobalParamLevel {
   constructor(public value: number, public isActive: boolean, public strValue: string) {
@@ -382,10 +416,12 @@ class GlobalParamLevel {
 
 export default defineComponent({
   name: 'Board',
-  emits: ['toggleTileView', 'inspectSpace'],
+  emits: ['toggleTileView', 'inspectSpace', 'leaveSpace'],
   props: {
     atlas: Boolean,
     inspectedSpace: String as () => SpaceId | undefined,
+    sectorDescriptionId: String,
+    orbitDock: Object as () => HTMLElement | undefined,
     legalSpaces: Array as () => ReadonlyArray<SpaceId>,
     placedSpaces: Object as () => ReadonlySet<SpaceId>,
     spaces: {
@@ -432,18 +468,47 @@ export default defineComponent({
     BoardSpace,
   },
   methods: {
-    inspectFromEvent(event: Event) {
-      if (!this.atlas || !(event.target instanceof Element)) {
+    orbitalName(space: SpaceModel): string {
+      return orbitalNames[space.id] ?? space.a9 ?? space.id;
+    },
+    atlasSpaceClasses(id: SpaceId) {
+      return {
+        'atlas-sector--inspected': this.atlas && this.inspectedSpace === id,
+        'atlas-sector--legal': this.legalSpaces?.includes(id),
+        'atlas-sector--placed': this.placedSpaces?.has(id),
+      };
+    },
+    inspectFromEvent(event: MouseEvent | FocusEvent) {
+      if (!this.atlas || (event.type === 'pointerover' && 'pointerType' in event && event.pointerType === 'touch')) {
         return;
       }
-      const sector = event.target.closest('[data_space_id]');
-      const id = sector?.getAttribute('data_space_id');
-      if (id) {
-        this.$emit('inspectSpace', id as SpaceId);
+      const sector = sectorForTarget(event.target);
+      if (sector === null) {
         if (event.type === 'click') {
-          SoundManager.mission('sector');
+          this.$emit('leaveSpace');
         }
+        return;
       }
+      if (sector === sectorForTarget(event.relatedTarget)) {
+        return;
+      }
+      this.$emit('inspectSpace', sector.getAttribute('data_space_id') as SpaceId, sector);
+      if (event.type === 'click') {
+        SoundManager.mission('sector');
+      }
+    },
+    leaveSector(event: PointerEvent | FocusEvent) {
+      if (!this.atlas || ('pointerType' in event && event.pointerType === 'touch')) {
+        return;
+      }
+      const sector = sectorForTarget(event.target);
+      if (sector === null || sector === sectorForTarget(event.relatedTarget)) {
+        return;
+      }
+      if (event.type === 'pointerout' && sector.matches(':focus-visible')) {
+        return;
+      }
+      this.$emit('leaveSpace', sector);
     },
     navigateAtlas(event: KeyboardEvent) {
       if (!this.atlas || !(event.target instanceof HTMLElement) || !event.target.hasAttribute('data_space_id')) {
@@ -459,22 +524,10 @@ export default defineComponent({
       }
       const direction = event.key === 'ArrowRight' ? 1 : -1;
       event.preventDefault();
-      const sectors = Array.from(this.$el.querySelectorAll('#main_board > [data_space_id]')) as HTMLElement[];
+      const region = event.currentTarget as HTMLElement;
+      const sectors = Array.from(region.querySelectorAll<HTMLElement>(':scope > [data_space_id]'));
       const index = sectors.indexOf(event.target);
       sectors[index + direction]?.focus({preventScroll: true});
-    },
-    hasSpace(spaceId: SpaceId): boolean {
-      return spacesById(this.spaces).has(spaceId);
-    },
-    getSpace(spaceId: SpaceId): SpaceModel {
-      const space = spacesById(this.spaces).get(spaceId);
-      if (space === undefined) {
-        // For some reason Vue still calls getSpace when hasSpace is false. I thought it didn't.
-        // Returning undefined as SpaceModel satisfies the type checker, but the value isn't
-        // used.
-        return undefined as unknown as SpaceModel;
-      }
-      return space;
     },
     getValuesForParameter(targetParameter: string): Array<GlobalParamLevel> {
       const values = [];
@@ -539,6 +592,9 @@ export default defineComponent({
     },
   },
   computed: {
+    orbitalSpaces(): Array<SpaceModel> {
+      return this.spaces.filter((space) => space.spaceType === SpaceType.COLONY);
+    },
     atlasTabStop(): SpaceId | undefined {
       return this.allSpacesOnMars.find((space) => space.id === this.inspectedSpace)?.id ?? this.allSpacesOnMars[0]?.id;
     },

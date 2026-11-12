@@ -1,0 +1,279 @@
+#player-home.mission-cinematic .mission-play__map:has(.rival-panel) {
+  --rival-panel-top: clamp(76px, 12vh, 118px);
+  --rival-panel-right: clamp(12px, 2.8vw, 42px);
+  --rival-panel-width: clamp(298px, 27vw, 370px);
+}
+
+#player-home.mission-cinematic .rival-panel {
+  position: absolute;
+  z-index: 8;
+  top: var(--rival-panel-top);
+  right: var(--rival-panel-right);
+  width: var(--rival-panel-width);
+}
+
+#player-home.mission-cinematic:has(.mission-status__your-turn) .mission-play__map:has(.rival-panel) {
+  --rival-panel-top: clamp(94px, 12vh, 118px);
+}
+
+.mission-status__your-turn {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 3px 7px;
+  border: 1px solid #e6ae6d8c;
+  border-radius: 3px;
+  background: #181f23;
+  color: #ffdcaf;
+  font-size: 0.63rem;
+  line-height: 1;
+  vertical-align: top;
+}
+
+.rival-panel__list {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  > li {
+    margin: 0;
+  }
+}
+
+.rival-tile {
+  display: grid;
+  width: 100%;
+  min-height: 29px;
+  grid-template-columns: minmax(0, 1fr) repeat(6, auto);
+  align-items: center;
+  column-gap: clamp(3px, 0.6vw, 7px);
+  padding: 3px 7px;
+  border: 1px solid #9fb0ba4d;
+  border-radius: 3px;
+  background: #10191fe8;
+  color: #edf1f1;
+  font-size: 0.62rem;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    border-color: #e6ae6d;
+    background: #1a2730;
+  }
+}
+
+.rival-tile__identity,
+.rival-tile__resource {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.rival-tile--active {
+  border-color: #e6ae6d8c;
+
+  .rival-tile__name {
+    color: #ffdcaf;
+  }
+}
+
+.rival-tile__marker {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 1px;
+}
+
+.rival-tile__person {
+  display: grid;
+  min-width: 0;
+}
+
+.rival-tile__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rival-tile__status {
+  color: #ffdcaf;
+  font-size: 0.49rem;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.rival-tile__resource {
+  font-variant-numeric: tabular-nums;
+
+  .resource_icon {
+    width: 13px;
+    height: 13px;
+    flex: none;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+}
+
+.rival-panel__more,
+.rival-panel__close {
+  padding: 4px 8px;
+  border: 1px solid #9fb0ba4d;
+  border-radius: 3px;
+  background: #10191f;
+  color: #edf1f1;
+  font-size: 0.65rem;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    border-color: #e6ae6d;
+  }
+}
+
+.rival-panel__more {
+  flex: none;
+  margin-inline-start: auto;
+}
+
+.rival-panel__overflow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+}
+
+.rival-panel__overflow-turn {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 5px;
+  border: 1px solid #e6ae6d8c;
+  border-radius: 3px;
+  background: #10191fe8;
+  color: #edf1f1;
+  font-size: 0.58rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rival-tile--active .rival-tile__marker {
+    animation: rival-turn-arrives 460ms ease-out;
+  }
+}
+
+@keyframes rival-turn-arrives {
+  from { box-shadow: 0 0 0 4px #e6ae6da0; }
+  to { box-shadow: 0 0 0 0 #e6ae6d00; }
+}
+
+.rival-panel__dialog {
+  width: min(820px, calc(100% - 24px));
+  max-width: none;
+  max-height: min(80vh, 720px);
+  padding: 0;
+  overflow-y: auto;
+  border: 1px solid #879ca963;
+  border-radius: 8px;
+  background: #121d24;
+  color: #edf1f1;
+
+  &::backdrop,
+  & + .backdrop {
+    background: #070b10a6;
+  }
+}
+
+.rival-panel__dialog-header {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border-bottom: 1px solid #9fb0ba4d;
+  background: #15212a;
+
+  h2 {
+    margin: 0;
+    font-size: 0.9rem;
+    overflow-wrap: anywhere;
+  }
+}
+
+.rival-panel__cards,
+.rival-panel__extra,
+.rival-panel__empty {
+  padding: 12px 14px;
+}
+
+.rival-panel__cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.rival-panel__empty {
+  margin: 0;
+  color: #c3d0d6;
+}
+
+@media (min-width: 761px) {
+  #player-home.mission-cinematic .mission-play__map:has(.rival-panel) {
+    .atlas-stage__map {
+      right: clamp(150px, 12vw, 180px);
+      left: clamp(140px, 12vw, 180px);
+    }
+
+    .atlas-inspector {
+      top: max(23%, calc(var(--rival-panel-top) + 155px));
+    }
+  }
+}
+
+@media (max-width: 760px) {
+  #player-home.mission-cinematic .mission-play__map:has(.rival-panel) {
+    --rival-panel-top: 153px;
+    --rival-panel-right: 9px;
+    --rival-panel-width: min(330px, calc(100% - 54px));
+    --rival-map-top: calc(var(--rival-panel-top) + 36px);
+
+    &:has(.rival-panel__list > li:nth-child(2)) {
+      --rival-map-top: calc(var(--rival-panel-top) + 60px);
+    }
+
+    &:has(.rival-panel__list > li:nth-child(3)) {
+      --rival-map-top: calc(var(--rival-panel-top) + 84px);
+    }
+
+    &:has(.rival-panel__list > li:nth-child(4)) {
+      --rival-map-top: calc(var(--rival-panel-top) + 110px);
+    }
+
+    &:has(.rival-panel__more) {
+      --rival-map-top: calc(var(--rival-panel-top) + 140px);
+    }
+  }
+
+  .rival-tile {
+    min-height: 24px;
+    padding: 2px 4px;
+    font-size: 0.55rem;
+  }
+
+  .rival-tile__identity,
+  .rival-tile__resource {
+    gap: 2px;
+  }
+
+  .rival-tile__resource .resource_icon {
+    width: 11px;
+    height: 11px;
+  }
+}

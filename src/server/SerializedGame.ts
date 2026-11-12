@@ -43,6 +43,8 @@ export type SerializedGame = {
     gameLog: Array<LogMessage>;
     gameOptions: GameOptions;
     generation: number;
+    turn?: number;
+    turnStarted?: boolean;
     globalsPerGeneration: Array<Partial<Record<GlobalParameter, number>>>;
     id: GameId;
     initialDraftIteration: number;

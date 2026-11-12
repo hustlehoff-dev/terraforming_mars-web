@@ -1,8 +1,10 @@
 <template>
   <div class="mission-setup player_home_block player_home_block--setup nofloat">
     <a name="board" class="player_home_anchor hotkey-target"></a>
-    <AtlasBoard :game="game" :tileView="tileView" @toggleTileView="$emit('toggleTileView')" />
-    <slot></slot>
+    <template v-if="!choosingCorporation">
+      <AtlasBoard :game="game" :tileView="tileView" @toggleTileView="$emit('toggleTileView')" />
+      <slot></slot>
+    </template>
     <template v-if="isInitialDraftingPhase">
       <div v-for="card in playerView.dealtCorporationCards" :key="card.name" class="cardbox">
         <Card :card="card" />
@@ -52,8 +54,14 @@
     </template>
 
     <a name="actions" class="player_home_anchor hotkey-target"></a>
-    <DynamicTitle v-if="playerView.pickedCorporationCard.length === 0" title="Select initial cards:" :color="thisPlayer.color" />
+    <DynamicTitle v-if="!choosingCorporation && playerView.pickedCorporationCard.length === 0" title="Select initial cards:" :color="thisPlayer.color" />
     <WaitingFor v-if="game.phase !== 'end'" :playerView="playerView" :waitingfor="playerView.waitingFor" :requestId="playerView.requestId" />
+
+    <details v-if="choosingCorporation" class="corporation-board">
+      <summary v-i18n>Board</summary>
+      <AtlasBoard :game="game" :tileView="tileView" @toggleTileView="$emit('toggleTileView')" />
+      <slot></slot>
+    </details>
 
     <DynamicTitle title="Game details" :color="thisPlayer.color" />
 
@@ -125,6 +133,9 @@ export default defineComponent({
   },
   emits: ['toggleTileView'],
   computed: {
+    choosingCorporation(): boolean {
+      return this.playerView.waitingFor?.type === 'initialCards';
+    },
     thisPlayer(): PublicPlayerModel {
       return this.playerView.thisPlayer;
     },

@@ -4,7 +4,30 @@
       message="Continue without buying any project cards?"
       ref="confirmation"
       @accept="confirmSelection" />
-    <SelectCard :playerView="playerView" :playerinput="corpCardOption" :showtitle="true" :onsave="noop" @cardschanged="corporationChanged" />
+    <fieldset class="corporation-selection">
+      <legend v-i18n>Choose your corporation</legend>
+      <div class="corporation-selection__options">
+        <article
+          v-for="card in corpCardOption.cards"
+          :key="card.name"
+          class="corporation-selection__option"
+          :class="{'corporation-selection__option--selected': selectedCorporations.includes(card.name)}">
+          <h2>{{ $t(card.name) }}</h2>
+          <Card :card="card" autoTall />
+          <label class="corporation-selection__choice">
+            <input
+              type="radio"
+              :name="corporationGroup"
+              :checked="selectedCorporations.includes(card.name)"
+              :disabled="card.isDisabled"
+              :aria-label="$t(card.name)"
+              @change="corporationChanged([card.name])">
+            <span v-if="selectedCorporations.includes(card.name)" v-i18n>Selected</span>
+            <span v-else v-i18n>Select</span>
+          </label>
+        </article>
+      </div>
+    </fieldset>
     <div v-if="playerCanChooseAridor" class="player_home_colony_cont">
       <div v-i18n>These are the colony tiles Aridor may choose from:</div>
       <div class="discarded-colonies-for-aridor">
@@ -30,7 +53,7 @@
 
 <script lang="ts">
 
-import {defineComponent} from 'vue';
+import {defineComponent, useId} from 'vue';
 
 import AppButton from '@/client/components/common/AppButton.vue';
 import {getCard, getCardOrThrow} from '@/client/cards/ClientCardManifest';
@@ -39,6 +62,7 @@ import * as constants from '@/common/constants';
 import {PlayerInputModel, SelectCardModel, SelectInitialCardsModel} from '@/common/models/PlayerInputModel';
 import {PlayerViewModel} from '@/common/models/PlayerModel';
 import SelectCard from '@/client/components/SelectCard.vue';
+import Card from '@/client/components/card/Card.vue';
 import ConfirmDialog from '@/client/components/common/ConfirmDialog.vue';
 import {getPreferences, Preferences, PreferencesManager} from '@/client/utils/PreferencesManager';
 import {Tag} from '@/common/cards/Tag';
@@ -55,7 +79,6 @@ type DataModel = {
   selectedCards: Array<CardName>,
   // End result will be a single CEO, but the player may select multiple while deciding what to keep.
   selectedCeos: Array<CardName>,
-  // End result will be a single corporation, but the player may select multiple while deciding what to keep.
   selectedCorporations: Array<CardName>,
   selectedPreludes: Array<CardName>,
   valid: boolean,
@@ -96,9 +119,13 @@ export default defineComponent({
   },
   components: {
     AppButton,
+    Card,
     SelectCard,
     ConfirmDialog,
     Colony,
+  },
+  setup() {
+    return {corporationGroup: useId()};
   },
   data(): DataModel {
     return {
@@ -335,12 +362,7 @@ export default defineComponent({
       return hasOption(this.playerinput.options, titles.SELECT_CEO_TITLE);
     },
     corpCardOption() {
-      const option = getOption(this.playerinput.options, titles.SELECT_CORPORATION_TITLE);
-      if (getPreferences().experimental_ui) {
-        option.min = 1;
-        option.max = option.cards.length;
-      }
-      return option;
+      return getOption(this.playerinput.options, titles.SELECT_CORPORATION_TITLE);
     },
     preludeCardOption() {
       const option = getOption(this.playerinput.options, titles.SELECT_PRELUDE_TITLE);

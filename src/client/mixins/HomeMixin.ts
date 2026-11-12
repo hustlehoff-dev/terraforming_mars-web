@@ -31,6 +31,9 @@ export const HomeMixin = defineComponent({
     },
   },
   methods: {
+    handleViewNavigation(_event: KeyboardEvent): boolean {
+      return false;
+    },
     navigatePage(event: KeyboardEvent) {
       // Most '?' are shifted, so process this before the action that exits early with modifiers
       if (event.key === '?') {
@@ -38,6 +41,9 @@ export const HomeMixin = defineComponent({
         return;
       }
       if (event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+      if (this.handleViewNavigation(event)) {
         return;
       }
       const ids: Partial<Record<string, string>> = {

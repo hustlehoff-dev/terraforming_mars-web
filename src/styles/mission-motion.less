@@ -110,10 +110,34 @@
       z-index: 1;
     }
 
-    .mission-status__value,
-    .atlas-inspector__sector strong {
+    .atlas-stage__shuttle {
+      z-index: 2;
+      top: 32%;
+      left: 50%;
+      display: block;
+      width: 14px;
+      height: 5px;
+      border-radius: 60% 85% 45% 40%;
+      background: #f3e8d7;
+      box-shadow: -4px 0 8px 2px #65ccff, -17px 0 12px 1px #51b5ff80;
+      animation: mission-shuttle 17s linear infinite;
+    }
+
+    .atlas-stage__completion {
+      z-index: 2;
+      inset: 14% 0 22%;
+      display: block;
+      background: radial-gradient(ellipse, #b8ffe277, transparent 66%);
+      animation: mission-atmosphere 1400ms ease-out both;
+    }
+
+    .mission-status__value {
       display: inline-block;
       animation: mission-readout 380ms ease-out both;
+    }
+
+    .mission-status__your-turn {
+      animation: mission-readout 420ms ease-out both;
     }
 
     .atlas-stage:not(.atlas-stage--tracks) .board-cont.atlas-board {
@@ -142,11 +166,11 @@
       }
     }
 
-    .mission-hand__card {
+    .mission-hand__slot {
       transition: translate 160ms ease-out, border-color 160ms ease-out, filter 160ms ease-out;
 
       &:hover,
-      &:focus-visible {
+      &:focus-within {
         translate: 0 -3px;
         filter: brightness(1.16);
       }
@@ -193,6 +217,18 @@
 @keyframes mission-dust {
   from { translate: -24px 18px; }
   to { translate: 28px -25px; }
+}
+
+@keyframes mission-shuttle {
+  0% { opacity: 0; transform: translate(-45vw, 50px) rotate(-16deg); }
+  5% { opacity: 1; }
+  14% { opacity: 1; }
+  20%, 100% { opacity: 0; transform: translate(45vw, -38px) rotate(-4deg); }
+}
+
+@keyframes mission-atmosphere {
+  from { opacity: 0.85; scale: 0.75; }
+  to { opacity: 0; scale: 1.15; }
 }
 
 @keyframes mission-readout {

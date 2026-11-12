@@ -1,0 +1,90 @@
+.corporation-selection {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  margin: 0 0 24px;
+  padding: clamp(14px, 3vw, 45px);
+  border: 1px solid #675e56;
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, #100e12ae, #10161bf2),
+    url(./assets/board/mars-without-venus.png) center 21% / min(110vw, 1170px) auto no-repeat,
+    #121a21;
+
+  legend {
+    padding-inline: 10px;
+    color: #f6e7d7;
+    font-size: clamp(1.3rem, 4vw, 2.5rem);
+    font-weight: 700;
+    line-height: 1.12;
+  }
+}
+
+.corporation-selection__options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 310px));
+  justify-content: center;
+  gap: clamp(10px, 2vw, 20px);
+}
+
+.corporation-selection__option {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 6px;
+  border: 1px solid #879ba770;
+  border-radius: 7px;
+  background: linear-gradient(155deg, #24323bec, #10171bed);
+
+  h2 {
+    margin: 0 0 10px;
+    color: #f6e7d7;
+    font-size: 0.96rem;
+    text-align: center;
+  }
+
+  .card-container {
+    max-width: 100%;
+    margin-inline: 0;
+  }
+}
+
+.corporation-selection__option--selected {
+  border-color: #91f9f1;
+  box-shadow: 0 0 0 1px #91f9f1, 0 0 18px #65e5dc55;
+}
+
+.corporation-selection__choice {
+  display: flex;
+  min-width: 65%;
+  justify-content: center;
+  gap: 8px;
+  margin: auto 0 0;
+  padding: 6px 9px;
+  border: 1px solid #708591;
+  border-radius: 4px;
+  background: #101a21;
+  color: #f4eee7;
+  cursor: pointer;
+
+  &:focus-within,
+  &:hover {
+    border-color: #91f9f1;
+  }
+
+  &:has(:checked) {
+    background: #143938;
+    color: #b6fff3;
+  }
+}
+
+.corporation-board {
+  margin: 22px 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .corporation-selection__option {
+    transition: border-color 180ms ease-out, box-shadow 180ms ease-out;
+  }
+}

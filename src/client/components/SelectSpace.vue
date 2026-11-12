@@ -1,12 +1,14 @@
 <template>
   <div class="select_space_cont">
-    <ConfirmDialog
-      message="Place your tile here?"
-      :enableDontShowAgainCheckbox="true"
-      ref="confirmation"
-      @accept="confirmPlacement"
-      @dismiss="cancelPlacement"
-      @hide="hideDialog" />
+    <Teleport to="body">
+      <ConfirmDialog
+        message="Place your tile here?"
+        :enableDontShowAgainCheckbox="true"
+        ref="confirmation"
+        @accept="confirmPlacement"
+        @dismiss="cancelPlacement"
+        @hide="hideDialog" />
+    </Teleport>
     <div v-if="showtitle" class="wf-select-space">
       {{ $t(playerinput.title) }}
       <GoToMap :playerinput="playerinput" />

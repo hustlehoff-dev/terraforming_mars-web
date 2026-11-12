@@ -126,6 +126,8 @@ export class Game implements IGame, Logger {
   public globalsPerGeneration: Array<Partial<Record<GlobalParameter, number>>> = [];
 
   public generation: number = 1;
+  public turn: number = 0;
+  private turnStarted = false;
   public phase: Phase = Phase.RESEARCH;
   public projectDeck: ProjectDeck;
   public preludeDeck: PreludeDeck;
@@ -482,7 +484,8 @@ export class Game implements IGame, Logger {
     if (this.gameOptions.initialDraftVariant) {
       this.phase = Phase.INITIALDRAFTING;
       newInitialDraft(this).startDraft();
-    } else {
+    } else if (this.phase === Phase.RESEARCH) {
+      // When everyone uses Beginner Corporation, they have already started taking actions.
       this.gotoInitialResearchPhase();
     }
   }
@@ -516,6 +519,8 @@ export class Game implements IGame, Logger {
       gameLog: this.gameLog,
       gameOptions: this.gameOptions,
       generation: this.generation,
+      turn: this.turn,
+      turnStarted: this.turnStarted,
       globalsPerGeneration: this.globalsPerGeneration,
       id: this.id,
       initialDraftIteration: this.initialDraftIteration,
@@ -909,6 +914,7 @@ export class Game implements IGame, Logger {
     this.updateGlobalsForTheGeneration();
 
     this.generation++;
+    this.turn = 0;
     this.log('Generation ${0}', (b) => b.forNewGeneration().number(this.generation));
     this.setNextFirstPlayer();
 
@@ -1195,10 +1201,18 @@ export class Game implements IGame, Logger {
 
   private startActionsForPlayer(player: IPlayer) {
     this.activePlayer = player;
+    this.turnStarted = false;
     player.actionsTakenThisGame++;
     player.actionsTakenThisRound = 0;
 
     player.takeAction();
+  }
+
+  public beginActionTurn(): void {
+    if (this.phase === Phase.ACTION && !this.turnStarted) {
+      this.turn++;
+      this.turnStarted = true;
+    }
   }
 
   public increaseOxygenLevel(player: IPlayer, increments: -2 | -1 | 1 | 2): void {
@@ -1820,6 +1834,8 @@ export class Game implements IGame, Logger {
     game.gameAge = d.gameAge;
     game.gameLog = d.gameLog;
     game.generation = d.generation;
+    game.turn = d.turn ?? (d.phase === Phase.ACTION ? 1 : 0);
+    game.turnStarted = d.turnStarted ?? d.phase === Phase.ACTION;
     game.phase = d.phase;
     game.oxygenLevel = d.oxygenLevel;
     game.undoCount = d.undoCount ?? 0;

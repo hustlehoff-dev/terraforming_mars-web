@@ -76,6 +76,7 @@ export class Server {
       gameAge: game.gameAge,
       gameOptions: this.getGameOptionsAsModel(game.gameOptions),
       generation: game.getGeneration(),
+      turn: game.phase === Phase.ACTION ? game.turn : undefined,
       globalsPerGeneration: game.gameIsOver() ? game.globalsPerGeneration : [],
       isSoloModeWin: game.isSoloModeWin(),
       isTerraformed: game.marsIsTerraformed(),

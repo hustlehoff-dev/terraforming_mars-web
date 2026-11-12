@@ -20,20 +20,23 @@ describe('SelectInitialCards', () => {
   });
 
   it('saves data without prelude', async () => {
-    const component = createComponent([CardName.ECOLINE], [CardName.ANTS]);
+    const component = createComponent([CardName.HELION, CardName.ECOLINE], [CardName.ANTS]);
     expect(component).not.is.undefined;
 
     const button = getButton(component);
     expect(button.attributes().disabled).not.to.be.undefined;
 
     const selectCards = component.findAllComponents({name: 'select-card'});
-    expect(selectCards).has.length(2);
-    selectCards[0].vm.$emit('cardschanged', [CardName.ECOLINE]);
+    expect(selectCards).has.length(1);
+    await component.get('input[aria-label="Helion"]').setValue(true);
+    await selectEcoline(component);
+    expect(component.findAll('input[type="radio"]:checked')).to.have.length(1);
+    expect(component.get('.corporation-selection__option--selected').text()).to.include('Selected');
 
     await component.vm.$nextTick();
     expect(button.attributes().disabled).is.undefined;
 
-    selectCards[1].vm.$emit('cardschanged', [CardName.ANTS]);
+    selectCards[0].vm.$emit('cardschanged', [CardName.ANTS]);
     await component.vm.$nextTick();
 
     await button.trigger('click');
@@ -49,10 +52,10 @@ describe('SelectInitialCards', () => {
     expect(component).not.is.undefined;
 
     const selectCards = component.findAllComponents({name: 'select-card'});
-    expect(selectCards).has.length(3);
-    selectCards[0].vm.$emit('cardschanged', [CardName.ECOLINE]);
-    selectCards[1].vm.$emit('cardschanged', [CardName.ALLIED_BANK]);
-    selectCards[2].vm.$emit('cardschanged', [CardName.ANTS]);
+    expect(selectCards).has.length(2);
+    await selectEcoline(component);
+    selectCards[0].vm.$emit('cardschanged', [CardName.ALLIED_BANK]);
+    selectCards[1].vm.$emit('cardschanged', [CardName.ANTS]);
     await component.vm.$nextTick();
 
     const button = getButton(component);
@@ -70,18 +73,18 @@ describe('SelectInitialCards', () => {
     expect(button.attributes().disabled).not.to.be.undefined;
 
     const selectCards = component.findAllComponents({name: 'select-card'});
-    expect(selectCards).has.length(3);
+    expect(selectCards).has.length(2);
 
-    selectCards[0].vm.$emit('cardschanged', [CardName.ECOLINE]);
+    await selectEcoline(component);
     await component.vm.$nextTick();
     expect(button.attributes().disabled).not.to.be.undefined;
 
-    selectCards[1].vm.$emit('cardschanged', [CardName.ALLIED_BANK, CardName.SUPPLY_DROP]);
+    selectCards[0].vm.$emit('cardschanged', [CardName.ALLIED_BANK, CardName.SUPPLY_DROP]);
 
     await component.vm.$nextTick();
     expect(button.attributes().disabled).is.undefined;
 
-    selectCards[2].vm.$emit('cardschanged', [CardName.ANTS]);
+    selectCards[1].vm.$emit('cardschanged', [CardName.ANTS]);
     await component.vm.$nextTick();
 
     await button.trigger('click');
@@ -99,8 +102,7 @@ describe('SelectInitialCards', () => {
 
   it('shows error when no project cards selected', async () => {
     const component = createComponent([CardName.ECOLINE], [CardName.ANTS]);
-    const selectCards = component.findAllComponents({name: 'select-card'});
-    selectCards[0].vm.$emit('cardschanged', [CardName.ECOLINE]);
+    await selectEcoline(component);
     await component.vm.$nextTick();
 
     const button = getButton(component);
@@ -120,8 +122,8 @@ describe('SelectInitialCards', () => {
       [CardName.ALLIED_BANK, CardName.SUPPLY_DROP]);
 
     const selectCards = component.findAllComponents({name: 'select-card'});
-    selectCards[0].vm.$emit('cardschanged', [CardName.ECOLINE]);
-    selectCards[1].vm.$emit('cardschanged', [CardName.ALLIED_BANK, CardName.SUPPLY_DROP]);
+    await selectEcoline(component);
+    selectCards[0].vm.$emit('cardschanged', [CardName.ALLIED_BANK, CardName.SUPPLY_DROP]);
     await component.vm.$nextTick();
     const button = getButton(component);
     await button.trigger('click');
@@ -137,16 +139,20 @@ describe('SelectInitialCards', () => {
     expect(component).not.is.undefined;
 
     const selectCards = component.findAllComponents({name: 'select-card'});
-    expect(selectCards).has.length(3);
-    selectCards[0].vm.$emit('cardschanged', [CardName.ECOLINE]);
-    selectCards[1].vm.$emit('cardschanged', [CardName.FLOYD, CardName.HAL9000]);
-    selectCards[2].vm.$emit('cardschanged', [CardName.ANTS]);
+    expect(selectCards).has.length(2);
+    await selectEcoline(component);
+    selectCards[0].vm.$emit('cardschanged', [CardName.FLOYD, CardName.HAL9000]);
+    selectCards[1].vm.$emit('cardschanged', [CardName.ANTS]);
     await component.vm.$nextTick();
 
     const button = getButton(component);
     expect(button.attributes().disabled).not.to.be.undefined;
   });
 });
+
+function selectEcoline(component: VueWrapper<InstanceType<typeof SelectInitialCards>>) {
+  return component.get('input[aria-label="Ecoline"]').setValue(true);
+}
 
 function getButton(component: VueWrapper<InstanceType<typeof SelectInitialCards>>) {
   return component.findAllComponents({name: 'AppButton'})[0];

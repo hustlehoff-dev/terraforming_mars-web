@@ -111,6 +111,7 @@ export function fakeGameModel(overrides?: RecursivePartial<GameModel>): GameMode
     passedPlayers: [],
     pathfinders: undefined,
     phase: Phase.ACTION,
+    turn: 1,
     spaces: [],
     step: 0,
     tags: [],

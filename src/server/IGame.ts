@@ -60,6 +60,8 @@ export interface IGame extends Logger {
   inputsThisRound: number;
   resettable: boolean;
   generation: number;
+  turn: number;
+  beginActionTurn(): void;
   readonly players: ReadonlyArray<IPlayer>;
   /**
    * MarsBot's player in an automa game, otherwise undefined.

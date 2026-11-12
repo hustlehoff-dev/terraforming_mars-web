@@ -106,15 +106,21 @@ describe('Board', () => {
   });
 
   it('updates off-Mars spaces when the spaces change', async () => {
+    const orbitDock = document.createElement('div');
+    document.body.append(orbitDock);
     const wrapper = shallowMount(Board, {
       ...globalConfig,
-      props: {spaces, expansions: DEFAULT_EXPANSIONS, venusScaleLevel: 0, boardName: BoardName.THARSIS},
+      global: {...globalConfig.global, stubs: {Teleport: false}},
+      props: {spaces, orbitDock, expansions: DEFAULT_EXPANSIONS, venusScaleLevel: 0, boardName: BoardName.THARSIS},
     });
 
     const updated = spaces.map((s) => s.id === SpaceName.GANYMEDE_COLONY ? {...s, tileType: TileType.CITY} : s);
     await wrapper.setProps({spaces: updated});
 
+    expect(orbitDock.querySelector('#colony_spaces')).to.exist;
     const ganymede = wrapper.findAllComponents(BoardSpace).find((w) => w.props('text') === 'Ganymede Colony');
     expect(ganymede?.props('space').tileType).to.eq(TileType.CITY);
+    wrapper.unmount();
+    orbitDock.remove();
   });
 });

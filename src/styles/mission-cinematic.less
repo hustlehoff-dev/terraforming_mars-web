@@ -226,15 +226,10 @@
   }
 
   .atlas-inspector__readout {
-    min-height: 0;
     border: 1px solid #879ca963;
     border-top-color: var(--mission-gold);
     border-radius: 4px;
     background: var(--mission-glass);
-  }
-
-  .atlas-inspector__readout:has(.atlas-inspector__hint) {
-    display: none;
   }
 
   .mission-scoreboard {
@@ -347,21 +342,36 @@
   }
 }
 
-.mission-hand__card {
+.mission-hand__slot {
+  position: relative;
   flex: 0 0 clamp(96px, 10vw, 155px);
   overflow: hidden;
-  padding: 0;
   border: 1px solid #a5b8bd74;
   border-radius: 7px;
   background: #142028;
   color: #f2eee6;
-  text-align: left;
-  cursor: pointer;
 
   &:hover,
-  &:focus-visible,
-  &[aria-expanded='true'] {
+  &:focus-within,
+  &:has(.mission-hand__card[aria-expanded='true']) {
     border-color: #f1be80;
+  }
+}
+
+.mission-hand__card {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+
+  &::after {
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    content: '';
   }
 }
 
@@ -376,23 +386,33 @@
   line-height: 1.16;
 
   strong {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
     padding: 3px 5px;
     border-radius: 2px;
     background: #dec5a4;
     color: #1b2227;
   }
+
+  .resource_icon {
+    width: 13px;
+    height: 13px;
+  }
 }
 
-.mission-hand__art {
-  display: block;
-  height: clamp(54px, 8vw, 82px);
-  background-image: url(./assets/board/mars-projects.jpg);
-  background-size: 200% 200%;
+.mission-hand__thumbnail {
+  --thumbnail-height: clamp(54px, 8vw, 82px);
+  display: grid;
+  height: var(--thumbnail-height);
+  justify-items: center;
+  overflow: hidden;
+  background: #0d1821;
 
-  &--city { background-position: left top; }
-  &--power { background-position: right top; }
-  &--greenhouse { background-position: left bottom; }
-  &--research { background-position: right bottom; }
+  .card-container {
+    margin: 0;
+    zoom: calc(var(--thumbnail-height) / 325px);
+  }
 }
 
 .mission-hand__effect {
@@ -468,33 +488,8 @@
     }
 
     .atlas-inspector__readout {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1.65fr);
-      align-items: start;
-      column-gap: 10px;
       padding: 6px 8px;
       font-size: 0.65rem;
-    }
-
-    .atlas-inspector__sector,
-    .atlas-inspector__terrain,
-    .atlas-inspector__bonuses {
-      grid-column: 1;
-    }
-
-    .atlas-inspector__bonuses,
-    .atlas-inspector__action {
-      margin-top: 3px;
-      padding-top: 3px;
-    }
-
-    .atlas-inspector__action {
-      grid-column: 2;
-      grid-row: 1 / span 3;
-      margin: 0;
-      padding: 0 0 0 8px;
-      border-top: 0;
-      border-left: 1px solid var(--atlas-line);
     }
 
     .mission-scoreboard {

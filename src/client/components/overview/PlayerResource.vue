@@ -1,7 +1,7 @@
 <template>
   <div class="resource_item" :class="mainCSS">
     <div class="resource_item_stock">
-      <span class="resource_icon tooltip tooltip-bottom" :class="iconCSS" :data-tooltip="resourceTypeTooltip"></span>
+      <ResourceIcon :resource="type" tooltip />
       <div class="resource_item_stock_count" data-test="stock-count">{{ count }}</div>
     </div>
     <div class="resource_item_prod">
@@ -23,9 +23,11 @@ import {DEFAULT_STEEL_VALUE, DEFAULT_TITANIUM_VALUE} from '@/common/constants';
 import {Resource} from '@/common/Resource';
 import {getPreferences} from '@/client/utils/PreferencesManager';
 import {Protection} from '@/common/models/PlayerModel';
+import ResourceIcon from '@/client/components/common/ResourceIcon.vue';
 
 export default defineComponent({
   name: 'PlayerResource',
+  components: {ResourceIcon},
   props: {
     type: {
       type: String as () => Resource,
@@ -71,9 +73,6 @@ export default defineComponent({
     mainCSS(): string {
       return 'resource_item--' + this.type;
     },
-    iconCSS(): string {
-      return 'resource_icon--' + this.type;
-    },
     productionSign(): string {
       if (this.production > 0) {
         return '+';
@@ -97,12 +96,6 @@ export default defineComponent({
     },
     showResourceProtectionIcon(): boolean {
       return this.productionProtection === 'on' && this.resourceProtection !== 'off';
-    },
-    resourceTypeTooltip(): string {
-      if (this.type === Resource.MEGACREDITS) {
-        return this.$t('MegaCredits (M€)');
-      }
-      return this.$t(this.type.charAt(0).toUpperCase() + this.type.slice(1));
     },
     productionCountTooltip(): string {
       return this.$t('Production count');

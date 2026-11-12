@@ -1,0 +1,119 @@
+.mission-card-available {
+  outline: 2px solid #95ffce;
+  outline-offset: -2px;
+  box-shadow: 0 0 11px #53fac376;
+}
+
+.mission-card-status {
+  display: block;
+  color: #aaffd7;
+  font-size: 0.59rem;
+  font-weight: 700;
+}
+
+.topmost-player-home:has(.mission-cinematic) {
+  height: 100dvh;
+  overflow: clip;
+
+  > .notice {
+    position: fixed;
+    right: 8px;
+    bottom: 0;
+    padding: 0;
+    background: transparent;
+    font-size: 0.45rem;
+    pointer-events: none;
+  }
+}
+
+#player-home.mission-cinematic {
+  --scene-height: 100dvh;
+
+  height: var(--scene-height);
+  min-height: 0;
+  overflow: clip;
+  padding: 0;
+
+  .mission-play {
+    height: 100%;
+  }
+
+  .mission-dock__commands {
+    display: flex;
+    grid-column: 3;
+    flex-wrap: wrap;
+    justify-content: end;
+    gap: 5px;
+  }
+
+  .mission-dock__button[aria-expanded='true'] {
+    border-color: var(--atlas-ice);
+  }
+
+  .mission-panel {
+    position: absolute;
+    z-index: 105;
+    inset: clamp(52px, 12dvh, 108px) clamp(10px, 3vw, 42px) calc(var(--dock-height) + 27px) auto;
+    display: flex;
+    width: min(720px, calc(100% - 20px));
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #8199a48a;
+    border-radius: 7px;
+    background: #11191ff5;
+    box-shadow: 0 10px 35px #0009;
+  }
+
+  .mission-panel__nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 9px;
+    border-bottom: 1px solid var(--atlas-line);
+  }
+
+  .mission-panel__nav button {
+    padding: 4px 8px;
+    border: 1px solid var(--atlas-line);
+    border-radius: 4px;
+    background: var(--atlas-panel);
+    color: var(--atlas-text);
+    font-size: 0.64rem;
+    cursor: pointer;
+
+    &[aria-pressed='true'],
+    &:focus-visible {
+      border-color: var(--atlas-ice);
+    }
+  }
+
+  .mission-panel__close {
+    margin-inline-start: auto;
+  }
+
+  .mission-panel__body {
+    min-height: 0;
+    flex: 1;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: clamp(8px, 2vw, 18px);
+  }
+
+  .mission-play__controls {
+    display: block;
+  }
+}
+
+@media (max-width: 760px) {
+  #player-home.mission-cinematic {
+    .mission-panel {
+      inset: 55px 10px calc(var(--dock-height) + 21px);
+      width: auto;
+    }
+
+    .mission-dock__commands {
+      display: grid;
+      justify-items: end;
+    }
+  }
+}

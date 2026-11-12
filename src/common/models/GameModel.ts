@@ -40,6 +40,7 @@ export type GameModel = {
   gameAge: number;
   gameOptions: GameOptionsModel;
   generation: number;
+  turn: number | undefined;
   globalsPerGeneration: ReadonlyArray<Partial<Record<GlobalParameter, number>>>,
   isSoloModeWin: boolean;
   lastSoloGeneration: number,

@@ -126,6 +126,20 @@
     white-space: nowrap;
   }
 
+  .mission-status__check,
+  .mission-status__complete {
+    color: #cbe9b5;
+    font-size: 0.65rem;
+  }
+
+  .mission-status__check {
+    margin-inline-start: 0.35em;
+  }
+
+  .mission-status__metric--complete progress {
+    accent-color: #cbe9b5;
+  }
+
   .mission-play__map {
     margin-bottom: 10px;
   }
@@ -361,7 +375,6 @@
 }
 
 .atlas-inspector__readout {
-  min-height: 168px;
   padding: 12px;
   border-top: 2px solid var(--atlas-rust);
   background: var(--atlas-panel);
@@ -371,48 +384,66 @@
   }
 }
 
-.atlas-inspector__sector {
+.atlas-tooltip {
+  position: fixed;
+  z-index: 30;
+  width: max-content;
+  max-width: min(240px, calc(100vw - 16px));
+  padding: 9px 11px;
+  border: 1px solid #526674;
+  border-radius: 5px;
+  background: #121b23;
+  color: #f3eee7;
+  box-shadow: 0 4px 18px #05090d80;
+  font-size: 0.72rem;
+  visibility: hidden;
+  pointer-events: none;
+  overflow-wrap: anywhere;
+
+  p {
+    margin: 0;
+  }
+}
+
+.atlas-tooltip__sector {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 6px;
-  margin: 0 0 6px;
-  color: var(--atlas-muted);
+  gap: 14px;
+  color: #abb9c1;
   font-size: 0.65rem;
 
   strong {
-    color: var(--atlas-text);
+    color: #f3eee7;
     font-family: "Courier New", monospace;
-    font-size: 1.2rem;
+    font-size: 0.9rem;
     line-height: 1;
   }
 }
 
-.atlas-inspector__terrain {
+.atlas-tooltip__terrain {
   font-weight: 700;
   text-transform: capitalize;
 }
 
-.atlas-inspector__caption,
-.atlas-inspector__hint {
+.atlas-inspector__caption {
   color: var(--atlas-muted);
   font-size: 0.66rem;
 }
 
-.atlas-inspector__bonuses,
-.atlas-inspector__action {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--atlas-line);
+.atlas-tooltip__bonuses {
+  margin-top: 5px;
+  color: #abb9c1;
+  font-size: 0.66rem;
 }
 
-.atlas-inspector__bonuses ul {
+.atlas-tooltip__bonuses ul {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 8px;
   margin: 2px 0 0;
   padding: 0;
-  color: var(--atlas-ice);
+  color: #a2eeff;
   list-style: none;
 
   li {
@@ -474,7 +505,4 @@
     }
   }
 
-  .atlas-inspector__readout {
-    min-height: 94px;
-  }
 }

@@ -6,8 +6,32 @@ import {Phase} from '../../common/Phase';
 import {Log} from '../../common/logs/Log';
 import {LogMessageData} from '../../common/logs/LogMessageData';
 import {LogMessageDataType} from '../../common/logs/LogMessageDataType';
+import {PlayedCardLogModel} from '../../common/models/PlayedCardLogModel';
+
+// These are the public play events written by Player.playCard and Player.playCorporationCard.
+// Match the persisted templates so the history also works for existing saved games.
+const cardPlayMessages = new Set(['${0} played ${1}', '${0} played ${1} [ ${2} ]']);
 
 export class GameLogs {
+  public getPlayedCardHistory(game: IGame): Array<PlayedCardLogModel> {
+    const history: Array<PlayedCardLogModel> = [];
+    for (let index = game.gameLog.length - 1; index >= 0; index--) {
+      const message = game.gameLog[index];
+      if (!message || message.playerId !== undefined || !cardPlayMessages.has(message.message)) {
+        continue;
+      }
+      const [player, card] = message.data;
+      if (player?.type === LogMessageDataType.PLAYER && card?.type === LogMessageDataType.CARD) {
+        history.push({
+          key: `${index}:${message.timestamp}:${player.value}:${card.value}`,
+          player: player.value,
+          card: card.value,
+        });
+      }
+    }
+    return history;
+  }
+
   private getLogsForGeneration(messages: Array<LogMessage>, generation: number): Array<LogMessage> {
     let foundStart = generation === 1;
     const newMessages = [];

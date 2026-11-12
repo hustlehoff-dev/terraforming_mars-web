@@ -1502,6 +1502,8 @@ export class Player implements IPlayer {
         }
       }
 
+      game.beginActionTurn();
+
       // Terraforming Mars FAQ says:
       //   If for any reason you are not able to perform your mandatory first action (e.g. if
       //   all 3 Awards are claimed before starting your turn as Vitor), you can skip this and

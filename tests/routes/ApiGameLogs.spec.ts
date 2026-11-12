@@ -8,6 +8,7 @@ import {use} from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import {testGame} from '@tests/TestGame';
 import {statusCode} from '@/common/http/statusCode';
+import {CardName} from '@/common/cards/CardName';
 use(chaiAsPromised);
 
 describe('ApiGameLogs', () => {
@@ -101,6 +102,32 @@ describe('ApiGameLogs', () => {
     await scaffolding.get(ApiGameLogs.INSTANCE, res);
     const messages = JSON.parse(res.content);
     expect(messages).is.empty;
+  });
+
+  it('returns the complete public play history in reverse order with stable keys', async () => {
+    const [game, player, rival] = testGame(2);
+    await scaffolding.ctx.gameLoader.add(game);
+    game.gameLog.length = 0;
+    game.log('${0} played ${1}', (b) => b.player(player).cardName(CardName.MINING_AREA));
+    for (let i = 0; i < 55; i++) {
+      game.log(`Other log ${i}`);
+    }
+    game.log('${0} played ${1}', (b) => b.player(player).cardName(CardName.BIRDS), {reservedFor: player});
+    game.log('${0} drew ${1}', (b) => b.player(rival).cardName(CardName.FISH));
+    game.log('${0} played ${1} [ ${2} ]', (b) => b.player(rival).cardName(CardName.BIRDS).markdown('payment'));
+
+    scaffolding.url = '/api/game/logs?id=' + player.id + '&view=played-cards';
+    await scaffolding.get(ApiGameLogs.INSTANCE, res);
+    const history = JSON.parse(res.content);
+
+    expect(history.map(({card, player: color}: {card: CardName, player: string}) => [card, color]))
+      .deep.eq([[CardName.BIRDS, rival.color], [CardName.MINING_AREA, player.color]]);
+    expect(history[0].key).not.eq(history[1].key);
+
+    const refreshed = new MockResponse();
+    game.log('An unrelated update');
+    await scaffolding.get(ApiGameLogs.INSTANCE, refreshed);
+    expect(JSON.parse(refreshed.content)).deep.eq(history);
   });
 
   [{idx: 0, color: 'Yellow'}, {idx: 1, color: 'Orange'}, {idx: 2, color: 'Blue'}].forEach((entry) => {
