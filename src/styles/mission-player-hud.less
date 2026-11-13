@@ -16,39 +16,65 @@
 }
 
 .mission-player-hud__corporations {
-  display: grid;
-  max-height: 129px;
+  display: flex;
+  max-height: 136px;
+  height: calc(325px * var(--hand-scale, 0.38) + 8px);
+  align-items: flex-start;
   gap: 4px;
-  overflow: auto;
+  overflow: auto hidden;
   padding: 3px;
   scrollbar-width: thin;
 
   button {
-    display: grid;
-    justify-items: center;
-    gap: 3px;
+    position: relative;
+    display: block;
+    width: calc(240px * var(--hand-scale, 0.38));
+    height: calc(325px * var(--hand-scale, 0.38));
+    flex: 0 0 calc(240px * var(--hand-scale, 0.38));
     overflow: hidden;
-    padding: 3px 4px;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    background: #202d37;
-    color: #f4efe6;
-    font-size: 0.57rem;
-    line-height: 1.12;
+    padding: 0;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
     cursor: pointer;
+
+    > .card-container {
+      width: 240px;
+      margin: 0;
+      zoom: var(--hand-scale, 0.38);
+      pointer-events: none;
+    }
+
+    .mission-player-hud__corp-art {
+      position: absolute;
+      z-index: 1;
+      inset: 45% 3px 3px;
+      background: url(./assets/board/mars-projects.jpg) left top / 200% 200% no-repeat;
+      border-radius: 0 0 4px 4px;
+      pointer-events: none;
+    }
 
     &:focus-visible,
     &:hover {
-      border-color: #ffd099;
+      outline: 2px solid #ffd099;
+      outline-offset: 1px;
+    }
+
+    &.mission-card-available {
+      outline: 3px solid #95ffce;
+      outline-offset: -3px;
+      box-shadow: 0 0 14px 3px #53fac390;
     }
   }
 }
 
-.mission-player-hud__logo {
-  display: grid;
-  height: 28px;
-  place-items: center;
-  zoom: 0.5;
+.mission-player-hud__corp-status {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  color: #95ffce;
+  font-size: 0.7rem;
+  text-shadow: 0 1px 3px #000;
 }
 
 .mission-player-hud__stocks {
@@ -67,6 +93,12 @@
     color: #f4efe6;
     font-size: 0.61rem;
     font-variant-numeric: tabular-nums;
+  }
+
+  .mission-player-hud__production {
+    color: #c4d0d3;
+    font-size: 0.85em;
+    white-space: nowrap;
   }
 
   .resource_icon {
@@ -129,33 +161,34 @@
     .mission-player-hud {
       grid-column: 1 / -1;
       grid-row: 1;
-      grid-template-columns: minmax(90px, 1fr) minmax(0, 2fr);
-      grid-template-rows: 42px 116px;
+      grid-template-columns: minmax(0, 90px) minmax(0, 1fr);
+      grid-template-rows: 42px minmax(0, 1fr);
       gap: 2px 6px;
 
       .mission-hand {
-        grid-column: 1 / -1;
+        grid-column: 2;
+        grid-row: 2;
       }
     }
   }
 
   .mission-player-hud__corporations {
-    display: flex;
-    max-height: 37px;
-    overflow-x: auto;
+    grid-column: 1;
+    grid-row: 2;
+    height: calc(325px * 0.30 + 8px);
+    max-height: calc(325px * 0.30 + 8px);
+    --hand-scale: 0.30;
 
     button {
-      display: flex;
-      min-width: max-content;
-      align-items: center;
+      width: calc(240px * 0.30);
+      height: calc(325px * 0.30);
+      flex-basis: calc(240px * 0.30);
     }
   }
 
-  .mission-player-hud__logo {
-    display: none;
-  }
-
   .mission-player-hud__stocks {
+    grid-column: 1 / -1;
+    grid-row: 1;
     grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 2px;
     padding: 2px 4px;
@@ -165,6 +198,10 @@
       gap: 1px;
       font-size: 0.56rem;
       line-height: 1.1;
+    }
+
+    .mission-player-hud__production {
+      font-size: 0.78em;
     }
 
     .resource_icon {

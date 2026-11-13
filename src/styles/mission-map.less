@@ -6,11 +6,21 @@
   .atlas-stage {
     --orbit-height: 0px;
     --map-orbit-clearance: var(--orbit-height);
-    background: radial-gradient(ellipse at 52% 43%, #332823, #101a25 46%, #080d14 83%);
+    --mars-framing: center 14% / max(100%, 276dvh) auto;
+    --mars-atmosphere: transparent;
+    background:
+      linear-gradient(0deg, #0b1016 0%, #0b1016c7 10%, transparent 35%),
+      radial-gradient(ellipse at 53% 48%, var(--mars-atmosphere), transparent 48%, #090e1580 100%),
+      url(./assets/board/mars-orbit.jpg) var(--mars-framing) no-repeat,
+      #211c1e;
   }
 
   .atlas-stage--has-orbit {
     --orbit-height: 48px;
+  }
+
+  .atlas-stage--tracks {
+    background: radial-gradient(ellipse at 52% 43%, #332823, #101a25 46%, #080d14 83%);
   }
 
   .atlas-stage__map {
@@ -22,7 +32,7 @@
   .atlas-stage .board-cont.atlas-board {
     top: 50%;
     transform: translate(calc(-1 * var(--atlas-center-x)), calc(-1 * var(--atlas-center-y)));
-    zoom: min(2, calc(100cqi / (var(--atlas-diameter) + 16px)), calc(100cqh / (var(--atlas-diameter) + 18px)));
+    zoom: min(1.2, calc(82cqi / var(--atlas-frame-width)), calc(100cqh / (var(--atlas-diameter) + 18px)));
   }
 
   .atlas-stage--tracks .board-cont.atlas-board {
@@ -32,7 +42,7 @@
 
   .atlas-stage:not(.atlas-stage--tracks) .board-cont.atlas-board {
     &::before {
-      display: block;
+      display: none;
     }
 
     #main_board {
@@ -127,6 +137,10 @@
   }
 
   .atlas-stage--complete {
+    --mars-atmosphere: #79dbc43d;
+  }
+
+  .atlas-stage--tracks.atlas-stage--complete {
     background: radial-gradient(ellipse at 50% 44%, #436863, #132e38 37%, #0b131e 69%);
   }
 }
@@ -150,15 +164,6 @@
       bottom: calc(var(--dock-height) - 26px);
     }
 
-    .atlas-stage:not(.atlas-stage--tracks) .board-cont.atlas-board {
-      zoom: min(
-        2,
-        calc((100vw - 2 * clamp(155px, 20vw, 275px)) / (var(--atlas-diameter) + 16px)),
-        calc(100cqi / (var(--atlas-diameter) + 16px)),
-        calc(100cqh / (var(--atlas-diameter) + 4px))
-      );
-    }
-
     .atlas-orbit {
       right: clamp(12px, 2.8vw, 42px);
       left: auto;
@@ -173,6 +178,14 @@
     .atlas-stage__map {
       top: max(145px, var(--rival-map-top, 0px));
       bottom: calc(var(--dock-height) + var(--orbit-height) + 57px);
+    }
+
+    .atlas-stage {
+      --mars-framing: center 70% / auto 145%;
+    }
+
+    .atlas-stage:not(.atlas-stage--tracks) .board-cont.atlas-board {
+      zoom: min(1.2, calc(91cqi / (var(--atlas-diameter) + 16px)), calc(100cqh / (var(--atlas-diameter) + 18px)));
     }
 
     .atlas-inspector {
