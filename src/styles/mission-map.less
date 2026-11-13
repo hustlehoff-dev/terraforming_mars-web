@@ -3,15 +3,46 @@
 }
 
 #player-home.mission-cinematic {
+  .mars-surface {
+    display: block;
+    position: absolute;
+    z-index: 1;
+    inset: clamp(74px, 9dvh, 100px) 0 calc(var(--dock-height) + var(--map-orbit-clearance) + 15px);
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .mars-surface__frame {
+    display: block;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform-origin: center;
+  }
+
+  .mars-surface__raster {
+    display: block;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .mars-surface__board {
+    display: block;
+    position: absolute;
+    inset: 0;
+  }
+
   .atlas-stage {
     --orbit-height: 0px;
     --map-orbit-clearance: var(--orbit-height);
-    --mars-framing: center center / 100% auto;
     --mars-atmosphere: #f0a77825;
+    overflow: clip;
     background:
       linear-gradient(180deg, #050a1166 0%, #050a1138 10%, transparent 27%, transparent 76%, #0b10168c 100%),
       radial-gradient(ellipse at 52% 61%, var(--mars-atmosphere), transparent 53%, #090e1540 100%),
-      url(./assets/board/mars-globe.jpg) var(--mars-framing) no-repeat,
       #050a11;
   }
 
@@ -24,20 +55,20 @@
   }
 
   .atlas-stage__map {
-    container-type: size;
-    top: clamp(74px, 9dvh, 100px);
-    bottom: calc(var(--dock-height) + var(--map-orbit-clearance) + 15px);
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+    pointer-events: none;
   }
 
-  .atlas-stage .board-cont.atlas-board {
-    top: 50%;
-    transform: translate(calc(-1 * var(--atlas-center-x)), calc(-1 * var(--atlas-center-y)));
-    zoom: min(1.12, calc(88cqi / var(--atlas-frame-width)), calc(96cqh / (var(--atlas-diameter) + 18px)));
-  }
-
-  .atlas-stage--tracks .board-cont.atlas-board {
-    transform: translate(-50%, -50%);
-    zoom: min(1.2, calc(100cqi / var(--atlas-frame-width)), calc(100cqh / var(--atlas-frame-height)));
+  .mars-surface .board-cont.atlas-board {
+    position: absolute;
+    top: calc(50% - var(--atlas-center-y));
+    left: calc(50% - var(--atlas-center-x));
+    margin: 0;
+    transform: none;
+    zoom: 1;
+    pointer-events: auto;
   }
 
   .atlas-stage:not(.atlas-stage--tracks) .board-cont.atlas-board {
@@ -208,9 +239,8 @@
       }
     }
 
-    .atlas-stage:not(.atlas-stage--tracks) .atlas-stage__map {
-      top: clamp(74px, 9dvh, 100px);
-      bottom: calc(var(--dock-height) - 26px);
+    .atlas-stage:not(.atlas-stage--tracks) .mars-surface {
+      inset: clamp(74px, 9dvh, 100px) 0 calc(var(--dock-height) - 26px);
     }
 
     .atlas-orbit {
@@ -234,18 +264,7 @@
 
 @media (max-width: 760px) {
   #player-home.mission-cinematic {
-    .atlas-stage__map {
-      top: max(145px, var(--rival-map-top, 0px));
-      bottom: calc(var(--dock-height) + var(--orbit-height) + 57px);
-    }
-
-    .atlas-stage {
-      --mars-framing: center center / auto 100%;
-    }
-
-    .atlas-stage:not(.atlas-stage--tracks) .board-cont.atlas-board {
-      zoom: min(0.98, calc(86cqi / (var(--atlas-diameter) + 16px)), calc(92cqh / (var(--atlas-diameter) + 18px)));
-    }
+    .mars-surface { inset: max(145px, var(--rival-map-top, 0px)) 0 calc(var(--dock-height) + var(--orbit-height) + 52px); }
 
     .atlas-inspector {
       inset: auto 9px calc(var(--dock-height) + var(--orbit-height) + 22px);

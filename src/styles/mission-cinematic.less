@@ -126,45 +126,9 @@
     height: var(--scene-height);
     border: 0;
     border-radius: 0;
-    background:
-      linear-gradient(0deg, #0b1016 0%, #0b1016c7 10%, transparent 35%),
-      radial-gradient(ellipse at 53% 48%, transparent 42%, #090e15b5 100%),
-      url(./assets/board/mars-orbit.jpg) center 43% / cover,
-      #211c1e;
-  }
-
-  .atlas-stage__map {
-    position: absolute;
-    inset: 60px 0 calc(var(--dock-height) - 14px);
-  }
-
-  .board-cont.atlas-board {
-    --scene-board-width: 680px;
-    --scene-board-height: 345px;
-
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    margin: 0;
-    transform: translate(-50%, -52%);
-    zoom: min(3.05, calc(97cqi / var(--scene-board-width)), calc((var(--scene-height) - 225px) / var(--scene-board-height)));
-
-    &.board-cont--large {
-      --scene-board-width: 760px;
-      --scene-board-height: 400px;
-    }
   }
 
   .atlas-stage:not(.atlas-stage--tracks) .board-cont.atlas-board {
-    &::before {
-      display: none;
-    }
-
-    #main_board {
-      transform: translateY(-17px) perspective(850px) rotateX(38deg);
-      transform-origin: 40% 52%;
-    }
-
     .board-outer-spaces .board-space-c01,
     .board-outer-spaces .board-space-c02 {
       transform: translate(18px, 85px) scale(0.65);
@@ -206,10 +170,6 @@
     .board-space-bonuses {
       opacity: 0.72;
     }
-  }
-
-  .atlas-stage--tracks .board-cont.atlas-board {
-    zoom: min(1.2, calc(97cqi / var(--atlas-frame-width)), calc((var(--scene-height) - 215px) / var(--atlas-frame-height)));
   }
 
   .atlas-inspector {
@@ -345,15 +305,6 @@
       top: 16px;
       right: 60px;
       padding: 4px 6px;
-    }
-
-    .atlas-stage__map {
-      inset: 126px 0 255px;
-    }
-
-    .board-cont.atlas-board {
-      top: calc(50% - 15px);
-      zoom: min(1.25, calc(121cqi / var(--scene-board-width)), calc((var(--scene-height) - 360px) / var(--scene-board-height)));
     }
 
     .atlas-inspector {

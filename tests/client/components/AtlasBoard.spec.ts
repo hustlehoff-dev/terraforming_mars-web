@@ -14,7 +14,7 @@ describe('AtlasBoard', () => {
   it('shows the inspected sector and updates its placement prompt when the active choice changes', async () => {
     const input = shallowRef<SelectSpaceModel>();
     const wrapper = shallowMount(AtlasBoard, {
-      global: {...globalConfig.global, provide: {[mapPlacementKey]: {input}}, stubs: {Teleport: true}},
+      global: {...globalConfig.global, provide: {[mapPlacementKey]: {input}}, stubs: {Teleport: true, MarsSurface: false}},
       props: {
         game: fakeGameModel({spaces: [{id: '04', a9: 'A2', spaceType: SpaceType.OCEAN, bonus: [SpaceBonus.STEEL, SpaceBonus.STEEL]}]}),
         tileView: 'show',

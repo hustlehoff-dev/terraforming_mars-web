@@ -2,29 +2,31 @@
   <div class="atlas-stage" :class="{'atlas-stage--tracks': showTracks, 'atlas-stage--has-orbit': hasOrbitalSpaces, 'atlas-stage--complete': game.isTerraformed}" @keydown.esc="hideTooltip()">
     <span v-if="orbitLayout" class="atlas-stage__shuttle" aria-hidden="true"></span>
     <span v-if="orbitLayout && game.isTerraformed" class="atlas-stage__completion" aria-hidden="true"></span>
-    <div class="atlas-stage__map">
-      <Board
-        id="shortkey-board"
-        :spaces="spaces"
-        :expansions="game.gameOptions.expansions"
-        :venusScaleLevel="game.venusScaleLevel"
-        :boardName="game.gameOptions.boardName"
-        :oceans_count="game.oceans"
-        :oxygen_level="game.oxygenLevel"
-        :temperature="game.temperature"
-        :altVenusBoard="game.gameOptions.altVenusBoard"
-        :aresData="game.aresData"
-        :tileView="tileView"
-        :inspectedSpace="inspectedSpace"
-        :sectorDescriptionId="tooltipPosition ? sectorTooltipId : undefined"
-        :orbitDock="orbitDock"
-        :legalSpaces="activePlacement?.spaces"
-        :placedSpaces="placedSpaces"
-        atlas
-        @inspectSpace="inspectSpace"
-        @leaveSpace="hideTooltip"
-        @toggleTileView="$emit('toggleTileView')" />
-    </div>
+    <MarsSurface :enabled="orbitLayout" :tracks="showTracks">
+      <div class="atlas-stage__map">
+        <Board
+          id="shortkey-board"
+          :spaces="spaces"
+          :expansions="game.gameOptions.expansions"
+          :venusScaleLevel="game.venusScaleLevel"
+          :boardName="game.gameOptions.boardName"
+          :oceans_count="game.oceans"
+          :oxygen_level="game.oxygenLevel"
+          :temperature="game.temperature"
+          :altVenusBoard="game.gameOptions.altVenusBoard"
+          :aresData="game.aresData"
+          :tileView="tileView"
+          :inspectedSpace="inspectedSpace"
+          :sectorDescriptionId="tooltipPosition ? sectorTooltipId : undefined"
+          :orbitDock="orbitDock"
+          :legalSpaces="activePlacement?.spaces"
+          :placedSpaces="placedSpaces"
+          atlas
+          @inspectSpace="inspectSpace"
+          @leaveSpace="hideTooltip"
+          @toggleTileView="$emit('toggleTileView')" />
+      </div>
+    </MarsSurface>
 
     <section v-if="hasOrbitalSpaces" class="atlas-orbit" :aria-label="$t('Orbital stations')">
       <h2 class="atlas-orbit__title" v-i18n>Orbital stations</h2>
@@ -73,6 +75,7 @@
 <script lang="ts">
 import {CSSProperties, defineComponent, inject, ref, useId} from 'vue';
 import Board from '@/client/components/Board.vue';
+import MarsSurface from '@/client/components/board/MarsSurface.vue';
 import {mapPlacementKey} from '@/client/components/board/MapPlacement';
 import {nextTileView, TileView} from '@/client/components/board/TileView';
 import {spacesById} from '@/client/utils/spacesById';
@@ -98,7 +101,7 @@ const terrainNames: Record<SpaceType, string> = {
 
 export default defineComponent({
   name: 'AtlasBoard',
-  components: {Board},
+  components: {Board, MarsSurface},
   emits: ['toggleTileView'],
   props: {
     orbitLayout: Boolean,
