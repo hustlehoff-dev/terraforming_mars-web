@@ -6,13 +6,13 @@
   .atlas-stage {
     --orbit-height: 0px;
     --map-orbit-clearance: var(--orbit-height);
-    --mars-framing: center 7dvh / max(100%, 190dvh) auto;
+    --mars-framing: center center / 100% auto;
     --mars-atmosphere: #f0a77825;
     background:
-      linear-gradient(180deg, #050a11 0%, #050a11c0 10%, #080d1752 20%, transparent 32%, #0b1016a8 84%, #0b1016 100%),
-      radial-gradient(ellipse at 52% 61%, var(--mars-atmosphere), transparent 53%, #090e1580 100%),
-      url(./assets/board/mars-orbit.jpg) var(--mars-framing) no-repeat,
-      #211c1e;
+      linear-gradient(180deg, #050a1166 0%, #050a1138 10%, transparent 27%, transparent 76%, #0b10168c 100%),
+      radial-gradient(ellipse at 52% 61%, var(--mars-atmosphere), transparent 53%, #090e1540 100%),
+      url(./assets/board/mars-globe.jpg) var(--mars-framing) no-repeat,
+      #050a11;
   }
 
   .atlas-stage--has-orbit {
@@ -32,7 +32,7 @@
   .atlas-stage .board-cont.atlas-board {
     top: 50%;
     transform: translate(calc(-1 * var(--atlas-center-x)), calc(-1 * var(--atlas-center-y)));
-    zoom: min(1.04, calc(78cqi / var(--atlas-frame-width)), calc(88cqh / (var(--atlas-diameter) + 18px)));
+    zoom: min(1.12, calc(88cqi / var(--atlas-frame-width)), calc(96cqh / (var(--atlas-diameter) + 18px)));
   }
 
   .atlas-stage--tracks .board-cont.atlas-board {
@@ -48,6 +48,10 @@
     #main_board {
       transform: perspective(1000px) rotateX(28deg);
       transform-origin: 50% 52%;
+
+      > .board-space:not(.atlas-sector--legal, .atlas-sector--inspected, .board-space--available, :focus-visible)::after {
+        color: #f7e9d666;
+      }
     }
   }
 
@@ -236,7 +240,7 @@
     }
 
     .atlas-stage {
-      --mars-framing: center top / auto 118%;
+      --mars-framing: center center / auto 100%;
     }
 
     .atlas-stage:not(.atlas-stage--tracks) .board-cont.atlas-board {
