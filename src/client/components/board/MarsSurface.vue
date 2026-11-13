@@ -1,7 +1,7 @@
 <template>
   <div v-if="enabled" ref="viewport" class="mars-surface">
     <div class="mars-surface__frame" :style="frameStyle">
-      <img v-if="!tracks" class="mars-surface__raster" src="assets/board/mars-globe.jpg" alt="">
+      <div v-if="!tracks" class="mars-surface__raster" :style="globeStyle" aria-hidden="true"></div>
       <div class="mars-surface__board"><slot></slot></div>
     </div>
   </div>
@@ -14,15 +14,15 @@ import {computed, ref, watch} from 'vue';
 const FRAME_WIDTH = 1280;
 const FRAME_HEIGHT = 720;
 
-const props = defineProps<{enabled: boolean; tracks: boolean}>();
+const props = defineProps<{enabled: boolean; tracks: boolean; large?: boolean}>();
 const viewport = ref<HTMLElement>();
 const viewportSize = ref({width: FRAME_WIDTH, height: FRAME_HEIGHT});
+const globeDiameter = computed(() => props.large ? 610 : 500);
+const globeStyle = computed(() => ({width: `${globeDiameter.value}px`}));
 const scale = computed(() => {
-  // The classic tracks use the full board frame. The surface only needs
-  // to fit the projected hexes inside the HUD clearances.
-  const boardWidth = props.tracks ? 765 : 550;
-  const boardHeight = props.tracks ? 680 : 500;
-  return Math.min(1.12, Math.max(0, viewportSize.value.width - 24) / boardWidth, viewportSize.value.height / boardHeight);
+  const boardWidth = props.tracks ? 765 : globeDiameter.value;
+  const boardHeight = props.tracks ? 680 : globeDiameter.value;
+  return Math.min(1.65, Math.max(0, viewportSize.value.width - 24) / boardWidth, viewportSize.value.height / boardHeight);
 });
 const frameStyle = computed(() => ({
   width: `${FRAME_WIDTH}px`,

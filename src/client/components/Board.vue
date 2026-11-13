@@ -99,7 +99,7 @@
         :space="curSpace"
         :aresExtension="expansions.ares"
         :tileView="tileView"
-        :class="atlasSpaceClasses(curSpace.id)"
+        :class="[atlasSpaceClasses(curSpace.id), atlas && tileView === 'show' && curSpace.tileType !== undefined && curSpace.color ? 'atlas-owner--' + curSpace.color : undefined]"
         :tabindex="atlas ? (atlasTabStop === curSpace.id ? 0 : -1) : undefined"
         :role="atlas ? 'button' : undefined"
         :aria-label="atlas ? $t('Sector') + ' ' + (curSpace.a9 ?? curSpace.id) : undefined"

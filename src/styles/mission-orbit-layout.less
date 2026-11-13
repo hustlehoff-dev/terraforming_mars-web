@@ -1,0 +1,281 @@
+#player-home.mission-cinematic {
+  .mission-commands {
+    position: absolute;
+    z-index: 10;
+    top: 13px;
+    left: 50%;
+    display: flex;
+    width: min(640px, calc(100% - 160px));
+    justify-content: center;
+    gap: 5px;
+    transform: translateX(-50%);
+  }
+
+  .mission-commands button,
+  .mission-dock__button {
+    border: 1px solid #9eafb982;
+    border-radius: 2px 12px 2px 10px;
+    background: linear-gradient(180deg, #839dab25, transparent 45%), #0a1219ec;
+    color: #f2f4f5;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .mission-commands button {
+    min-height: 34px;
+    padding: 5px clamp(8px, 2vw, 32px);
+    font-size: clamp(0.6rem, 1.15vw, 0.85rem);
+    letter-spacing: 0.045em;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      border-color: #86f2e5;
+      background-color: #17343d;
+    }
+  }
+
+  .mission-dock__button--primary {
+    border-color: #88dacc;
+  }
+
+  .mission-player-hud__corporations,
+  .mission-player-hud__stocks {
+    border-color: #82b29c9c;
+    border-radius: 3px 10px 3px 10px;
+    background: linear-gradient(155deg, #2c4c4240, transparent 55%), #0b161bed;
+  }
+}
+
+@media (min-width: 1100px) {
+  #player-home.mission-cinematic {
+    .mission-status {
+      display: block;
+      padding: 0;
+      background: none;
+    }
+
+    .mission-status__title,
+    .mission-status__your-turn,
+    .mission-status__complete {
+      position: absolute;
+      left: clamp(14px, 2vw, 36px);
+    }
+
+    .mission-status__title { top: 58px; }
+    .mission-status__your-turn { top: 98px; }
+    .mission-status__complete { top: 126px; }
+
+    .mission-status__generation {
+      top: 58px;
+      right: clamp(16px, 2.4vw, 44px);
+      display: grid;
+      width: 112px;
+      min-height: 54px;
+      place-content: center;
+      padding: 5px;
+      border-color: #8aa5af9c;
+      border-radius: 4px 12px 0 0;
+      background: #0c151ce8;
+      text-align: center;
+
+      strong {
+        color: #fff;
+        font-size: 1rem;
+        line-height: 1.1;
+      }
+
+      small {
+        font-size: 0.52rem;
+      }
+    }
+
+    .mission-status__metrics {
+      position: absolute;
+      top: 118px;
+      right: clamp(16px, 2.4vw, 44px);
+      display: grid;
+      width: 112px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 4px;
+      margin: 0;
+      padding: 4px;
+      border: 1px solid #8aa5af9c;
+      border-radius: 0 0 4px 14px;
+      background: #0b131ce8;
+      text-align: center;
+    }
+
+    .mission-status__metric {
+      min-width: 0;
+      padding: 4px 1px;
+      border: 1px solid #9cb8c132;
+      background: #14222b91;
+
+      dt {
+        margin-bottom: 4px;
+        color: #d3dfe1;
+        font-size: 0.53rem;
+        line-height: 1.1;
+      }
+
+      dd {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 3px;
+      }
+
+      progress {
+        margin: 4px auto 0;
+      }
+    }
+
+    .mission-status__metric--oxygen {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .mission-status__metric--temperature {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .mission-status__metric--oceans {
+      grid-column: 1 / -1;
+      border-color: #71bff283;
+      background: #132e40;
+    }
+
+    .mission-status__metrics:not(.mission-status__metrics--extended) {
+      .mission-status__metric--oxygen progress,
+      .mission-status__metric--temperature progress {
+        width: 14px;
+        height: clamp(120px, 34dvh, 350px);
+        flex: 0 0 100%;
+        writing-mode: vertical-lr;
+        direction: rtl;
+      }
+    }
+
+    .atlas-inspector {
+      top: 13px;
+      right: calc(clamp(14px, 2.5vw, 36px) + 88px);
+      width: auto;
+    }
+
+    .atlas-inspector__readout {
+      max-width: 200px;
+    }
+
+    .mission-play__map:has(.rival-panel) {
+      --rival-panel-top: 43%;
+      --rival-panel-width: min(260px, 21vw);
+
+      .rival-panel {
+        top: var(--rival-panel-top);
+        right: auto;
+        left: 0;
+      }
+
+      .atlas-inspector {
+        top: 13px;
+      }
+    }
+
+    .rival-tile {
+      grid-template-columns: repeat(6, minmax(0, 1fr)) auto;
+      row-gap: 4px;
+      border-left: 3px solid var(--rival-accent, #a1a8ae);
+      border-radius: 0 11px 3px 0;
+      background: linear-gradient(90deg, #354854c4, #0b131ce8);
+    }
+
+    .rival-tile__identity {
+      grid-column: 1 / 7;
+    }
+
+    .rival-tile__resource:last-child {
+      grid-column: 6 / -1;
+    }
+
+    .activity-feed {
+      inset-block: auto calc(var(--dock-height) + 42px);
+    }
+  }
+}
+
+@media (max-width: 1099px) {
+  #player-home.mission-cinematic .mission-commands {
+    top: 159px;
+    width: calc(100% - 24px);
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1099px) {
+  #player-home.mission-cinematic .mission-commands {
+    top: 99px;
+    width: min(440px, 54%);
+  }
+
+  #player-home.mission-cinematic .atlas-stage .mars-surface {
+    top: 139px;
+  }
+}
+
+@media (max-width: 760px) {
+  #player-home.mission-cinematic {
+    .mission-play__map:has(.rival-panel) {
+      --rival-panel-top: 202px;
+    }
+
+    .atlas-stage .mars-surface {
+      top: max(204px, var(--rival-map-top, 0px));
+    }
+
+    .activity-feed {
+      inset-block-start: 201px;
+    }
+  }
+}
+
+@media (min-width: 1500px) {
+  #player-home.mission-cinematic .mission-player-hud__stocks {
+    grid-template-columns: repeat(6, minmax(44px, 1fr));
+    gap: 3px;
+
+    li {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      padding: 3px;
+      border-inline-start: 1px solid #8fbeae38;
+    }
+
+    .mission-player-hud__production {
+      grid-row: 1;
+      grid-column: 1 / -1;
+      padding: 1px 3px;
+      background: #d09d6833;
+      text-align: center;
+    }
+  }
+}
+
+.rival-tile__rating {
+  font-weight: 700;
+  color: #f7e6be;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1099px) {
+  .rival-tile {
+    grid-template-columns: minmax(0, 1fr) auto repeat(6, auto);
+  }
+}
+
+each(@players, {
+  @accent: ~'player_@{value}';
+  .rival-tile--@{value} {
+    --rival-accent: saturate(lighten(@@accent, 20%), 15%);
+  }
+});

@@ -8,6 +8,6 @@
 
 ## Jak ten proces stosujemy do planszy Marsa
 
-`MarsSurface` obejmuje grafikę planety i interaktywną planszę w jednej ramie 1280 × 720. Scena 2,5D wykorzystuje perspektywę CSS dla siatki. Rozmiar okna zmienia skalę całej ramy. Heksy i ich obszary kliknięcia przesuwają się razem z odpowiadającym im terenem. Widok może przycinać zewnętrzne części grafiki, jeśli wymaga tego ekran telefonu.
+`MarsSurface` obejmuje tarczę planety i interaktywną planszę w jednej ramie 1280 × 720. Rozmiar okna zmienia skalę całej ramy. Heksy i ich obszary kliknięcia przesuwają się razem z odpowiadającym im terenem. Średnica tarczy uwzględnia standardową siatkę oraz większą planszę Amazonis Planitia.
 
 `AtlasBoard` składa scenę z planszą, stacjami orbitalnymi, kontrolkami i podpowiedzią. `Board` nadal odpowiada za pola i zdarzenia gracza. Kontrolki i stacje mają własny układ ekranowy, ponieważ muszą pozostać dostępne po zmianie rozmiaru sceny.

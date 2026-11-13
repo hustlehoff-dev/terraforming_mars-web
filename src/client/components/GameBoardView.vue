@@ -38,8 +38,8 @@
 
     <div v-if="players.length > 1" class="player_home_block--milestones-and-awards">
       <a class="hotkey-target"></a>
-      <Milestones :milestones="game.milestones" />
-      <Awards :awards="game.awards" />
+      <Milestones :id="detailsTarget ? 'board-milestones' : undefined" :milestones="game.milestones" />
+      <Awards :id="detailsTarget ? 'board-awards' : undefined" :awards="game.awards" />
     </div>
   </Teleport>
 </template>

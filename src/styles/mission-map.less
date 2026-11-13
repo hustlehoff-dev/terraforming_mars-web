@@ -21,13 +21,17 @@
   }
 
   .mars-surface__raster {
-    display: block;
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transform: scale(0.94);
+    top: 50%;
+    left: 50%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background:
+      radial-gradient(ellipse at 59% 23%, #ffbf6a35, transparent 48%),
+      linear-gradient(158deg, transparent 43%, #160d1940 63%, #020a1ee0),
+      url(./assets/board/mars-without-venus.png) 54% 56% / 139% 135% no-repeat #9d4a2a;
+    box-shadow: inset 0 6px 15px #ffdcab8f, inset -8px -12px 22px #273f684f, 0 -4px 16px #f6ae7166, -5px 8px 19px #3c89c96b;
+    transform: translate(-50%, -50%);
   }
 
   .mars-surface__board {
@@ -42,9 +46,9 @@
     --mars-atmosphere: #f0a77825;
     overflow: clip;
     background:
-      linear-gradient(180deg, #050a1166 0%, #050a1138 10%, transparent 27%, transparent 76%, #0b10168c 100%),
-      radial-gradient(ellipse at 52% 61%, var(--mars-atmosphere), transparent 53%, #090e1540 100%),
-      #050a11;
+      linear-gradient(175deg, #020308c7, #160e12b0 35%, #03081486 76%, #050912),
+      radial-gradient(ellipse at 63% 52%, var(--mars-atmosphere), transparent 62%),
+      url(./assets/stars.jpg) center / 550px auto #050a11;
   }
 
   .atlas-stage--has-orbit {
@@ -78,11 +82,21 @@
     }
 
     #main_board {
-      transform: perspective(1000px) rotateX(28deg);
-      transform-origin: 50% 52%;
-
       > .board-space:not(.atlas-sector--legal, .atlas-sector--inspected, .board-space--available, :focus-visible)::after {
-        color: #f7e9d666;
+        color: var(--atlas-owner-color, #f7bb685e);
+      }
+
+      each(@players, {
+        @owner: ~'player_@{value}';
+        > .atlas-owner--@{value} {
+          --atlas-owner-color: saturate(lighten(@@owner, 20%), 15%);
+        }
+      });
+
+      .board-caption {
+        paint-order: stroke;
+        stroke: #1b121c;
+        stroke-width: 1.8px;
       }
     }
   }
@@ -241,24 +255,61 @@
     }
 
     .atlas-stage:not(.atlas-stage--tracks) .mars-surface {
-      inset: clamp(74px, 9dvh, 100px) 0 calc(var(--dock-height) - 26px);
+      inset: clamp(66px, 9dvh, 96px) 0 calc(var(--dock-height) - 26px);
     }
 
     .atlas-orbit {
-      --orbit-top: clamp(320px, 42dvh, 430px);
-
-      inset: var(--orbit-top) clamp(12px, 2.8vw, 42px) auto auto;
-      width: min(250px, 22vw);
-      max-height: min(270px, max(90px, calc(100% - var(--orbit-top) - var(--dock-height) - 21px)));
+      inset: 0;
+      width: auto;
+      max-height: none;
+      padding: 0;
+      overflow: visible;
+      border: 0;
+      background: none;
+      box-shadow: none;
       transform: none;
+      pointer-events: none;
     }
 
-    .board-outer-spaces--dock {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+    .atlas-orbit__title {
+      position: absolute;
+      clip-path: inset(50%);
     }
 
     .board-outer-spaces--dock > .board-space {
-      height: 104px;
+      position: absolute;
+      width: clamp(75px, 8vw, 130px);
+      height: auto;
+      aspect-ratio: 1;
+      padding: 0;
+      place-items: center;
+      border-color: #ecc38c8c;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #1b080632, #090e1cac), url(./assets/colonies-planets/ganymede.jpg) center / cover;
+      box-shadow: inset 0 4px 11px #ffda9e99, 0 0 16px #86bbec40;
+      pointer-events: auto;
+
+      &.board-space-c01 {
+        top: 52%;
+        right: 15%;
+      }
+
+      &.board-space-c02 {
+        top: 25%;
+        left: 17%;
+        background-image: linear-gradient(145deg, #401a1130, #0b0f22ac), url(./assets/colonies-planets/deimos.jpg);
+      }
+
+      &::after {
+        top: 12%;
+        width: 64%;
+        height: 76%;
+      }
+
+      > .board-space-text {
+        width: 70%;
+        text-transform: uppercase;
+      }
     }
   }
 }

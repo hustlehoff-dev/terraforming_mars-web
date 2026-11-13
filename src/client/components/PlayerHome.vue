@@ -36,11 +36,18 @@
       :discardPileSize="game.discardPileSize"
       :otherDeckSizes="game.otherDeckSizes" />
 
+    <nav v-if="cinematic" class="mission-commands" :aria-label="$t('Actions')">
+      <button v-if="playerView.players.length > 1 && !hideAwardsAndMilestones" type="button" @click="openBoardOverview('milestones')" v-i18n>Milestones</button>
+      <button type="button" :aria-expanded="missionPanel === 'projects'" @click="toggleMissionPanel('projects')" v-i18n>Standard Projects</button>
+      <button v-if="playerView.players.length > 1 && !hideAwardsAndMilestones" type="button" @click="openBoardOverview('awards')" v-i18n>Awards</button>
+    </nav>
+
     <header class="mission-status">
       <div>
         <p class="mission-status__generation">
-          <span v-i18n>Generation</span> {{ game.generation }}<template v-if="playerView.players.length === 1"> / {{ game.lastSoloGeneration }}</template>
-          <template v-if="game.phase === 'action' && game.turn !== undefined"> · <span v-i18n>Turn</span> {{ game.turn }}</template>
+          <span class="mission-status__generation-label" v-i18n>Generation</span>
+          <strong>{{ game.generation }}<template v-if="playerView.players.length === 1"> / {{ game.lastSoloGeneration }}</template></strong>
+          <small v-if="game.phase === 'action' && game.turn !== undefined"> · <span v-i18n>Turn</span> {{ game.turn }}</small>
         </p>
         <div class="mission-status__title">
           <h1 :title="$t(game.gameOptions.boardName)"><span class="mission-status__brand" v-i18n>Terraforming Mars</span><span class="mission-status__board">{{ $t(game.gameOptions.boardName) }}</span></h1>
@@ -49,7 +56,7 @@
         <span v-if="activeTurnColor === thisPlayer.color" class="mission-status__your-turn" role="status" v-i18n>Your turn</span>
         <span v-if="game.isTerraformed" class="mission-status__complete" v-i18n>Terraforming complete</span>
       </div>
-      <dl class="mission-status__metrics">
+      <dl class="mission-status__metrics" :class="{'mission-status__metrics--extended': missionMetrics.length > 3}">
         <div v-for="metric in missionMetrics" :key="metric.key" class="mission-status__metric" :class="['mission-status__metric--' + metric.key, {'mission-status__metric--complete': metric.value >= metric.max}]">
           <dt v-i18n>{{ metric.label }}</dt>
           <dd>
@@ -78,7 +85,7 @@
           @toggleTileView="cycleTileView()"
         />
         <ActivityFeed v-if="cinematic" :viewModel="playerView" @spaceClicked="jumpToLogSpace" />
-        <RivalPanel v-if="cinematic" :players="playerView.players" :playerColor="thisPlayer.color" :activeColor="activeTurnColor" />
+        <RivalPanel v-if="cinematic" :players="playerView.players" :playerColor="thisPlayer.color" :activeColor="activeTurnColor" :passedColors="game.phase === 'action' ? game.passedPlayers : []" />
         <div class="mission-dock">
           <button type="button" class="mission-dock__button" :aria-expanded="missionPanel === 'played'" @click="toggleMissionPanel('played')" v-i18n>Played Cards</button>
           <MissionPlayerHud
@@ -114,6 +121,12 @@
               <a name="actions" class="player_home_anchor hotkey-target"></a>
               <h2 v-i18n>Actions</h2>
               <WaitingFor ref="waitingFor" :playerView="playerView" :waitingfor="playerView.waitingFor" :requestId="playerView.requestId" />
+            </section>
+            <section v-if="cinematic && missionPanel === 'projects'" class="player_home_block">
+              <h2 v-i18n>Standard Projects</h2>
+              <PlayerInputFactory v-if="standardProjectInput" :key="playerView.requestId" :playerView="playerView"
+                :playerinput="standardProjectInput" :onsave="playStandardProject" :showsave="true" :showtitle="false" />
+              <p v-else v-i18n>Standard projects are available when you can take an action.</p>
             </section>
             <div v-show="!cinematic || missionPanel === 'hand'">
               <div class="player_home_block player_home_block--hand" v-if="playerView.draftedCards.length > 0">
@@ -276,6 +289,7 @@ import {SoundManager} from '@/client/utils/SoundManager';
 import {KeyboardNavigation} from '@/client/components/KeyboardNavigation';
 import {SpaceId} from '@/common/Types';
 import {getCardAvailability} from '@/client/utils/CardAvailability';
+import {InputResponse} from '@/common/inputs/InputResponse';
 
 type PlayerHomeModel = {
   missionPanel: MissionPanel | undefined;
@@ -294,6 +308,7 @@ type ToggleableCardType = 'HAND' | 'ACTIVE' | 'AUTOMATED' | 'EVENT';
 
 const missionPanels = [
   {id: 'actions', label: 'Actions'},
+  {id: 'projects', label: 'Standard Projects'},
   {id: 'played', label: 'Played Cards'},
   {id: 'hand', label: 'Cards In Hand'},
   {id: 'details', label: 'Game details'},
@@ -342,6 +357,11 @@ export default defineComponent({
     };
   },
   watch: {
+    'playerView.requestId'() {
+      if (this.missionPanel === 'projects' && this.standardProjectInput === undefined && this.playerView.waitingFor !== undefined) {
+        this.showMissionPanel('actions');
+      }
+    },
     missionPanel() {
       this.gameSetupOpen = false;
     },
@@ -398,6 +418,9 @@ export default defineComponent({
     cinematic(): boolean {
       return this.thisPlayer.tableau.length > 0 && this.game.phase !== 'end';
     },
+    hideAwardsAndMilestones(): boolean {
+      return getPreferences().hide_awards_and_milestones;
+    },
     soundsEnabled(): boolean {
       return getPreferences().enable_sounds;
     },
@@ -410,6 +433,17 @@ export default defineComponent({
         return -1;
       }
       return input.options.findIndex((option) => option.type === 'option' && option.title === 'End Turn');
+    },
+    standardProjectIndex(): number {
+      const input = this.playerView.waitingFor;
+      if (input?.type !== 'or' || input.optional) {
+        return -1;
+      }
+      return input.options.findIndex((option) => option.type === 'projectCard' && option.title === 'Standard projects');
+    },
+    standardProjectInput() {
+      const input = this.playerView.waitingFor;
+      return input?.type === 'or' ? input.options[this.standardProjectIndex] : undefined;
     },
     missionMetrics() {
       const {temperature, oxygenLevel, oceans, gameOptions, moon, venusScaleLevel} = this.game;
@@ -516,6 +550,17 @@ export default defineComponent({
     SoundManager.stopMissionAmbience();
   },
   methods: {
+    openBoardOverview(section: 'milestones' | 'awards') {
+      this.showMissionPanel('details');
+      this.$nextTick(() => {
+        document.getElementById(`board-${section}`)?.scrollIntoView({block: 'nearest'});
+      });
+    },
+    playStandardProject(response: InputResponse) {
+      if (this.standardProjectIndex !== -1) {
+        (this.$refs.waitingFor as InstanceType<typeof WaitingFor> | undefined)?.onsave({type: 'or', index: this.standardProjectIndex, response});
+      }
+    },
     showMissionPanel(panel: MissionPanel) {
       if (this.cinematic && this.missionPanel === undefined && document.activeElement instanceof HTMLElement) {
         this.missionPanelOpener = document.activeElement;

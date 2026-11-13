@@ -2,7 +2,7 @@
   <div class="atlas-stage" :class="{'atlas-stage--tracks': showTracks, 'atlas-stage--has-orbit': hasOrbitalSpaces, 'atlas-stage--complete': game.isTerraformed}" @keydown.esc="hideTooltip()">
     <span v-if="orbitLayout" class="atlas-stage__shuttle" aria-hidden="true"></span>
     <span v-if="orbitLayout && game.isTerraformed" class="atlas-stage__completion" aria-hidden="true"></span>
-    <MarsSurface :enabled="orbitLayout" :tracks="showTracks">
+    <MarsSurface :enabled="orbitLayout" :tracks="showTracks" :large="game.gameOptions.boardName === BoardName.AMAZONIS_PLANITIA">
       <div class="atlas-stage__map">
         <Board
           id="shortkey-board"
@@ -88,6 +88,7 @@ import {GameModel} from '@/common/models/GameModel';
 import {tileTypeToString} from '@/common/TileType';
 import {SpaceId} from '@/common/Types';
 import {SoundManager} from '@/client/utils/SoundManager';
+import {BoardName} from '@/common/boards/BoardName';
 
 const terrainNames: Record<SpaceType, string> = {
   [SpaceType.LAND]: 'Land',
@@ -115,7 +116,7 @@ export default defineComponent({
     },
   },
   setup() {
-    return {mapPlacement: inject(mapPlacementKey, undefined)?.input, sectorTooltipId: useId(), orbitDock: ref<HTMLElement>()};
+    return {BoardName, mapPlacement: inject(mapPlacementKey, undefined)?.input, sectorTooltipId: useId(), orbitDock: ref<HTMLElement>()};
   },
   data() {
     return {

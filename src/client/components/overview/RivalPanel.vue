@@ -2,7 +2,7 @@
   <aside v-if="rivals.length > 0" class="rival-panel" :aria-label="$t('Other players')">
     <ul class="rival-panel__list">
       <li v-for="rival in visibleRivals" :key="rival.color">
-        <RivalTile :player="rival" :active="rival.color === activeColor" @click="open(rival.color)" />
+        <RivalTile :player="rival" :active="rival.color === activeColor" :passed="passedColors?.includes(rival.color)" @click="open(rival.color)" />
       </li>
     </ul>
     <div v-if="extraRivals.length > 0" class="rival-panel__overflow">
@@ -40,7 +40,7 @@
       </template>
       <ul v-else class="rival-panel__list rival-panel__extra">
         <li v-for="rival in extraRivals" :key="rival.color">
-          <RivalTile :player="rival" :active="rival.color === activeColor" @click="open(rival.color)" />
+          <RivalTile :player="rival" :active="rival.color === activeColor" :passed="passedColors?.includes(rival.color)" @click="open(rival.color)" />
         </li>
       </ul>
     </dialog>
@@ -61,6 +61,7 @@ const props = defineProps<{
   players: ReadonlyArray<PublicPlayerModel>;
   playerColor: Color;
   activeColor?: Color;
+  passedColors?: ReadonlyArray<Color>;
 }>();
 
 const visibleCount = 4;
