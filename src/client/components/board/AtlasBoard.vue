@@ -26,7 +26,10 @@
         @toggleTileView="$emit('toggleTileView')" />
     </div>
 
-    <div v-if="hasOrbitalSpaces" ref="orbitDock" class="atlas-orbit" :aria-label="$t('Orbital stations')"></div>
+    <section v-if="hasOrbitalSpaces" class="atlas-orbit" :aria-label="$t('Orbital stations')">
+      <h2 class="atlas-orbit__title" v-i18n>Orbital stations</h2>
+      <div ref="orbitDock"></div>
+    </section>
 
     <aside class="atlas-inspector" :aria-label="$t('Board')">
       <div class="atlas-inspector__tools">
@@ -236,9 +239,13 @@ export default defineComponent({
       const left = anchor.left - width - gap;
       const preferredLeft = right + width <= viewportWidth - gap || left < gap ? right : left;
       const centeredTop = anchor.top + (anchor.height - height) / 2;
+      const orbit = this.tooltipAnchor.closest('.atlas-orbit')?.getBoundingClientRect();
+      const aboveOrbit = orbit !== undefined && orbit.top >= height + 2 * gap;
+      const tooltipLeft = aboveOrbit ? anchor.left + (anchor.width - width) / 2 : preferredLeft;
+      const tooltipTop = aboveOrbit ? orbit.top - height - gap : centeredTop;
       this.tooltipPosition = {
-        left: Math.max(gap, Math.min(preferredLeft, viewportWidth - width - gap)) + 'px',
-        top: Math.max(gap, Math.min(centeredTop, viewportHeight - height - gap)) + 'px',
+        left: Math.max(gap, Math.min(tooltipLeft, viewportWidth - width - gap)) + 'px',
+        top: Math.max(gap, Math.min(tooltipTop, viewportHeight - height - gap)) + 'px',
         visibility: 'visible',
       };
     },
