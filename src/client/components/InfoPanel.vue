@@ -1,6 +1,6 @@
 <template>
-  <div class="info_panel">
-    <div class="info-panel-title" v-i18n>Game Setup Details</div>
+  <div class="info_panel" :class="{'info_panel--embedded': embedded}">
+    <div v-if="!embedded" class="info-panel-title" v-i18n>Game Setup Details</div>
     <GameSetupDetail :gameOptions="gameOptions" :playerNumber="playerNumber" :lastSoloGeneration="lastSoloGeneration" />
 
     <div class="info-panel-title" v-i18n>Decks</div>
@@ -14,7 +14,7 @@
     </div>
 
     <div class="info_panel_actions">
-      <button class="btn btn-lg btn-primary" @click="emit('close')" v-i18n>Ok</button>
+      <button v-if="!embedded" class="btn btn-lg btn-primary" @click="emit('close')" v-i18n>Ok</button>
       <button class="btn btn-lg" @click="gameOptionsPopupOpen = true" v-i18n>More...</button>
     </div>
     <GameOptionsPopup v-if="gameOptionsPopupOpen" :gameOptions="gameOptions" @close="gameOptionsPopupOpen = false" />
@@ -35,6 +35,7 @@ const props = defineProps<{
   deckSize: number;
   discardPileSize: number;
   otherDeckSizes: OtherDeckSizesModel;
+  embedded?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -62,6 +63,10 @@ function keylistener(event: KeyboardEvent) {
   }
 }
 
-onMounted(() => window.addEventListener('keydown', keylistener));
+onMounted(() => {
+  if (!props.embedded) {
+    window.addEventListener('keydown', keylistener);
+  }
+});
 onUnmounted(() => window.removeEventListener('keydown', keylistener));
 </script>

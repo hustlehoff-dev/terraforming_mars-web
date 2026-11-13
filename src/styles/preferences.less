@@ -412,6 +412,15 @@
   background: #000000;
   max-height: calc(85vh);
   overflow-y: auto;
+
+  &.info_panel--embedded {
+    position: static;
+    display: block;
+    max-height: none;
+    padding: 12px 0;
+    overflow: visible;
+    background: transparent;
+  }
 }
 
 // Outranks .game-setup-detail-container .game-config, which sets the margin.

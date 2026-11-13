@@ -18,6 +18,7 @@ describe('Mars soundtrack', () => {
     const source = {connect, start, stop, loop: false, loopStart: 0, loopEnd: 0};
     connect.mockReturnValue({connect: vi.fn()});
     const createBufferSource = vi.fn(() => source);
+    const setTargetAtTime = vi.fn();
     let finishDecoding!: (buffer: AudioBuffer) => void;
     const decoding = new Promise<AudioBuffer>((resolve) => {
       finishDecoding = resolve;
@@ -30,7 +31,7 @@ describe('Mars soundtrack', () => {
       currentTime = 0;
       decodeAudioData = decodeAudioData;
       createBufferSource = createBufferSource;
-      createGain = () => ({gain: {setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn()}});
+      createGain = () => ({gain: {setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), cancelScheduledValues: vi.fn(), setTargetAtTime}});
     });
     vi.spyOn(document, 'hidden', 'get').mockReturnValue(false);
 
@@ -46,6 +47,9 @@ describe('Mars soundtrack', () => {
     await vi.waitFor(() => expect(start).toHaveBeenCalledOnce());
     expect(fetchTrack).toHaveBeenCalledOnce();
     expect(source.loop).toBe(true);
+    SoundManager.setMissionMusicVolume(0);
+    expect(setTargetAtTime.mock.calls[0][0]).toBe(0);
+    expect(stop).not.toHaveBeenCalled();
     SoundManager.stopMissionAmbience();
     expect(stop).toHaveBeenCalledOnce();
   });

@@ -4,6 +4,7 @@ import {safeLocalStorage} from '@/client/utils/SafeLocalStorage';
 export type Preferences = {
   learner_mode: boolean,
   enable_sounds: boolean,
+  music_volume: number,
   magnify_cards: boolean,
   show_alerts: boolean,
   hide_hand: boolean,
@@ -32,6 +33,7 @@ export type Preference = keyof Preferences;
 const defaults: Preferences = {
   learner_mode: true,
   enable_sounds: true,
+  music_volume: 65,
   magnify_cards: true,
   show_alerts: true,
   lang: 'en',
@@ -78,9 +80,12 @@ export class PreferencesManager {
     }
   }
 
-  private _set(key: Preference, val: string | boolean) {
+  private _set(key: Preference, val: string | boolean | number) {
     if (key === 'lang') {
       this._values.lang = String(val);
+    } else if (key === 'music_volume') {
+      const volume = Number(val);
+      this._values.music_volume = Number.isFinite(volume) ? Math.min(100, Math.max(0, Math.round(volume))) : defaults.music_volume;
     } else {
       this._values[key] = typeof(val) === 'boolean' ? val : (val === '1');
     }
@@ -92,17 +97,14 @@ export class PreferencesManager {
     return this._values;
   }
 
-  set(name: Preference, val: string | boolean, setOnChange = false): void {
+  set(name: Preference, val: string | boolean | number, setOnChange = false): void {
     // Don't set values if nothing has changed.
     if (setOnChange && this._values[name] === val) {
       return;
     }
     this._set(name, val);
-    if (name === 'lang') {
-      safeLocalStorage.setItem(name, this._values.lang);
-    } else {
-      safeLocalStorage.setItem(name, val ? '1' : '0');
-    }
+    const value = this._values[name];
+    safeLocalStorage.setItem(name, typeof value === 'boolean' ? (value ? '1' : '0') : String(value));
   }
 }
 

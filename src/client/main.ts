@@ -1,4 +1,4 @@
-import {createApp, defineAsyncComponent} from 'vue';
+import {createApp, defineAsyncComponent, watchEffect} from 'vue';
 
 import App from '@/client/components/App.vue';
 import {getPreferences} from '@/client/utils/PreferencesManager';
@@ -15,6 +15,15 @@ declare global {
 
 async function bootstrap() {
   const lang = getPreferences().lang;
+  const preferencesTarget = document.getElementById('ts-preferences-target');
+  preferencesTarget?.classList.add(`language-${lang}`);
+  watchEffect(() => {
+    for (const [key, value] of Object.entries(getPreferences())) {
+      if (typeof value === 'boolean') {
+        preferencesTarget?.classList.toggle(`preferences_${key}`, value);
+      }
+    }
+  });
 
   if (lang !== 'en') {
     try {

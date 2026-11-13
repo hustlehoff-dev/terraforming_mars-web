@@ -7,6 +7,7 @@ export namespace SoundManager {
   let noiseBuffer: AudioBuffer | undefined;
   let soundtrack: Promise<AudioBuffer> | undefined;
   let ambience: AudioBufferSourceNode | undefined;
+  let ambienceGain: GainNode | undefined;
   let ambienceRequested = false;
 
   function playInContext(play: (audio: AudioContext) => void, allowResume = false) {
@@ -97,7 +98,7 @@ export namespace SoundManager {
         source.loopStart = 1;
         source.loopEnd = 61;
         gain.gain.setValueAtTime(0, audio.currentTime);
-        gain.gain.linearRampToValueAtTime(0.65, audio.currentTime + 2);
+        gain.gain.linearRampToValueAtTime(getPreferences().music_volume / 100, audio.currentTime + 2);
         source.connect(gain).connect(audio.destination);
         source.onended = () => {
           source.disconnect();
@@ -105,6 +106,7 @@ export namespace SoundManager {
         };
         source.start(0, source.loopStart);
         ambience = source;
+        ambienceGain = gain;
       }).catch(() => {});
     }, true);
   }
@@ -113,6 +115,15 @@ export namespace SoundManager {
     ambienceRequested = false;
     ambience?.stop();
     ambience = undefined;
+    ambienceGain = undefined;
+  }
+
+  export function setMissionMusicVolume(volume: number) {
+    if (context !== undefined && ambienceGain !== undefined) {
+      const now = context.currentTime;
+      ambienceGain.gain.cancelScheduledValues(now);
+      ambienceGain.gain.setTargetAtTime(volume / 100, now, 0.035);
+    }
   }
 
   export function mission(cue: MissionCue) {

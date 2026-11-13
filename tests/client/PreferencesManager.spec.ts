@@ -62,4 +62,13 @@ describe('PreferencesManager', () => {
 
     expect(values.lang).eq('fr');
   });
+
+  it('preserves a muted soundtrack after reload without disabling sound effects', () => {
+    instance.set('music_volume', 0);
+    PreferencesManager.resetForTest();
+
+    const values = PreferencesManager.INSTANCE.values();
+    expect(values.music_volume).eq(0);
+    expect(values.enable_sounds).eq(true);
+  });
 });

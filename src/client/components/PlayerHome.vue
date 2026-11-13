@@ -17,26 +17,24 @@
       @click.stop="toggleMissionAudio">
       <span aria-hidden="true">♪</span>
     </button>
-    <details class="mission-menu" :open="!cinematic" @click="routeSidebarLink">
-      <summary :aria-label="$t('Player Settings')" :title="$t('Player Settings')">⚙</summary>
-      <Sidebar
-        :actingPlayer="isPlayerActing(playerView)"
-        :playerColor="thisPlayer.color"
-        :generation="game.generation"
-        :coloniesCount="game.colonies.length"
-        :temperature="game.temperature"
-        :oxygen="game.oxygenLevel"
-        :oceans="game.oceans"
-        :venus="game.venusScaleLevel"
-        :turmoil="game.turmoil"
-        :moonData="game.moon"
-        :gameOptions="game.gameOptions"
-        :playerNumber="playerView.players.length"
-        :lastSoloGeneration="game.lastSoloGeneration"
-        :deckSize="game.deckSize"
-        :discardPileSize="game.discardPileSize"
-        :otherDeckSizes="game.otherDeckSizes" />
-    </details>
+    <MissionSettings v-if="cinematic" />
+    <Sidebar v-else
+      :actingPlayer="isPlayerActing(playerView)"
+      :playerColor="thisPlayer.color"
+      :generation="game.generation"
+      :coloniesCount="game.colonies.length"
+      :temperature="game.temperature"
+      :oxygen="game.oxygenLevel"
+      :oceans="game.oceans"
+      :venus="game.venusScaleLevel"
+      :turmoil="game.turmoil"
+      :moonData="game.moon"
+      :gameOptions="game.gameOptions"
+      :playerNumber="playerView.players.length"
+      :lastSoloGeneration="game.lastSoloGeneration"
+      :deckSize="game.deckSize"
+      :discardPileSize="game.discardPileSize"
+      :otherDeckSizes="game.otherDeckSizes" />
 
     <header class="mission-status">
       <div>
@@ -198,6 +196,11 @@
 
         <div v-show="!cinematic || missionPanel === 'details'">
           <div id="mission-board-details"></div>
+          <details v-if="cinematic && missionPanel === 'details'" @toggle="gameSetupOpen = ($event.target as HTMLDetailsElement).open">
+            <summary v-i18n>Game Setup Details</summary>
+            <InfoPanel v-if="gameSetupOpen" embedded :gameOptions="game.gameOptions" :playerNumber="playerView.players.length"
+              :lastSoloGeneration="game.lastSoloGeneration" :deckSize="game.deckSize" :discardPileSize="game.discardPileSize" :otherDeckSizes="game.otherDeckSizes" />
+          </details>
           <div v-if="thisPlayer.underworldData.tokens.length > 0">
             <DynamicTitle title="Claimed Underground Resource Tokens" :color="thisPlayer.color" />
             <UndergroundTokens :underworldData="thisPlayer.underworldData" />
@@ -239,6 +242,8 @@ import {Color} from '@/common/Color';
 import {Phase} from '@/common/Phase';
 import WaitingFor from '@/client/components/WaitingFor.vue';
 import Sidebar from '@/client/components/Sidebar.vue';
+import MissionSettings from '@/client/components/MissionSettings.vue';
+import InfoPanel from '@/client/components/InfoPanel.vue';
 import Colony from '@/client/components/colonies/Colony.vue';
 import LogPanel from '@/client/components/logpanel/LogPanel.vue';
 import ActivityFeed from '@/client/components/logpanel/ActivityFeed.vue';
@@ -275,6 +280,7 @@ import {getCardAvailability} from '@/client/utils/CardAvailability';
 type PlayerHomeModel = {
   missionPanel: MissionPanel | undefined;
   missionPanelOpener: HTMLElement | undefined;
+  gameSetupOpen: boolean;
   missionAudioStarted: boolean;
   showHand: boolean;
   showActiveCards: boolean;
@@ -326,6 +332,7 @@ export default defineComponent({
     return {
       missionPanel: undefined,
       missionPanelOpener: undefined,
+      gameSetupOpen: false,
       missionAudioStarted: false,
       showHand: !preferences.hide_hand,
       showActiveCards: !preferences.hide_active_cards,
@@ -335,6 +342,9 @@ export default defineComponent({
     };
   },
   watch: {
+    missionPanel() {
+      this.gameSetupOpen = false;
+    },
     mapPlacement(input: SelectSpaceModel | undefined) {
       if (this.cinematic && input !== undefined) {
         this.missionPanel = input.spaces.some((space) => space.startsWith('m')) ? 'details' : undefined;
@@ -342,6 +352,7 @@ export default defineComponent({
     },
     cinematic: 'syncMissionAmbience',
     soundsEnabled: 'syncMissionAmbience',
+    musicVolume: SoundManager.setMissionMusicVolume,
     'game.generation'(generation: number, previous: number) {
       if (this.cinematic && generation > previous) {
         SoundManager.mission('turn');
@@ -389,6 +400,9 @@ export default defineComponent({
     },
     soundsEnabled(): boolean {
       return getPreferences().enable_sounds;
+    },
+    musicVolume(): number {
+      return getPreferences().music_volume;
     },
     endTurnIndex(): number {
       const input = this.playerView.waitingFor;
@@ -479,6 +493,8 @@ export default defineComponent({
     RivalPanel,
     WaitingFor,
     Sidebar,
+    MissionSettings,
+    InfoPanel,
     Colony,
     LogPanel,
     ActivityFeed,
@@ -524,29 +540,6 @@ export default defineComponent({
       this.missionPanel = undefined;
       this.missionPanelOpener?.focus({preventScroll: true});
       this.missionPanelOpener = undefined;
-    },
-    routeSidebarLink(event: MouseEvent) {
-      if (!this.cinematic || !(event.target instanceof Element)) {
-        return;
-      }
-      const href = event.target.closest('a')?.getAttribute('href');
-      switch (href) {
-      case '#actions':
-        this.showMissionPanel('actions');
-        break;
-      case '#cards':
-        this.showMissionPanel('hand');
-        break;
-      case '#colonies':
-        this.showMissionPanel('details');
-        break;
-      case '#board':
-        this.closeMissionPanel();
-        break;
-      default:
-        return;
-      }
-      event.preventDefault();
     },
     handleViewNavigation(event: KeyboardEvent): boolean {
       if (!this.cinematic || (event.target instanceof HTMLElement && event.target.matches('input, textarea, select, [contenteditable="true"]'))) {
