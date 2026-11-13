@@ -576,7 +576,7 @@ export default defineComponent({
       this.$nextTick(() => this.onSpaceClicked(space));
     },
     startMissionAudio() {
-      if (this.cinematic && this.soundsEnabled && !this.missionAudioStarted) {
+      if (this.cinematic && this.soundsEnabled) {
         this.missionAudioStarted = true;
         this.syncMissionAmbience();
       }

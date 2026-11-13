@@ -4,7 +4,8 @@ export namespace SoundManager {
   type MissionCue = 'sector' | 'card' | 'project' | 'placement' | 'turn';
 
   let context: AudioContext | undefined;
-  let windBuffer: AudioBuffer | undefined;
+  let noiseBuffer: AudioBuffer | undefined;
+  let soundtrack: Promise<AudioBuffer> | undefined;
   let ambience: AudioBufferSourceNode | undefined;
   let ambienceRequested = false;
 
@@ -42,39 +43,69 @@ export namespace SoundManager {
     oscillator.stop(start + duration);
   }
 
-  function noise(audio: AudioContext, frequency: number, volume: number, duration?: number) {
-    if (windBuffer === undefined) {
-      windBuffer = audio.createBuffer(1, audio.sampleRate * 2, audio.sampleRate);
-      const samples = windBuffer.getChannelData(0);
+  function noise(audio: AudioContext, frequency: number, volume: number, duration: number) {
+    if (noiseBuffer === undefined) {
+      noiseBuffer = audio.createBuffer(1, audio.sampleRate * 2, audio.sampleRate);
+      const samples = noiseBuffer.getChannelData(0);
       for (let i = 0; i < samples.length; i++) {
         samples[i] = Math.random() * 2 - 1;
       }
     }
     const source = audio.createBufferSource();
-    source.buffer = windBuffer;
-    source.loop = duration === undefined;
+    source.buffer = noiseBuffer;
     const filter = audio.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.value = frequency;
     const gain = audio.createGain();
     const start = audio.currentTime;
     gain.gain.setValueAtTime(0, start);
-    gain.gain.linearRampToValueAtTime(volume, start + (duration === undefined ? 0.7 : 0.015));
+    gain.gain.linearRampToValueAtTime(volume, start + 0.015);
     source.connect(filter).connect(gain).connect(audio.destination);
     source.start(start);
-    if (duration !== undefined) {
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-      source.stop(start + duration);
-    }
-    return source;
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    source.stop(start + duration);
+  }
+
+  function loadSoundtrack(audio: AudioContext): Promise<AudioBuffer> {
+    return soundtrack ??= fetch('/assets/audio/mars-orbit.mp3').then((response) => {
+      if (!response.ok) {
+        throw new Error('Could not load the Mars soundtrack');
+      }
+      return response.arrayBuffer();
+    }).then((data) => audio.decodeAudioData(data)).catch((error) => {
+      soundtrack = undefined;
+      throw error;
+    });
   }
 
   export function startMissionAmbience() {
     ambienceRequested = true;
+    if (ambience !== undefined || document.hidden) {
+      return;
+    }
     playInContext((audio) => {
-      if (ambienceRequested && ambience === undefined && !document.hidden) {
-        ambience = noise(audio, 190, 0.12);
-      }
+      void loadSoundtrack(audio).then((buffer) => {
+        if (!ambienceRequested || ambience !== undefined || document.hidden || !getPreferences().enable_sounds) {
+          return;
+        }
+        const source = audio.createBufferSource();
+        const gain = audio.createGain();
+        source.buffer = buffer;
+        source.loop = true;
+        // The MP3 includes one second of adjacent music at both ends to keep
+        // the loop points clear of the encoder's delay and padding.
+        source.loopStart = 1;
+        source.loopEnd = 61;
+        gain.gain.setValueAtTime(0, audio.currentTime);
+        gain.gain.linearRampToValueAtTime(0.65, audio.currentTime + 2);
+        source.connect(gain).connect(audio.destination);
+        source.onended = () => {
+          source.disconnect();
+          gain.disconnect();
+        };
+        source.start(0, source.loopStart);
+        ambience = source;
+      }).catch(() => {});
     }, true);
   }
 

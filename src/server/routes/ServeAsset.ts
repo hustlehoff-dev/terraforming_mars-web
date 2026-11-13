@@ -144,6 +144,7 @@ export class ServeAsset extends Handler {
     case 'assets/Prototype-ru.ttf':
     case 'assets/Prototype-pl.ttf':
     case 'assets/futureforces.ttf':
+    case 'assets/audio/mars-orbit.mp3':
       return {file: urlPath};
 
     case 'styles.css':

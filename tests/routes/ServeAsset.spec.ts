@@ -65,6 +65,14 @@ describe('ServeAsset', () => {
     expect(res.content.startsWith('<!DOCTYPE html>'));
   });
 
+  it('serves the Mars soundtrack as MP3 audio', async () => {
+    instance = new ServeAsset(undefined, false, fileApi);
+    scaffolding.url = '/assets/audio/mars-orbit.mp3';
+    await scaffolding.get(instance, res);
+    expect(res.content).eq('data: assets/audio/mars-orbit.mp3');
+    expect(res.getHeader('Content-Type')).eq('audio/mpeg');
+  });
+
   it('styles.css', async () => {
     instance = new ServeAsset(undefined, false, fileApi);
     scaffolding.url = '/styles.css';
