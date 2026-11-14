@@ -8,6 +8,18 @@
         <div class="wf-component deck-deal mission-hud-dialog__scroll">
 
           <template v-if="open === 'played'">
+            <!-- Filter by tag; the number is how many of that tag the player has. -->
+            <div v-if="playedTags.length" class="nofloat mission-tags" role="group" :aria-label="$t('Filter by tag')">
+              <button type="button" class="mission-tags__tag" :class="{'mission-tags__tag--on': tagFilter === undefined}" :aria-pressed="tagFilter === undefined"
+                @click="tagFilter = undefined">{{ $t('All') }}</button>
+              <button v-for="tag in playedTags" :key="tag.tag" type="button" class="mission-tags__tag"
+                :class="{'mission-tags__tag--on': tagFilter === tag.tag}" :aria-pressed="tagFilter === tag.tag" :title="$t(tag.tag)"
+                @click="tagFilter = tagFilter === tag.tag ? undefined : tag.tag">
+                <img :src="'assets/tags/' + tag.tag + '.png'" alt="">
+                <b>{{ tag.count }}</b>
+              </button>
+            </div>
+            <p v-if="tagFilter && playedGroups.every((group) => group.hidden || group.cards.length === 0)" class="nofloat mission-hud-dialog__hint" v-i18n>No played cards with this tag.</p>
             <template v-for="group in playedGroups" :key="group.label">
               <div class="nofloat mission-hud-dialog__group">{{ $t(group.label) }} · {{ group.cards.length }}</div>
               <template v-if="group.hidden">
@@ -136,6 +148,7 @@ import {getAward, getMilestone} from '@/client/MilestoneAwardManifest';
 import {CardName} from '@/common/cards/CardName';
 import {CardModel} from '@/common/models/CardModel';
 import {CardType} from '@/common/cards/CardType';
+import {Tag} from '@/common/cards/Tag';
 import {Color} from '@/common/Color';
 import {getCard} from '@/client/cards/ClientCardManifest';
 import {PlayerInputModel} from '@/common/models/PlayerInputModel';
@@ -174,14 +187,31 @@ const PLAYED_GROUPS: ReadonlyArray<{type: CardType, label: string}> = [
 ];
 const playedColor = ref<Color>();
 const playedPlayer = computed(() => props.playerView.players.find((player) => player.color === playedColor.value) ?? props.playerView.thisPlayer);
+/** Tag shown in the played cards window, or all of them. */
+const tagFilter = ref<Tag>();
+/** The player's tags (as counted by the game) that appear on their played cards. */
+const playedTags = computed(() => {
+  const counts = playedPlayer.value.tags;
+  return (Object.keys(counts) as Tag[])
+    .filter((tag) => counts[tag] > 0)
+    .map((tag) => ({tag, count: counts[tag]}))
+    .sort((a, b) => b.count - a.count);
+});
 const playedGroups = computed(() => {
   const own = playedPlayer.value.color === props.playerView.thisPlayer.color;
+  const filter = tagFilter.value;
   return PLAYED_GROUPS.map((group) => ({
     label: group.label,
     // Other players' events are a face-down pile in the board game: show the count, not the cards.
     hidden: group.type === CardType.EVENT && !own,
-    cards: playedPlayer.value.tableau.filter((card) => getCard(card.name)?.type === group.type),
+    cards: playedPlayer.value.tableau.filter((card) => {
+      const known = getCard(card.name);
+      return known?.type === group.type && (filter === undefined || (known.tags as ReadonlyArray<Tag>).includes(filter));
+    }),
   })).filter((group) => group.cards.length > 0);
+});
+watch(open, () => {
+  tagFilter.value = undefined;
 });
 function showPlayed(color: Color) {
   playedColor.value = color;
@@ -740,3 +770,49 @@ function chooseMa(subIndex: number) {
   }
 }
 </style>
+
+<style lang="less">
+// Tag filter of the played cards window.
+.mission-hud-dialog .mission-tags {
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.mission-tags__tag {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 4px;
+  border: 1px solid #6f8c98;
+  border-radius: 18px;
+  background: #0b141ce6;
+  color: #eef6f8;
+  font-weight: 800;
+  cursor: pointer;
+
+  &:first-child {
+    padding-left: 12px;
+  }
+
+  img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+  }
+
+  &:hover {
+    border-color: #b4ffeb;
+  }
+
+  &--on {
+    border-color: #e2c27f;
+    box-shadow: 0 0 0 1px #e2c27f, 0 0 12px #e2c27f66;
+    color: #fff3c4;
+  }
+}
+</style>
+

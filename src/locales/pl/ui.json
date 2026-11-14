@@ -449,6 +449,8 @@
   "Spectator (watch only):": "Widz (tylko oglądanie):",
   "open": "otwórz",
   "Spend 8 heat to raise the temperature 1 step?": "Wydać 8 ciepła, aby podnieść temperaturę o 1 krok?",
+  "Filter by tag": "Filtruj po znaczniku",
+  "No played cards with this tag.": "Brak zagranych kart z tym znacznikiem.",
   "Bought": "Kupione",
   "You drew a card": "Dobrałeś kartę",
   "You drew ${0} cards": "Dobrałeś ${0} karty",
