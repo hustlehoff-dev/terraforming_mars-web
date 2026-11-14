@@ -32,6 +32,7 @@
         </ul>
       </button>
       <div v-if="player.played" :key="player.played.key" class="mission-players__played" role="status">
+        <p class="mission-players__played-label" :class="'player_bg_color_' + player.color">{{ player.name }} <span v-i18n>played</span></p>
         <Card :card="{name: player.played.card}" autoTall />
       </div>
     </div>
@@ -67,7 +68,7 @@ function showNext(player: Color) {
     return;
   }
   visible[player] = play;
-  timers.set(player, window.setTimeout(() => showNext(player), 4500));
+  timers.set(player, window.setTimeout(() => showNext(player), 7000));
 }
 
 function show(plays: ReadonlyArray<PlayedCardLogModel>) {
@@ -183,13 +184,33 @@ function productionClass(value: number): string {
 .mission-players__played {
   position: absolute;
   inset-block-start: 0;
-  inset-inline-start: calc(100% + 8px);
+  inset-inline-start: calc(100% + 12px);
+  display: grid;
+  justify-items: start;
+  gap: 6px;
   pointer-events: none;
+  filter: drop-shadow(0 10px 24px #000d) drop-shadow(0 0 14px #e2c27f55);
 
   > :deep(.card-container) {
     margin: 0;
-    zoom: 0.6;
+    // Full size; a little smaller on short screens so the card stays on screen.
+    zoom: 1;
+
+    @media (max-height: 760px) {
+      zoom: 0.8;
+    }
   }
+}
+
+.mission-players__played-label {
+  margin: 0;
+  padding: 4px 12px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 800;
+  text-shadow: 0 1px 2px #000;
+  white-space: nowrap;
 }
 
 @media (prefers-reduced-motion: no-preference) {
