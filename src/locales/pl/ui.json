@@ -458,6 +458,7 @@
   "Resume the game": "Wznów grę",
   "Added ${0} ${1} to ${2}": "Dodano ${0} ${1} na kartę ${2}",
   "Removed ${0} ${1} from ${2}": "Zdjęto ${0} ${1} z karty ${2}",
+  "Time to pick a card": "Czas na wybór karty",
   "Bought": "Kupione",
   "You drew a card": "Dobrałeś kartę",
   "You drew ${0} cards": "Dobrałeś ${0} karty",

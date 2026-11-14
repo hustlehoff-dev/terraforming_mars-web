@@ -2,6 +2,7 @@
   <div class="wf-component wf-component--select-card" :class="{'deck-deal': playerinput.dealtFromDeck || cardDialog, 'draft-pick': draftPick}"
     :aria-busy="draftSubmitting || undefined">
     <div v-if="showtitle === true" class="nofloat wf-component-title">{{ $t(playerinput.title) }}</div>
+    <MissionDraftClock v-if="draftPick && playerView.game.draftDeadline !== undefined" :deadline="playerView.game.draftDeadline" />
     <div v-if="playerinput.dealtFromDeck" class="deck-deal__origin" aria-hidden="true"></div>
     <label v-for="(card, index) in getOrderedCards()" :key="card.name" :class="[getCardBoxClass(card), {'cardbox--featured': featuredCards}]"
       :style="playerinput.dealtFromDeck ? {'--deal-delay': Math.min(index, 10) * 65 + 'ms'} : undefined">
@@ -60,6 +61,7 @@ import {sortActiveCards} from '@/client/utils/ActiveCardsSortingOrder';
 import {SelectCardResponse} from '@/common/inputs/InputResponse';
 import {Warning} from '@/common/cards/Warning';
 import {Phase} from '@/common/Phase';
+import MissionDraftClock from '@/client/components/board/MissionDraftClock.vue';
 
 type Owner = {
   name: string;
@@ -114,6 +116,7 @@ export default defineComponent({
     Card,
     WarningsComponent,
     AppButton,
+    MissionDraftClock,
   },
   watch: {
     cards() {

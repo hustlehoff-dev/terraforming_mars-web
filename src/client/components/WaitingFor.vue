@@ -334,6 +334,13 @@ export default defineComponent({
           if (response.ok) {
             const latest: PlayerViewModel = await response.json();
             playerView.players = latest.players;
+            // The draft clock starts when another player picks: show it to this player too.
+            playerView.game.draftDeadline = latest.game.draftDeadline;
+            // Time ran out and the game picked for this player: show the new state.
+            if (playerView.thisPlayer?.needsToDraft === true && latest.thisPlayer?.needsToDraft === false) {
+              await vueRoot(this).updatePlayer();
+              return;
+            }
           } else {
             console.warn('Unable to update other players', response.status, response.statusText);
             // Client errors (e.g. the game no longer exists) won't recover, so stop polling.
