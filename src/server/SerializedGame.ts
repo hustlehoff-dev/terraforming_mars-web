@@ -1,3 +1,4 @@
+import {Color} from '../common/Color';
 import {Phase} from '../common/Phase';
 import {SerializedClaimedMilestone} from './milestones/ClaimedMilestone';
 import {SerializedFundedAward} from './awards/FundedAward';
@@ -42,6 +43,7 @@ export type SerializedGame = {
     gameAge: number;
     gameLog: Array<LogMessage>;
     activityAction?: LogMessage['action'];
+    paused?: {by: Color, at: number};
     gameOptions: GameOptions;
     generation: number;
     turn?: number;

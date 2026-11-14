@@ -190,7 +190,7 @@ export abstract class Draft {
     }
     this.game.draftDeadline = Date.now() + limit * 1000;
     const round = this.game.draftRound;
-    this.game.draftTimeout = setTimeout(() => {
+    const expire = () => {
       this.game.draftTimeout = undefined;
       if (this.game.draftRound !== round) {
         return;
@@ -205,7 +205,9 @@ export abstract class Draft {
         }
       }
       this.game.save();
-    }, limit * 1000);
+    };
+    this.game.draftExpire = expire;
+    this.game.draftTimeout = setTimeout(expire, limit * 1000);
     this.game.draftTimeout.unref?.();
   }
 

@@ -32,6 +32,7 @@ import {PlayerInput} from '../routes/PlayerInput';
 import {Reset} from '../routes/Reset';
 import {ServeApp} from '../routes/ServeApp';
 import {ServeAsset} from '../routes/ServeAsset';
+import {ApiPause} from '../routes/ApiPause';
 import {serverId, statsId} from '../utils/server-ids';
 import {newIpBlocklist} from './IPBlocklist';
 import {newIpTracker} from './IPTracker';
@@ -104,6 +105,7 @@ const handlers: Map<string, IHandler> = new Map(
     [paths.API_SPECTATOR, ApiSpectator.INSTANCE],
     [paths.API_WAITING_FOR, ApiWaitingFor.INSTANCE],
     [paths.AUTOPASS, Autopass.INSTANCE],
+    [paths.API_PAUSE, ApiPause.INSTANCE],
     [paths.CARDS, ServeApp.INSTANCE],
     [paths.END_GAME_LOG, EndGameLog.INSTANCE],
     ['favicon.ico', ServeAsset.INSTANCE],

@@ -306,6 +306,12 @@ export interface IGame extends Logger {
   /** When the players still drafting must have picked (epoch ms), once one player picked; not saved. */
   draftDeadline: number | undefined;
   draftTimeout: ReturnType<typeof setTimeout> | undefined;
+  /** What happens when the draft clock runs out (kept to restart the clock after a pause). */
+  draftExpire?: () => void;
+  /** Set while a player has paused the game. */
+  paused: {by: Color, at: number} | undefined;
+  pause(player: IPlayer): void;
+  resume(player: IPlayer): void;
   getPlayerAfter(player: IPlayer): IPlayer;
   getPlayerBefore(player: IPlayer): IPlayer;
 

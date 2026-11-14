@@ -1,4 +1,6 @@
 {
+  "${0} resumed the game": "${0} wznawia grę",
+  "${0} paused the game": "${0} wstrzymuje grę",
   "${0} ran out of time and kept the first card": "${0} skończył się czas, zatrzymał pierwszą kartę",
   "${0} revealed and discarded ${1}": "${0} ujawnia i odrzuca ${1}",
   "${0} received ${1} from the project deck": "${0} otrzymuje z talii projektów ${1}",

@@ -10,6 +10,7 @@ export const paths = {
   API_IPS: 'api/ips',
   API_METRICS: 'api/metrics',
   API_LOGOUT: 'api/logout',
+  API_PAUSE: 'api/pause',
   API_PLAYER: 'api/player',
   API_PROFILE: 'api/profile',
   API_SPECTATOR: 'api/spectator',

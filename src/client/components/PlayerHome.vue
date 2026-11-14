@@ -94,11 +94,13 @@
             <button type="button" :aria-expanded="missionPanel === 'details'" @click="toggleMissionPanel('details')">{{ $t('Game details') }}</button>
             <button type="button" :aria-expanded="missionPanel === 'log'" @click="toggleMissionPanel('log')">{{ $t('Game log') }}</button>
             <button type="button" class="primary" :aria-expanded="missionPanel === 'actions'" @click="openActions">{{ $t(finalGreenery ? 'Final greenery placement' : 'Actions') }}</button>
+            <button type="button" class="mission-pause-button" :disabled="pausing" @click="setPaused(true)"><span aria-hidden="true">⏸</span>{{ $t('Pause the game') }}</button>
           </MissionParameters>
           <MissionTurnButton v-if="!mapPlacement" :actions="quickActions" :cardActions="cardActions?.cards ?? []"
             :canPass="passIndex !== -1" :canEndTurn="endTurnIndex !== -1" :active="activeTurnColor === thisPlayer.color && playerView.waitingFor !== undefined"
             :requestId="playerView.requestId" :deadline="thisPlayer.turnDeadline" :actionsTaken="thisPlayer.actionsTakenThisRound" :noActionLimit="othersPassed" :soloGame="playerView.players.length === 1" @select="openQuickAction" @cardAction="(card) => stageCardAction(card)" @pass="passNow" @endTurn="endTurn" />
         </div>
+        <MissionPauseOverlay v-if="cinematic" :paused="game.paused" :players="playerView.players" :busy="pausing" @resume="setPaused(false)" />
         <MissionDraftWaiting v-if="cinematic && draftLockedIn" :players="playerView.players" :deadline="game.draftDeadline" />
         <ConfirmDialog v-if="cinematic" ref="heatConfirm" message="Spend 8 heat to raise the temperature 1 step?" @accept="convertHeatNow" />
         <MissionPinnedCards v-if="cinematic" ref="pinnedCards" :cards="allCardsInHand" :playerId="playerView.id" :playableCards="cardAvailability.projects"
@@ -340,6 +342,9 @@ import MissionHudMenus from '@/client/components/board/MissionHudMenus.vue';
 import ConfirmDialog from '@/client/components/common/ConfirmDialog.vue';
 import MissionPinnedCards from '@/client/components/board/MissionPinnedCards.vue';
 import MissionDraftWaiting from '@/client/components/board/MissionDraftWaiting.vue';
+import {paths} from '@/common/app/paths';
+import {vueRoot} from '@/client/components/vueRoot';
+import MissionPauseOverlay from '@/client/components/board/MissionPauseOverlay.vue';
 import MissionEffectBadges from '@/client/components/board/MissionEffectBadges.vue';
 import MissionEffectsBar from '@/client/components/board/MissionEffectsBar.vue';
 import {CardName} from '@/common/cards/CardName';
@@ -358,6 +363,8 @@ type PlayerHomeModel = {
   quickAction: MissionQuickAction | undefined;
   choosingFinalGreenery: boolean;
   pendingGreenery: {input: SelectSpaceModel; path: number[]; payment: SelectProjectCardToPlayResponse} | undefined;
+  /** A pause or resume request is on its way. */
+  pausing: boolean;
   /** Played effect cards glowing because their effect just gave something. */
   litEffects: ReadonlySet<CardName>;
   /** Menu index of the heat conversion waiting for confirmation. */
@@ -450,6 +457,7 @@ export default defineComponent({
       pinnedNames: new Set(),
       pendingHeat: undefined,
       litEffects: new Set(),
+      pausing: false,
       previewedProject: undefined,
       projectOrigin: undefined,
       projectAutoPlay: false,
@@ -772,6 +780,7 @@ export default defineComponent({
     MissionPinnedCards,
     ConfirmDialog,
     MissionDraftWaiting,
+    MissionPauseOverlay,
     MissionEffectBadges,
     MissionEffectsBar,
     MissionParameters,
@@ -935,6 +944,17 @@ export default defineComponent({
     },
     showCardPlays(cards: Array<PlayedCardLogModel>) {
       (this.$refs.playersPanel as InstanceType<typeof MissionPlayersPanel> | undefined)?.show(cards);
+    },
+    async setPaused(paused: boolean) {
+      this.pausing = true;
+      try {
+        const response = await fetch(`${paths.API_PAUSE}?id=${this.playerView.id}&paused=${paused}`);
+        if (response.ok) {
+          await vueRoot(this).updatePlayer();
+        }
+      } finally {
+        this.pausing = false;
+      }
     },
     lightEffect(card: CardName) {
       this.litEffects = new Set([...this.litEffects, card]);

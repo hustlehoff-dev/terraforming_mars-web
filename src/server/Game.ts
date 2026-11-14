@@ -156,6 +156,51 @@ export class Game implements IGame, Logger {
   public draftRound: number = 1;
   public draftDeadline: number | undefined = undefined;
   public draftTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
+  public draftExpire: (() => void) | undefined = undefined;
+  public paused: {by: Color, at: number} | undefined = undefined;
+  /** Milliseconds left on the draft clock when the game was paused. */
+  private draftRemainingMs: number | undefined = undefined;
+
+  /** Stops the game: no moves, turn and draft clocks frozen with the time they had left. */
+  public pause(player: IPlayer): void {
+    if (this.paused !== undefined) {
+      return;
+    }
+    this.paused = {by: player.color, at: Date.now()};
+    for (const p of this.players) {
+      p.pauseTurnLimit();
+    }
+    if (this.draftDeadline !== undefined) {
+      this.draftRemainingMs = Math.max(0, this.draftDeadline - Date.now());
+      if (this.draftTimeout !== undefined) {
+        clearTimeout(this.draftTimeout);
+      }
+      this.draftTimeout = undefined;
+      this.draftDeadline = undefined;
+    }
+    this.log('${0} paused the game', (b) => b.player(player));
+    this.save();
+  }
+
+  /** Continues the game; clocks go on from where they stopped. */
+  public resume(player: IPlayer): void {
+    if (this.paused === undefined) {
+      return;
+    }
+    this.paused = undefined;
+    for (const p of this.players) {
+      p.resumeTurnLimit();
+    }
+    if (this.draftRemainingMs !== undefined && this.draftExpire !== undefined) {
+      const remaining = this.draftRemainingMs;
+      this.draftDeadline = Date.now() + remaining;
+      this.draftTimeout = setTimeout(this.draftExpire, remaining);
+      this.draftTimeout.unref?.();
+    }
+    this.draftRemainingMs = undefined;
+    this.log('${0} resumed the game', (b) => b.player(player));
+    this.save();
+  }
   public initialDraftIteration: number = 1;
 
   // Milestones and awards
@@ -524,6 +569,7 @@ export class Game implements IGame, Logger {
       gameAge: this.gameAge,
       gameLog: this.gameLog,
       activityAction: this.activityAction,
+      paused: this.paused,
       gameOptions: this.gameOptions,
       generation: this.generation,
       turn: this.turn,
@@ -1861,6 +1907,7 @@ export class Game implements IGame, Logger {
     game.gameAge = d.gameAge;
     game.gameLog = d.gameLog;
     game.activityAction = d.activityAction;
+    game.paused = d.paused;
     game.generation = d.generation;
     game.turn = d.turn ?? (d.phase === Phase.ACTION ? 1 : 0);
     game.turnStarted = d.turnStarted ?? d.phase === Phase.ACTION;

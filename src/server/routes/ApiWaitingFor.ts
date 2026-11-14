@@ -36,6 +36,9 @@ export class ApiWaitingFor extends Handler {
   private getPlayerWaitingForModel(player: IPlayer, game: IGame, gameAge: number, undoCount: number): WaitingForModel {
     const inputs = this.playersWithRequiredInputs(game);
     if (this.playerHasRequiredInput(player)) {
+      if (game.gameAge > gameAge || game.undoCount > undoCount) {
+        return {result: 'REFRESH', waitingFor: inputs};
+      }
       return {result: 'GO', waitingFor: inputs};
     } else if (game.gameAge > gameAge || game.undoCount > undoCount) {
       return {result: 'REFRESH', waitingFor: inputs};

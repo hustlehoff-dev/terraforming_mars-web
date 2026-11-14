@@ -75,6 +75,7 @@ export class Server {
       expectedPurgeTimeMs: game.expectedPurgeTimeMs(),
       gameAge: game.gameAge,
       draftDeadline: game.draftDeadline,
+      paused: game.paused,
       gameOptions: this.getGameOptionsAsModel(game.gameOptions),
       generation: game.getGeneration(),
       turn: game.phase === Phase.ACTION ? game.turn : undefined,

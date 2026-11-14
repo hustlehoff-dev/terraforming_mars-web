@@ -146,6 +146,8 @@ export default defineComponent({
         this.waitForUpdate();
       } else if (this.playerView.players.length > 1 && SIMULTANEOUS_PHASES.includes(this.playerView.game.phase)) {
         this.watchOtherPlayers();
+      } else if (this.playerView.players.length > 1) {
+        this.watchForChanges();
       }
       if (this.playerView.players.length > 1 && this.waitingfor !== undefined && !this.waitingfor.optional) {
         documentTitleTimer = window.setInterval(() => this.animateTitle(), 1000);
@@ -253,6 +255,22 @@ export default defineComponent({
         root.screen = 'the-end';
         window.history.replaceState(playerView, document.title, `${paths.THE_END}?id=${playerView.id}`);
       }
+    },
+    /** On this player's turn: every few seconds, ask whether the game changed (e.g. was paused). */
+    watchForChanges() {
+      clearTimeout(ui_update_timeout_id);
+      ui_update_timeout_id = window.setTimeout(async () => {
+        try {
+          const response = await fetch(paths.API_WAITING_FOR + window.location.search + '&gameAge=' + this.playerView.game.gameAge + '&undoCount=' + this.playerView.game.undoCount);
+          const result = response.ok ? await response.json() as WaitingForModel : undefined;
+          if (result?.result === 'REFRESH' && await vueRoot(this).updatePlayer()) {
+            return;
+          }
+        } catch {
+          // Try again on the next round.
+        }
+        this.watchForChanges();
+      }, 6000);
     },
     waitForUpdate() {
       const vueApp = this;

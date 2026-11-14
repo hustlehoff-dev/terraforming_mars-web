@@ -124,6 +124,8 @@ export interface IPlayer {
 
   timer: Timer;
   /** When the current action turn runs out (epoch ms), if the game has a turn time limit. */
+  pauseTurnLimit(): void;
+  resumeTurnLimit(): void;
   turnDeadline: number | undefined;
 
   // Turmoil

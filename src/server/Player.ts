@@ -1753,6 +1753,33 @@ export class Player implements IPlayer {
     this.turnDeadline = undefined;
   }
 
+  /** Milliseconds left on this player's turn clock when the game was paused. */
+  private turnRemainingMs: number | undefined = undefined;
+
+  public pauseTurnLimit(): void {
+    if (this.turnDeadline === undefined) {
+      return;
+    }
+    this.turnRemainingMs = Math.max(0, this.turnDeadline - Date.now());
+    if (this.turnTimeout !== undefined) {
+      clearTimeout(this.turnTimeout);
+    }
+    this.turnTimeout = undefined;
+    this.turnDeadline = undefined;
+  }
+
+  public resumeTurnLimit(): void {
+    const remaining = this.turnRemainingMs;
+    this.turnRemainingMs = undefined;
+    const input = this.waitingFor;
+    if (remaining === undefined || !(input instanceof OrOptions)) {
+      return;
+    }
+    this.turnDeadline = Date.now() + remaining;
+    this.turnTimeout = setTimeout(() => this.passForTime(input), remaining);
+    this.turnTimeout.unref?.();
+  }
+
   /** Starts the turn clock when the player is given the action menu and the game has a turn time limit. */
   private startTurnLimit(input: PlayerInput): void {
     this.clearTurnLimit();

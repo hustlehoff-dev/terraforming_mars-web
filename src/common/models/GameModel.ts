@@ -40,6 +40,8 @@ export type GameModel = {
   gameAge: number;
   /** When the players still drafting must have picked (epoch ms), if the game has a draft time limit. */
   draftDeadline?: number;
+  /** Set while a player has paused the game: no moves, turn clocks stopped. */
+  paused?: {by: Color, at: number};
   gameOptions: GameOptionsModel;
   generation: number;
   turn: number | undefined;
