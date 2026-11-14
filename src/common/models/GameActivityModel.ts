@@ -17,7 +17,9 @@ export type ActivityStep =
   {kind: 'placed', space: SpaceId, subject: string} |
   {kind: 'removed', space: SpaceId, subject: string} |
   {kind: 'draw', player?: Color, count?: number, deck?: DeckActivity} |
-  {kind: 'event', event: GameActivityKind, player?: Color, subject?: string, card?: CardName};
+  {kind: 'event', event: GameActivityKind, player?: Color, subject?: string, card?: CardName} |
+  /** Resources added to (count > 0) or removed from (count < 0) a card, e.g. 1 microbe onto Decomposers. */
+  {kind: 'resource', player?: Color, card: CardName, count: number, resource: string};
 
 export const deckLabels = {
   drawn: 'Drawn',

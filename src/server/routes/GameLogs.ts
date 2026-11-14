@@ -323,6 +323,18 @@ export class GameLogs {
       if (current?.player === undefined) {
         continue;
       }
+      // Which card got (or lost) resources, e.g. CEO's Favorite Project adding 1 to Decomposers.
+      const resourceMove = message.message === '${0} added ${1}${2} to ${3}' || message.message === '${0} added ${1}${2} to ${3} from ${4}' ? 1 :
+        message.message === '${0} removed ${1}${2} from ${3} to ${4}' ? -1 : 0;
+      if (resourceMove !== 0 && actor?.type === LogMessageDataType.PLAYER) {
+        const [, amount, resource, target] = message.data;
+        const qty = Number(amount?.value);
+        if (target?.type === LogMessageDataType.CARD && Number.isFinite(qty) && qty > 0) {
+          addStep(current, {kind: 'resource', ...(actor.value !== current.player ? {player: actor.value} : {}),
+            card: target.value as CardName, count: resourceMove * qty, resource: String(resource?.value ?? 'resource')});
+        }
+        continue;
+      }
       if (drawnCount && (message.action || (actor?.value === current.player && ['project', 'played', 'action', 'placed'].includes(current.kind)))) {
         current.drawnCount = (current.drawnCount ?? 0) + drawnCount;
         const player = actor?.type === LogMessageDataType.PLAYER && actor.value !== current.player ? actor.value : undefined;

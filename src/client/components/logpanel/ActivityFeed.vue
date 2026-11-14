@@ -195,6 +195,12 @@ const entries = computed(() => mergeDeckRuns(events.value).map((event) => {
       const sector = props.viewModel.game.spaces?.find((field) => field.id === step.space)?.a9 ?? step.space;
       return translateTextWithParams(step.kind === 'placed' ? 'Placed ${0} on sector ${1}' : 'Removed ${0} from sector ${1}', [translateText(step.subject), sector]);
     }
+    if (step.kind === 'resource') {
+      const otherPlayer = step.player && step.player !== event.player ? players.value.get(step.player)?.name : undefined;
+      const text = translateTextWithParams(step.count > 0 ? 'Added ${0} ${1} to ${2}' : 'Removed ${0} ${1} from ${2}',
+        [String(Math.abs(step.count)), translateText(step.resource), translateText(step.card.split(':')[0])]);
+      return [otherPlayer, text].filter(Boolean).join(': ');
+    }
     if (step.kind === 'event' && (step.event === 'temperature' || step.event === 'oxygen' || step.event === 'venus') && step.subject) {
       return `:i:${step.event}: ${step.subject}`;
     }
