@@ -219,6 +219,27 @@
               <span v-i18n>Show timers</span>
             </label>
 
+            <label for="turn-time-limit" class="create-game-turn-limit">
+              <span v-i18n>Turn time limit</span>
+              <select id="turn-time-limit" v-model.number="turnTimeLimit">
+                <option :value="0" v-i18n>Off</option>
+                <option :value="60">1 min</option>
+                <option :value="120">2 min</option>
+                <option :value="180">3 min</option>
+                <option :value="300">5 min</option>
+              </select>
+            </label>
+
+            <label for="draft-time-limit" class="create-game-turn-limit">
+              <span v-i18n>Draft time limit</span>
+              <select id="draft-time-limit" v-model.number="draftTimeLimit" :title="$t('Time left for the others once one player has picked a card')">
+                <option :value="0" v-i18n>Off</option>
+                <option :value="10">10 s</option>
+                <option :value="20">20 s</option>
+                <option :value="30">30 s</option>
+              </select>
+            </label>
+
             <input type="checkbox" v-model="escapeVelocityMode" id="escapevelocity-checkbox">
             <label for="escapevelocity-checkbox">
               <div class="create-game-expansion-icon expansion-icon-escape-velocity"></div>
@@ -743,6 +764,8 @@ export default defineComponent({
         politicalAgendasExtension: this.politicalAgendasExtension,
         undoOption: this.undoOption,
         showTimers: this.showTimers,
+        turnTimeLimit: this.turnTimeLimit,
+        draftTimeLimit: this.draftTimeLimit,
         fastModeOption: this.fastModeOption,
         removeNegativeGlobalEventsOption: this.removeNegativeGlobalEventsOption,
         includeFanMA: this.includeFanMA,

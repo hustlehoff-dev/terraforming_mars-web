@@ -65,6 +65,7 @@ export type SelectCardModel = BaseInputModel & {
   selectBlueCardAction: boolean;
   showOwner: boolean;
   showSelectAll: boolean;
+  dealtFromDeck?: boolean;
 }
 
 export type SelectColonyModel = BaseInputModel & {

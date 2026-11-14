@@ -123,6 +123,8 @@ export interface IPlayer {
   needsToDraft?: boolean;
 
   timer: Timer;
+  /** When the current action turn runs out (epoch ms), if the game has a turn time limit. */
+  turnDeadline: number | undefined;
 
   // Turmoil
   turmoilPolicyActionUsed: boolean;

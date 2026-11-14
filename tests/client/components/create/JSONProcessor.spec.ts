@@ -55,6 +55,7 @@ const TEMPLATE_INPUT = {
   politicalAgendasExtension: 'Standard',
   undoOption: false,
   showTimers: true,
+  turnTimeLimit: 0,
   fastModeOption: false,
   removeNegativeGlobalEventsOption: false,
   includeFanMA: false,

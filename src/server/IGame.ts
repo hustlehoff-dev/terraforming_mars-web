@@ -62,6 +62,8 @@ export interface IGame extends Logger {
   generation: number;
   turn: number;
   beginActionTurn(): void;
+  beginActivityAction(player: IPlayer): void;
+  endActivityAction(): void;
   readonly players: ReadonlyArray<IPlayer>;
   /**
    * MarsBot's player in an automa game, otherwise undefined.
@@ -296,6 +298,9 @@ export interface IGame extends Logger {
    * this is round 2.
    */
   draftRound: number;
+  /** When the players still drafting must have picked (epoch ms), once one player picked; not saved. */
+  draftDeadline: number | undefined;
+  draftTimeout: ReturnType<typeof setTimeout> | undefined;
   getPlayerAfter(player: IPlayer): IPlayer;
   getPlayerBefore(player: IPlayer): IPlayer;
 

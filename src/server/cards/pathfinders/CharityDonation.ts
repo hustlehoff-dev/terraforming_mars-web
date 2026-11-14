@@ -53,7 +53,7 @@ export class SelectCharityDonationCard extends DeferredAction {
     return new SelectCard(
       'Select a card to keep',
       'Choose',
-      this.cards)
+      this.cards, {dealtFromDeck: this.playerIdx === this.boundaryIndex})
       .andThen(
         ([card]) => {
           const game = this.player.game;

@@ -48,6 +48,8 @@ export function defaultCreateGameModel(): CreateGameModel {
     politicalAgendasExtension: 'Standard',
     undoOption: false,
     showTimers: true,
+    turnTimeLimit: 0,
+    draftTimeLimit: 0,
     fastModeOption: false,
     removeNegativeGlobalEventsOption: false,
     includeFanMA: false,

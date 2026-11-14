@@ -16,6 +16,10 @@ export type GameOptions = {
   // Configuration
   undoOption: boolean;
   showTimers: boolean;
+  /** Seconds a player has for each action turn; 0 means no limit. When it runs out the player passes. */
+  turnTimeLimit: number;
+  /** Seconds the other players have to pick once one player has picked a draft card; 0 means no limit. */
+  draftTimeLimit: number;
   fastModeOption: boolean;
   showOtherPlayersVP: boolean;
 
@@ -138,6 +142,8 @@ export const DEFAULT_GAME_OPTIONS: GameOptions = {
   requiresVenusTrackCompletion: false,
   showOtherPlayersVP: false,
   showTimers: true,
+  turnTimeLimit: 0,
+  draftTimeLimit: 0,
   shuffleMapOption: false,
   solarPhaseOption: false,
   soloTR: false,

@@ -23,6 +23,7 @@ export type Options = {
   showOwner: boolean,
   /** Default is false. If true, show a "Select All" / "Deselect All" toggle button. */
   showSelectAll: boolean,
+  dealtFromDeck?: boolean,
 }
 export class SelectCard<T extends ICard> extends BasePlayerInput<ReadonlyArray<T>> {
   public config: Options;
@@ -42,6 +43,7 @@ export class SelectCard<T extends ICard> extends BasePlayerInput<ReadonlyArray<T
       played: config?.played ?? true,
       showOwner: config?.showOwner ?? false,
       showSelectAll: config?.showSelectAll ?? false,
+      dealtFromDeck: config?.dealtFromDeck,
     };
     this.buttonLabel = buttonLabel;
   }
@@ -69,6 +71,7 @@ export class SelectCard<T extends ICard> extends BasePlayerInput<ReadonlyArray<T
       selectBlueCardAction: this.config.selectBlueCardAction,
       showOwner: this.config.showOwner === true,
       showSelectAll: this.config.showSelectAll === true,
+      dealtFromDeck: this.config.dealtFromDeck,
       optional: this.optional,
     };
   }

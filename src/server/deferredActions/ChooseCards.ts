@@ -19,6 +19,7 @@ export const LogType = {
 export type LogType = typeof LogType[keyof typeof LogType];
 
 export type ChooseOptions = {
+  dealtFromDeck?: boolean,
   keepMax?: number,
   logDrawnCard?: boolean,
   paying?: boolean,
@@ -58,7 +59,7 @@ export class ChooseCards extends DeferredAction {
     const min = options.paying ? 0 : options.keepMax;
 
     const button = max === 0 ? 'Ok' : (options.paying ? 'Buy' : 'Select');
-    return new SelectCard(msg, button, cards, {max, min, played: !options.paying})
+    return new SelectCard(msg, button, cards, {max, min, played: !options.paying, dealtFromDeck: options.dealtFromDeck})
       .andThen((selected) => {
         if (selected.length > max) {
           throw new Error('Selected too many cards');

@@ -38,6 +38,8 @@ export type GameModel = {
   otherDeckSizes: OtherDeckSizesModel;
   expectedPurgeTimeMs: number;
   gameAge: number;
+  /** When the players still drafting must have picked (epoch ms), if the game has a draft time limit. */
+  draftDeadline?: number;
   gameOptions: GameOptionsModel;
   generation: number;
   turn: number | undefined;

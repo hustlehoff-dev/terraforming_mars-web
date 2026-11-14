@@ -74,6 +74,7 @@ export class Server {
       discardedColonies: game.discardedColonies.map(toName),
       expectedPurgeTimeMs: game.expectedPurgeTimeMs(),
       gameAge: game.gameAge,
+      draftDeadline: game.draftDeadline,
       gameOptions: this.getGameOptionsAsModel(game.gameOptions),
       generation: game.getGeneration(),
       turn: game.phase === Phase.ACTION ? game.turn : undefined,
@@ -268,6 +269,7 @@ export class Server {
       tags: player.tags.countAllTags(),
       terraformRating: player.terraformRating,
       timer: player.timer.toModel(),
+      turnDeadline: player.turnDeadline,
       titanium: player.titanium,
       titaniumProduction: player.production.titanium,
       titaniumValue: player.getTitaniumValue(),
@@ -394,6 +396,20 @@ export class Server {
       if (tileType !== undefined) {
         model.tileType = tileType;
       }
+      if (space.tile?.card !== undefined) {
+        model.tileCard = space.tile.card;
+      }
+      const neighbours = board.getAdjacentSpaces(space);
+      const adjacentOceans = neighbours.filter(Board.isOceanSpace).length;
+      if (adjacentOceans > 0) {
+        model.adjacentOceans = adjacentOceans;
+      }
+      if (Board.isCitySpace(space)) {
+        model.adjacentGreenery = neighbours.filter(Board.isGreenerySpace).length;
+      }
+      if (tileType !== undefined) {
+        model.boardVictoryPoints = (Board.isGreenerySpace(space) ? 1 : 0) + (model.adjacentGreenery ?? 0);
+      }
       if (space.cube !== undefined) {
         model.cube = space.cube;
       }
@@ -466,6 +482,8 @@ export class Server {
       removeNegativeGlobalEvents: options.removeNegativeGlobalEventsOption,
       showOtherPlayersVP: options.showOtherPlayersVP,
       showTimers: options.showTimers,
+      turnTimeLimit: options.turnTimeLimit ?? 0,
+      draftTimeLimit: options.draftTimeLimit ?? 0,
       shuffleMapOption: options.shuffleMapOption,
       solarPhaseOption: options.solarPhaseOption,
       soloTR: options.soloTR,

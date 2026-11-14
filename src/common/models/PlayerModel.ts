@@ -75,6 +75,8 @@ export type PublicPlayerModel = {
   tags: Record<Tag, number>
   terraformRating: number;
   timer: TimerModel;
+  /** When the current action turn runs out (epoch ms), if the game has a turn time limit. */
+  turnDeadline?: number;
   titanium: number;
   titaniumProduction: number;
   titaniumValue: number;

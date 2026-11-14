@@ -8,6 +8,7 @@ import {SelectCard} from './inputs/SelectCard';
 import {message} from './logs/MessageBuilder';
 import {IPreludeCard} from './cards/prelude/IPreludeCard';
 import {ICeoCard} from './cards/ceos/ICeoCard';
+import {LogHelper} from './LogHelper';
 
 export type DraftType = 'none' | 'initial' | 'prelude' | 'ceos' | 'standard';
 
@@ -44,7 +45,11 @@ export abstract class Draft {
     const arrays: Array<Array<IProjectCard>> = [];
     if (this.game.draftRound === 1) {
       for (const player of this.game.players) {
-        arrays.push(this.draw(player));
+        const cards = this.draw(player);
+        arrays.push(cards);
+        if (this.type === 'standard' || this.type === 'initial') {
+          LogHelper.logProjectOffer(player, cards);
+        }
       }
     } else {
       arrays.push(...this.game.players.map((player) => player.draftHand));
@@ -144,6 +149,7 @@ export abstract class Draft {
       {
         min: cardsToKeep, max: cardsToKeep, played: false,
         enabled: enabled,
+        dealtFromDeck: !repick && (this.type === 'standard' || this.type === 'initial'),
       });
     selectCard.optional = repick;
     player.setWaitingFor(selectCard
@@ -164,16 +170,57 @@ export abstract class Draft {
     );
   }
 
+  /** Stops the draft clock (everybody picked, or a new round starts). */
+  private clearDraftClock(): void {
+    if (this.game.draftTimeout !== undefined) {
+      clearTimeout(this.game.draftTimeout);
+    }
+    this.game.draftTimeout = undefined;
+    this.game.draftDeadline = undefined;
+  }
+
+  /**
+   * With a draft time limit: once the first player has picked, the others have that many seconds.
+   * When time is up, each of them keeps the first card(s) of their hand.
+   */
+  private startDraftClock(): void {
+    const limit = this.game.gameOptions.draftTimeLimit ?? 0;
+    if (limit <= 0 || this.game.draftDeadline !== undefined) {
+      return;
+    }
+    this.game.draftDeadline = Date.now() + limit * 1000;
+    const round = this.game.draftRound;
+    this.game.draftTimeout = setTimeout(() => {
+      this.game.draftTimeout = undefined;
+      if (this.game.draftRound !== round) {
+        return;
+      }
+      for (const late of this.game.players.filter((p) => p.needsToDraft)) {
+        const cards = late.draftHand.slice(0, this.cardsToKeep(late)).map((card) => card.name);
+        try {
+          this.game.log('${0} ran out of time and kept the first card', (b) => b.player(late));
+          late.process({type: 'card', cards});
+        } catch (e) {
+          console.warn('Automatic draft pick after the time limit failed', e);
+        }
+      }
+      this.game.save();
+    }, limit * 1000);
+    this.game.draftTimeout.unref?.();
+  }
+
   /** Called when a player has chosen a card to draft. */
   private onCardDrafted(player: IPlayer): void {
     player.needsToDraft = false;
 
     // If anybody still needs to draft, stop here.
     if (this.game.players.some((p) => p.needsToDraft)) {
+      this.startDraftClock();
       this.askPlayerToDraft(player, true);
       this.game.save();
       return;
     }
+    this.clearDraftClock();
 
     // Clear all pending Repick waitingFor.
     for (const p of this.game.players) {

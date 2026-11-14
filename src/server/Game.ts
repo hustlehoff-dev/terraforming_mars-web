@@ -120,6 +120,7 @@ export class Game implements IGame, Logger {
   public createdTime: Date = new Date(0);
   public gameAge: number = 0; // Each log event increases it
   public gameLog: Array<LogMessage> = createGameLog();
+  private activityAction?: LogMessage['action'];
   public undoCount: number = 0; // Each undo increases it
   public inputsThisRound = 0;
   public resettable: boolean = false;
@@ -152,6 +153,8 @@ export class Game implements IGame, Logger {
 
   // Drafting
   public draftRound: number = 1;
+  public draftDeadline: number | undefined = undefined;
+  public draftTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
   public initialDraftIteration: number = 1;
 
   // Milestones and awards
@@ -447,7 +450,9 @@ export class Game implements IGame, Logger {
         gameOptions.moonExpansion) {
         player.dealtCorporationCards.push(...corporationDeck.drawN(game, gameOptions.startingCorporations));
         if (gameOptions.initialDraftVariant === false) {
-          player.dealtProjectCards.push(...projectDeck.drawN(game, 10));
+          const cards = projectDeck.drawN(game, 10);
+          LogHelper.logProjectOffer(player, cards);
+          player.dealtProjectCards.push(...cards);
         }
         if (gameOptions.preludeExtension) {
           gameOptions.startingPreludes = Math.max(gameOptions.startingPreludes ?? 0, constants.PRELUDE_CARDS_DEALT_PER_PLAYER);
@@ -517,6 +522,7 @@ export class Game implements IGame, Logger {
       nomadSpace: this.nomadSpace,
       gameAge: this.gameAge,
       gameLog: this.gameLog,
+      activityAction: this.activityAction,
       gameOptions: this.gameOptions,
       generation: this.generation,
       turn: this.turn,
@@ -1236,6 +1242,9 @@ export class Game implements IGame, Logger {
       player.increaseTerraformRating(steps);
     }
 
+    if (steps > 0 && this.phase !== Phase.SOLAR) {
+      this.log('${0} raised oxygen from ${1}% to ${2}%', (b) => b.player(player).number(this.oxygenLevel).number(newOxygenLevel));
+    }
     grantGlobalParameterTrackBonuses(player, 'oxygen', this.oxygenLevel, newOxygenLevel);
 
     this.oxygenLevel = newOxygenLevel;
@@ -1264,6 +1273,9 @@ export class Game implements IGame, Logger {
     const steps = Math.min(increments, venusStepsBetween(this.venusScaleLevel, this.max.venus));
     const newValue = venusLevelAfterSteps(this.venusScaleLevel, steps);
 
+    if (steps > 0 && this.phase !== Phase.SOLAR) {
+      this.log('${0} raised Venus from ${1}% to ${2}%', (b) => b.player(player).number(this.venusScaleLevel).number(newValue));
+    }
     grantGlobalParameterTrackBonuses(player, 'venus', this.venusScaleLevel, newValue);
 
     if (this.phase !== Phase.SOLAR) {
@@ -1327,6 +1339,9 @@ export class Game implements IGame, Logger {
       player.increaseTerraformRating(steps);
     }
 
+    if (steps > 0 && this.phase !== Phase.SOLAR) {
+      this.log('${0} raised temperature from ${1}°C to ${2}°C', (b) => b.player(player).number(this.temperature).number(newTemperature));
+    }
     grantGlobalParameterTrackBonuses(player, 'temperature', this.temperature, newTemperature);
 
     this.temperature = newTemperature;
@@ -1709,11 +1724,22 @@ export class Game implements IGame, Logger {
       .toSorted(byKey('cost'));
   }
 
+  public beginActivityAction(player: IPlayer): void {
+    this.activityAction = {id: this.gameAge, player: player.color};
+  }
+
+  public endActivityAction(): void {
+    this.activityAction = undefined;
+  }
+
   public log(message: string, f?: (builder: LogMessageBuilder) => void, options?: {reservedFor?: IPlayer}) {
     const builder = new LogMessageBuilder(message);
     f?.(builder);
     const logMessage = builder.build();
     logMessage.playerId = options?.reservedFor?.id;
+    if (this.activityAction !== undefined) {
+      logMessage.action = this.activityAction;
+    }
     this.gameLog.push(logMessage);
     this.gameAge++;
   }
@@ -1833,6 +1859,7 @@ export class Game implements IGame, Logger {
     game.clonedGamedId = d.clonedGamedId;
     game.gameAge = d.gameAge;
     game.gameLog = d.gameLog;
+    game.activityAction = d.activityAction;
     game.generation = d.generation;
     game.turn = d.turn ?? (d.phase === Phase.ACTION ? 1 : 0);
     game.turnStarted = d.turnStarted ?? d.phase === Phase.ACTION;

@@ -56,6 +56,8 @@ export type CreateGameModel = {
   showOtherPlayersVP: boolean;
   showPreludesList: boolean;
   showTimers: boolean;
+  turnTimeLimit?: number;
+  draftTimeLimit?: number;
   shuffleMapOption: boolean;
   solarPhaseOption: boolean;
   soloTR: boolean;

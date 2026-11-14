@@ -95,6 +95,7 @@ export class Player implements IPlayer {
   public readonly id: PlayerId;
   protected waitingFor?: PlayerInput;
   protected waitingForCb?: () => void;
+  private waitingForActivityAction = false;
   public game: IGame;
   public tags: Tags;
   public colonies: Colonies;
@@ -341,7 +342,8 @@ export class Player implements IPlayer {
       this.terraformRating += steps;
       this.hasIncreasedTerraformRatingThisGeneration = true;
 
-      if (opts.log === true) {
+      // Every TR gain is logged unless the caller opts out, so the activity feed can show it.
+      if (opts.log !== false) {
         if (opts.from !== undefined) {
           const from = opts.from;
           this.game.log('${0} gained ${1}:i:tr: from ${2}', (b) => b.player(this).number(steps).from(from));
@@ -661,6 +663,7 @@ export class Player implements IPlayer {
   public runResearchPhase(): void {
     if (!this.game.gameOptions.draftVariant || this.game.isSoloMode()) {
       this.draftedCards = newStandardDraft(this.game).draw(this);
+      LogHelper.logProjectOffer(this, this.draftedCards);
     }
 
     // If there are 4 cards to choose from, choose 4. If there are 5 because of Mars maths or Luna Project Office,
@@ -676,7 +679,7 @@ export class Player implements IPlayer {
       // TODO(kberg): Using .execute to rely on directly calling setWaitingFor is not great.
       // It's because all players is drafting at the same time. Once again, the server isn't ideal
       // when it comes to handling multiple players at once.
-      const action = new ChooseCards(this, cards, {paying: true, keepMax: selectable}).execute();
+      const action = new ChooseCards(this, cards, {paying: true, keepMax: selectable, dealtFromDeck: true}).execute();
 
       // ChooseCards.execute returns an action with an andThen set. That means
       // this has to wrap it around and do clever things.
@@ -705,7 +708,9 @@ export class Player implements IPlayer {
           inplaceRemove(cards, discard);
         }
         // Drawing from the top to maintain seeds.
-        cards.push(...this.game.projectDeck.drawN(this.game, 2, 'top'));
+        const replacements = this.game.projectDeck.drawN(this.game, 2, 'top');
+        LogHelper.logProjectOffer(this, replacements);
+        cards.push(...replacements);
         this.setWaitingFor(chooseCardsToBuy());
 
         return undefined;
@@ -1463,14 +1468,14 @@ export class Player implements IPlayer {
 
           const selectPrelude = PreludesExpansion.selectPreludeToPlay(this, this.preludeCardsInHand);
 
-          this.setWaitingFor(selectPrelude, () => game.drainQueue(() => {
+          this.setWaitingForActivityAction(selectPrelude, () => {
             this.incrementActionsTaken();
             if (this.preludeCardsInHand.length === 0 && !this.headStartIsInEffect()) {
               game.playerIsFinishedTakingActions();
               return;
             }
             this.takeAction();
-          }));
+          });
 
           return;
         }
@@ -1534,20 +1539,20 @@ export class Player implements IPlayer {
           orOptions.options.push(this.passOption());
         }
 
-        this.setWaitingFor(orOptions, () => game.drainQueue(() => {
+        this.setWaitingForActivityAction(orOptions, () => {
           if (this.pendingInitialActions.length === 0) {
             this.incrementActionsTaken();
           }
           this.timer.rebate(constants.BONUS_SECONDS_PER_ACTION * 1000);
           this.takeAction();
-        }));
+        });
         return;
       }
 
-      this.setWaitingFor(this.getActions(), () => game.drainQueue(() => {
+      this.setWaitingForActivityAction(this.getActions(), () => {
         this.incrementActionsTaken();
         this.takeAction();
-      }));
+      });
     });
   }
 
@@ -1696,18 +1701,28 @@ export class Player implements IPlayer {
     }
     const waitingFor = this.waitingFor;
     const waitingForCb = this.waitingForCb;
+    const startsActivity = this.waitingForActivityAction;
     const requestId = this.requestId;
+    this.clearTurnLimit();
     this.waitingFor = undefined;
     this.waitingForCb = undefined;
+    this.waitingForActivityAction = false;
     this.requestId = undefined;
     try {
       if (!waitingFor.optional) {
         this.timer.stop();
       }
+      if (startsActivity) {
+        this.game.beginActivityAction(this);
+      }
       this.defer(waitingFor.process(input, this));
       waitingForCb();
     } catch (err) {
+      if (startsActivity) {
+        this.game.endActivityAction();
+      }
       this.setWaitingFor(waitingFor, waitingForCb);
+      this.waitingForActivityAction = startsActivity;
       // The player is still answering the same request.
       this.requestId = requestId;
       throw err;
@@ -1716,6 +1731,62 @@ export class Player implements IPlayer {
 
   public getWaitingFor(): PlayerInput | undefined {
     return this.waitingFor;
+  }
+
+  private setWaitingForActivityAction(input: PlayerInput, callback: () => void): void {
+    this.setWaitingFor(input, () => this.game.drainQueue(() => {
+      this.game.endActivityAction();
+      callback();
+    }));
+    this.waitingForActivityAction = true;
+  }
+
+  /** When the current action turn runs out (epoch ms), if the game has a turn time limit. */
+  public turnDeadline: number | undefined = undefined;
+  private turnTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
+
+  private clearTurnLimit(): void {
+    if (this.turnTimeout !== undefined) {
+      clearTimeout(this.turnTimeout);
+    }
+    this.turnTimeout = undefined;
+    this.turnDeadline = undefined;
+  }
+
+  /** Starts the turn clock when the player is given the action menu and the game has a turn time limit. */
+  private startTurnLimit(input: PlayerInput): void {
+    this.clearTurnLimit();
+    const limit = this.game.gameOptions.turnTimeLimit ?? 0;
+    const title = typeof input.title === 'string' ? input.title : input.title.message;
+    if (limit <= 0 || !(input instanceof OrOptions) || (title !== 'Take your first action' && title !== 'Take your next action')) {
+      return;
+    }
+    this.turnDeadline = Date.now() + limit * 1000;
+    this.turnTimeout = setTimeout(() => this.passForTime(input), limit * 1000);
+    this.turnTimeout.unref?.();
+  }
+
+  /** Time is up: if the player is still on the same action menu, they pass (or end their turn). */
+  private passForTime(input: OrOptions): void {
+    this.turnTimeout = undefined;
+    if (this.waitingFor !== input) {
+      return;
+    }
+    const titleOf = (option: PlayerInput) => typeof option.title === 'string' ? option.title : option.title.message;
+    let index = input.options.findIndex((option) => option instanceof SelectOption && titleOf(option) === 'Pass for this generation');
+    if (index < 0) {
+      index = input.options.findIndex((option) => option instanceof SelectOption && titleOf(option) === 'End Turn');
+    }
+    if (index < 0) {
+      return;
+    }
+    try {
+      this.game.log('${0} ran out of time', (b) => b.player(this));
+      this.process({type: 'or', index, response: {type: 'option'}});
+      this.game.save();
+    } catch (e) {
+      console.warn('Automatic pass after the turn time limit failed', e);
+    }
   }
 
   public setWaitingFor(input: PlayerInput, cb: () => void = () => {}): void {
@@ -1732,9 +1803,11 @@ export class Player implements IPlayer {
     }
     this.waitingFor = input;
     this.waitingForCb = cb;
+    this.waitingForActivityAction = false;
     this.requestId = generateRandomId('');
     this.inputRequestedAt = this.clock.now();
     this.game.inputsThisRound++;
+    this.startTurnLimit(input);
   }
 
   /**
@@ -1765,6 +1838,7 @@ export class Player implements IPlayer {
     const waitingFor = this.waitingFor;
     this.waitingFor = undefined;
     this.waitingForCb = undefined;
+    this.waitingForActivityAction = false;
     this.requestId = undefined;
     if (waitingFor !== undefined && !waitingFor.optional) {
       this.timer.stop();
