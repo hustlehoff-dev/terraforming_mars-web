@@ -1918,6 +1918,12 @@ export class Game implements IGame, Logger {
     if (game.phase === Phase.END) {
       GameLoader.getInstance().mark(game.id);
     }
+    // A game loaded from the database (a restart, or another server instance on hosts that run
+    // several) re-creates every pending input with a new request ID that open pages do not know.
+    // Pages holding the previous ID keep working: the check is skipped until the next input.
+    for (const player of game.players) {
+      player.requestId = undefined;
+    }
     return game;
   }
 
