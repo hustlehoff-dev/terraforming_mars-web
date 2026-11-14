@@ -66,6 +66,7 @@ import {setFaviconStatus, setFaviconTurnFrame} from '@/client/utils/favicon';
 let ui_update_timeout_id: number | undefined;
 let otherPlayersTimer: number | undefined;
 let documentTitleTimer: number | undefined;
+let deadlineTimer: number | undefined;
 let animationFrame = 0;
 
 // How often to refresh other players' status during simultaneous phases.
@@ -149,6 +150,15 @@ export default defineComponent({
       if (this.playerView.players.length > 1 && this.waitingfor !== undefined && !this.waitingfor.optional) {
         documentTitleTimer = window.setInterval(() => this.animateTitle(), 1000);
       }
+      // With a turn time limit the server passes for the player at the deadline; nothing tells
+      // this page, so it fetches the new state shortly after the clock reaches zero.
+      window.clearTimeout(deadlineTimer);
+      const deadline = this.playerView.thisPlayer?.turnDeadline;
+      if (deadline !== undefined && this.waitingfor !== undefined) {
+        deadlineTimer = window.setTimeout(() => {
+          void vueRoot(this).updatePlayer();
+        }, Math.max(0, deadline - Date.now()) + 2000);
+      }
     },
     stop() {
       window.clearTimeout(ui_update_timeout_id);
@@ -157,6 +167,8 @@ export default defineComponent({
       otherPlayersTimer = undefined;
       window.clearInterval(documentTitleTimer);
       documentTitleTimer = undefined;
+      window.clearTimeout(deadlineTimer);
+      deadlineTimer = undefined;
     },
     getPlayerName(color: Color): string {
       const player = this.playerView.players.find((p) => p.color === color);
