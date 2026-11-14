@@ -102,15 +102,31 @@ export class PlayerInput extends Handler {
       if (this.isWaitingForUndo(player, entity)) {
         await this.performUndo(req, res, ctx, player);
       } else {
-        player.process(entity);
-        // Answer only once the new state is in the database: with several server instances
-        // the page's next request may reach another one, which must not see an older game.
-        await ctx.gameLoader.waitForSaves?.(player.game.id);
-        if (player.game.saveConflict) {
-          // Another instance saved a newer state first: this move was made on an old copy.
-          throw new AppError(INVALID_REQUEST_ID, 'The game moved on in the meantime. The page will refresh.');
+        const move = JSON.stringify(entity);
+        let current = player;
+        // A repeated click from a page that has not refreshed yet: nothing is asked of the player
+        // (the move is already in the game), so answer with the current state instead of an error.
+        for (let attempt = 1; current.getWaitingFor() !== undefined; attempt++) {
+          current.process(JSON.parse(move));
+          // Answer only once the new state is in the database: with several server instances
+          // the page's next request may reach another one, which must not see an older game.
+          await ctx.gameLoader.waitForSaves?.(current.game.id);
+          if (!current.game.saveConflict) {
+            break;
+          }
+          // Another instance saved first (e.g. both players buying cards at the same time).
+          // Load the newest state and make the same move on it.
+          if (attempt >= 3) {
+            throw new AppError(INVALID_REQUEST_ID, 'The game moved on in the meantime. The page will refresh.');
+          }
+          const fresh = await ctx.gameLoader.getGame(current.game.id, true);
+          if (fresh === undefined) {
+            throw RouteError.notFound();
+          }
+          current = fresh.getPlayerById(current.id);
+          this.resetTableauCardState(current);
         }
-        responses.writeJson(res, ctx, Server.getPlayerModel(player));
+        responses.writeJson(res, ctx, Server.getPlayerModel(current));
       }
     } catch (e) {
       if (!(e instanceof AppError || e instanceof InputError)) {
