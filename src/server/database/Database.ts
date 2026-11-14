@@ -1,4 +1,4 @@
-import {PostgreSQL} from './PostgreSQL';
+import {PostgreSQL, postgresConnectionString} from './PostgreSQL';
 import {SQLite} from './SQLite';
 import {IDatabase} from './IDatabase';
 import {LocalFilesystem} from './LocalFilesystem';
@@ -17,7 +17,7 @@ export class Database {
   }
 
   private static createInstance(): IDatabase {
-    if (process.env.POSTGRES_HOST !== undefined) {
+    if (postgresConnectionString() !== undefined) {
       console.log('Connecting to Postgres database.');
       return new PostgreSQL();
     }

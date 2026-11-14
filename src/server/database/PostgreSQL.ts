@@ -58,6 +58,19 @@ const metrics = {
   }),
 };
 
+/**
+ * The Postgres connection: a full `postgres://` URL in POSTGRES_HOST (the original setting), or the
+ * URL that hosted Postgres integrations provide (Neon on Vercel sets DATABASE_URL and POSTGRES_URL,
+ * and puts only the host name in POSTGRES_HOST).
+ */
+export function postgresConnectionString(): string | undefined {
+  const host = process.env.POSTGRES_HOST;
+  if (host?.startsWith('postgres')) {
+    return host;
+  }
+  return process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? host;
+}
+
 export class PostgreSQL implements IDatabase {
   protected trimCount = POSTGRES_TRIM_COUNT;
   protected compressOnWrite = DB_COMPRESS_ON_WRITE;
@@ -81,7 +94,7 @@ export class PostgreSQL implements IDatabase {
 
   constructor(
     private config: pg.ClientConfig = {
-      connectionString: process.env.POSTGRES_HOST,
+      connectionString: postgresConnectionString(),
     }) {
     if (config.connectionString?.startsWith('postgres')) {
       config.ssl = {
