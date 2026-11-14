@@ -1,3 +1,5 @@
+import {Counter} from '../behavior/Counter';
+import {Units} from '../../common/Units';
 import {CardModel} from '../../common/models/CardModel';
 import {ColonyModel} from '../../common/models/ColonyModel';
 import {Color} from '../../common/Color';
@@ -12,6 +14,37 @@ import {CardName} from '../../common/cards/CardName';
 import {Tag} from '../../common/cards/Tag';
 import {asArray} from '../../common/utils/utils';
 import {isIStandardProjectCard} from '../cards/IStandardProjectCard';
+
+/**
+ * Production and resources a card would give now when the amount is counted (per tag, per city...),
+ * so a card in hand can show the real number. Fixed amounts are already printed on the card.
+ */
+function countedEffects(player: IPlayer, card: ICard): Array<{kind: 'production' | 'stock', resource: keyof Units, amount: number}> {
+  const behavior = card.behavior;
+  if (behavior === undefined) {
+    return [];
+  }
+  const result: Array<{kind: 'production' | 'stock', resource: keyof Units, amount: number}> = [];
+  try {
+    const counter = new Counter(player, card);
+    for (const kind of ['production', 'stock'] as const) {
+      const units = behavior[kind];
+      if (units === undefined) {
+        continue;
+      }
+      for (const [resource, countable] of Object.entries(units)) {
+        if (countable === undefined || typeof countable === 'number') {
+          continue;
+        }
+        result.push({kind, resource: resource as keyof Units, amount: counter.count(countable)});
+      }
+    }
+  } catch (e) {
+    console.warn(`countedEffects ${card.name}`, e);
+    return [];
+  }
+  return result;
+}
 
 export function cardsToModel(
   player: IPlayer,
@@ -53,6 +86,12 @@ export function cardsToModel(
     };
     if (isIStandardProjectCard(card)) {
       model.standardProjectCanPayWith = card.canPayWith(player);
+    }
+    if (options.showCalculatedCost && isIProjectCard(card)) {
+      const counted = countedEffects(player, card);
+      if (counted.length > 0) {
+        model.countedEffects = counted;
+      }
     }
     if (card.isDisabled) {
       model.isDisabled = true;

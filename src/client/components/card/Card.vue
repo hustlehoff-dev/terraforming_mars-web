@@ -22,6 +22,12 @@
     <CardResourceCounter v-if="hasResourceType" :amount="resourceAmount" :type="resourceType" />
     <CardVictoryPoints v-if="cardMetadata.victoryPoints" :victoryPoints="cardMetadata.victoryPoints" />
     <CardExtraContent :card="card" />
+    <!-- What the card would give now when it counts tags, cities...: e.g. "= +5 M€ production". -->
+    <div v-if="card.countedEffects?.length" class="card-counted-effects" :title="$t('What this card gives now')">
+      <span class="card-counted-effects__eq" aria-hidden="true">=</span>
+      <span v-for="(effect, index) in card.countedEffects" :key="index" class="card-counted-effects__item"
+        v-html="countedIcon(effect)"></span>
+    </div>
     <slot></slot>
   </div>
 </template>
@@ -29,6 +35,7 @@
 <script lang="ts">
 
 import {computed, defineComponent, inject} from 'vue';
+import {renderIcons} from '@/client/markdown/markdown';
 
 import {CardModel} from '@/common/models/CardModel';
 import CardTitle from './CardTitle.vue';
@@ -107,6 +114,11 @@ export default defineComponent({
     return {
       hovering: false,
     };
+  },
+  methods: {
+    countedIcon(effect: {kind: 'production' | 'stock', resource: string, amount: number}): string {
+      return renderIcons(`+${effect.amount}:${effect.kind === 'production' ? 'p' : 'r'}:${effect.resource}:`);
+    },
   },
   computed: {
     cardInstance(): ClientCard {
@@ -252,3 +264,33 @@ export default defineComponent({
 });
 
 </script>
+
+<style lang="less">
+// The counted value of a card in hand, on a dark plate near the bottom of the card.
+.card-counted-effects {
+  position: absolute;
+  z-index: 6;
+  bottom: 44px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 2px solid #e2c27f;
+  border-radius: 10px;
+  background: #0b141cf0;
+  box-shadow: 0 0 12px #e2c27f88, 0 4px 10px #000a;
+  color: #fff3c4;
+  font-family: Ubuntu, Arial, sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.card-counted-effects__eq {
+  color: #e2c27f;
+}
+</style>
+

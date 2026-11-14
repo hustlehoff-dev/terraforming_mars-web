@@ -18,4 +18,9 @@ export interface CardModel {
     bonusResource?: Array<Resource>; // Used with the Mining cards and Robotic Workforce
     cloneTag?: Tag; // Used with Pathfinders
     standardProjectCanPayWith?: StandardProjectCanPayWith; // Set for standard projects; undefined for regular project cards
+    /**
+     * What a card in hand would give right now when its amount depends on the game, e.g. Satellites:
+     * M€ production for each space tag. Only amounts that are counted are listed.
+     */
+    countedEffects?: ReadonlyArray<{kind: 'production' | 'stock', resource: keyof Units, amount: number}>;
 }
