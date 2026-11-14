@@ -8,6 +8,6 @@
 
 ## Jak ten proces stosujemy do planszy Marsa
 
-`MarsSurface` obejmuje tarczę planety i interaktywną planszę w jednej ramie 1280 × 720. Rozmiar okna zmienia skalę całej ramy. Heksy i ich obszary kliknięcia przesuwają się razem z odpowiadającym im terenem. Średnica tarczy uwzględnia standardową siatkę oraz większą planszę Amazonis Planitia.
+`MarsSurface` jest właścicielem sceny 3D (three.js) i kamery. Powierzchnia, siatka heksów, woda, zieleń, kopuły, cienie, stacje orbitalne i pola DOM korzystają z jednej geometrii (`BoardGeometry`) i jednej kamery. Wygląd terenu wynika ze stanu `game.spaces`. Szczegóły w [mapie projektu](../PROJECT_MAP.md).
 
 `AtlasBoard` składa scenę z planszą, stacjami orbitalnymi, kontrolkami i podpowiedzią. `Board` nadal odpowiada za pola i zdarzenia gracza. Kontrolki i stacje mają własny układ ekranowy, ponieważ muszą pozostać dostępne po zmianie rozmiaru sceny.
