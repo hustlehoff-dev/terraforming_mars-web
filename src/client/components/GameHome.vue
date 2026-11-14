@@ -1,33 +1,48 @@
 <template>
-  <div id="game-home" class="game-home-container">
-    <h1><HomeLink>Terraforming Mars</HomeLink> [<span v-i18n>game id:</span> <span>{{ gameId }}</span>]</h1>
-    <h4><span v-i18n>Instructions: To start the game, separately copy and share the links with all players, and then click on your name.</span><br><span v-i18n>Save this page in case you or one of your opponents loses a link.</span></h4>
-    <ul>
-      <li v-for="(player, index) in (game === undefined ? [] : game.players)" :key="player.color">
-        <span class="turn-order" v-i18n>{{ getTurnOrder(index) }}</span>
-        <span :class="'color-square ' + getPlayerCubeColorClass(player.color)">{{ playerSymbol(player.color) }}</span>
-        <span class="player-name"><a :href="getHref(player.id)">{{ player.name }}</a></span>
-        <AppButton title="copy" size="tiny" @click="copyUrl(player.id)" />
-        <span v-if="isPlayerUrlCopied(player.id)" class="copied-notice"><span v-i18n>Copied!</span></span>
-      </li>
-      <li v-if="game !== undefined">
-        <p></p>
-        <span class="turn-order"></span>
-        <span class="color-square"></span>
-        <span class="player-name"><a :href="getHref(game.spectatorId)" v-i18n>Spectator</a></span>
-        <AppButton title="copy" size="tiny" @click="copyUrl(game.spectatorId)" />
-      </li>
-    </ul>
+  <div id="game-home" class="game-room">
+    <header class="game-room__head">
+      <HomeLink class="game-room__brand">Terraforming Mars</HomeLink>
+      <h1 v-i18n>The game is ready</h1>
+      <p class="game-room__id"><span v-i18n>game id:</span> <code>{{ gameId }}</code></p>
+    </header>
 
-    <div class="spacing-setup"></div>
+    <ol class="game-room__steps">
+      <li><b>1</b><span v-i18n>Send every player their own link (Copy link).</span></li>
+      <li><b>2</b><span v-i18n>Click Play next to your name to enter the game.</span></li>
+      <li><b>3</b><span v-i18n>Keep this page (bookmark it) in case somebody loses their link.</span></li>
+    </ol>
+
+    <section class="game-room__players" :aria-label="$t('Players')">
+      <div v-for="(player, index) in (game === undefined ? [] : game.players)" :key="player.color" class="game-room__player"
+        :class="'game-room__player--' + player.color">
+        <span class="game-room__order" :title="$t('Turn order')">{{ index + 1 }}</span>
+        <span :class="'game-room__color ' + getPlayerCubeColorClass(player.color)">{{ playerSymbol(player.color) }}</span>
+        <strong class="game-room__name">{{ player.name }}</strong>
+        <button type="button" class="game-room__copy" :class="{'game-room__copy--done': isPlayerUrlCopied(player.id)}" @click="copyUrl(player.id)">
+          {{ isPlayerUrlCopied(player.id) ? $t('Copied!') : $t('Copy link') }}
+        </button>
+        <a class="game-room__play" :href="getHref(player.id)" v-i18n>Play</a>
+      </div>
+      <button v-if="game !== undefined && game.players.length > 1" type="button" class="game-room__copy-all"
+        :class="{'game-room__copy--done': allCopied}" @click="copyAll">
+        {{ allCopied ? $t('Copied!') : $t('Copy all links (to send in one message)') }}
+      </button>
+    </section>
+
+    <p v-if="game !== undefined" class="game-room__spectator">
+      <span v-i18n>Spectator (watch only):</span>
+      <a :href="getHref(game.spectatorId)" v-i18n>open</a>
+      <button type="button" class="game-room__link-button" @click="copyUrl(game.spectatorId)">
+        {{ isPlayerUrlCopied(game.spectatorId ?? '') ? $t('Copied!') : $t('Copy link') }}
+      </button>
+    </p>
 
     <PurgeWarning :expectedPurgeTimeMs="game.expectedPurgeTimeMs" />
 
-    <div class="spacing-setup"></div>
-    <div v-if="game !== undefined">
-      <h1 v-i18n>Game settings</h1>
+    <details v-if="game !== undefined" class="game-room__settings">
+      <summary v-i18n>Game settings</summary>
       <GameSetupDetail :gameOptions="game.gameOptions" :playerNumber="game.players.length" :lastSoloGeneration="game.lastSoloGeneration" />
-    </div>
+    </details>
   </div>
 </template>
 
@@ -35,7 +50,6 @@
 
 import {defineComponent} from 'vue';
 import {SimpleGameModel} from '@/common/models/SimpleGameModel';
-import AppButton from '@/client/components/common/AppButton.vue';
 import PurgeWarning from '@/client/components/common/PurgeWarning.vue';
 import HomeLink from '@/client/components/common/HomeLink.vue';
 import {playerColorClass} from '@/common/utils/utils';
@@ -53,8 +67,16 @@ import {setDocumentTitle} from '../utils/documentTitle';
 // 4. execute document.execCommand('copy') which does the clipboard thing
 // 5. remove the dummy input
 function copyToClipboard(text: string): void {
-  const input = document.createElement('input');
-  input.setAttribute('value', text);
+  if (navigator.clipboard !== undefined) {
+    void navigator.clipboard.writeText(text).catch(() => legacyCopy(text));
+    return;
+  }
+  legacyCopy(text);
+}
+
+function legacyCopy(text: string): void {
+  const input = document.createElement('textarea');
+  input.value = text;
   document.body.appendChild(input);
   input.select();
   document.execCommand('copy');
@@ -72,7 +94,6 @@ export default defineComponent({
   },
   components: {
     HomeLink,
-    AppButton,
     GameSetupDetail,
     PurgeWarning,
   },
@@ -81,6 +102,7 @@ export default defineComponent({
     return {
       // Variable to keep the state for the current copied player id. Used to display message of which button and which player playable link is currently in the clipboard
       urlCopiedPlayerId: DEFAULT_COPIED_PLAYER_ID,
+      allCopied: false,
       previousViewport: '',
     };
   },
@@ -124,6 +146,16 @@ export default defineComponent({
       copyToClipboard(path + this.getHref(playerId));
       this.urlCopiedPlayerId = playerId;
     },
+    /** All player links as one text, e.g. to paste into a group chat. */
+    copyAll(): void {
+      const path = window.location.href.replace(/game\?id=.*/, '');
+      const text = this.game.players.map((player) => `${player.name}: ${path}${this.getHref(player.id)}`).join('\n');
+      copyToClipboard(text);
+      this.allCopied = true;
+      window.setTimeout(() => {
+        this.allCopied = false;
+      }, 3000);
+    },
     isPlayerUrlCopied(playerId: string): boolean {
       return playerId === this.urlCopiedPlayerId;
     },
@@ -156,3 +188,196 @@ export default defineComponent({
 });
 
 </script>
+
+<style scoped lang="less">
+.game-room {
+  display: grid;
+  width: min(760px, calc(100% - 32px));
+  gap: 18px;
+  margin: 40px auto;
+  padding: 28px clamp(16px, 4vw, 36px);
+  border: 1px solid #e2c27f66;
+  border-radius: 16px;
+  background: linear-gradient(#142330f2, #0a1219f2);
+  box-shadow: 0 20px 60px #000c;
+  color: #eef6f8;
+  font-family: Ubuntu, Arial, sans-serif;
+}
+
+.game-room__head {
+  text-align: center;
+
+  h1 {
+    margin: 6px 0 2px;
+    color: #fff3c4;
+    font-size: 1.8rem;
+  }
+}
+
+.game-room__brand {
+  color: #e2c27f;
+  font-size: 0.85rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.game-room__id {
+  margin: 0;
+  color: #9fb8c2;
+  font-size: 0.8rem;
+
+  code {
+    color: #cfe0e6;
+  }
+}
+
+.game-room__steps {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #cfe0e6;
+  }
+
+  b {
+    display: grid;
+    flex: none;
+    width: 26px;
+    height: 26px;
+    place-items: center;
+    border-radius: 50%;
+    background: #e2c27f;
+    color: #1b1200;
+  }
+}
+
+.game-room__players {
+  display: grid;
+  gap: 10px;
+}
+
+.game-room__player {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #ffffff22;
+  border-radius: 12px;
+  background: #0b141ccc;
+}
+
+.game-room__order {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid #6f8c98;
+  border-radius: 50%;
+  color: #cfe0e6;
+  font-weight: 800;
+}
+
+.game-room__color {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 6px;
+  color: #fff;
+  font-weight: 800;
+}
+
+.game-room__name {
+  overflow: hidden;
+  font-size: 1.15rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-room__copy,
+.game-room__copy-all,
+.game-room__play,
+.game-room__link-button {
+  padding: 9px 16px;
+  border: 1px solid #6f8c98;
+  border-radius: 9px;
+  background: linear-gradient(#1c2f3f, #0b141c);
+  color: #eef6f8;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    border-color: #b4ffeb;
+  }
+}
+
+.game-room__copy--done {
+  border-color: #6be39b;
+  color: #b8f5c8;
+}
+
+.game-room__play {
+  border-color: #e2c27f;
+  background: linear-gradient(#5a4116, #2f220c);
+  color: #ffe9bd;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.game-room__copy-all {
+  justify-self: center;
+}
+
+.game-room__spectator {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+  color: #9fb8c2;
+  font-size: 0.85rem;
+
+  a {
+    color: #a2eeff;
+  }
+}
+
+.game-room__link-button {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+
+.game-room__settings {
+  border-top: 1px solid #ffffff1f;
+  padding-top: 12px;
+
+  summary {
+    color: #e2c27f;
+    font-weight: 700;
+    cursor: pointer;
+  }
+}
+
+@media (max-width: 560px) {
+  .game-room__player {
+    grid-template-columns: auto auto 1fr;
+  }
+
+  .game-room__copy,
+  .game-room__play {
+    grid-column: span 3;
+    text-align: center;
+  }
+}
+</style>
+
