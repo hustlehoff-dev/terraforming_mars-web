@@ -132,8 +132,9 @@ export class ServeAsset extends Handler {
   }
 
   private toServiceWorkerFile(urlPath: string): { file?: string, encoding?: Encoding } {
+    // A tracked file, so builds that start from a clean checkout (containers) serve it too.
     return {
-      file: `build/${urlPath}`,
+      file: `assets/${urlPath.replace(/^\//, '')}`,
     };
   }
 
