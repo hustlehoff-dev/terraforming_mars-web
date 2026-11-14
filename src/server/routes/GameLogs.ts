@@ -7,8 +7,10 @@ import {Log} from '../../common/logs/Log';
 import {LogMessageData} from '../../common/logs/LogMessageData';
 import {LogMessageDataType} from '../../common/logs/LogMessageDataType';
 import {PlayedCardLogModel} from '../../common/models/PlayedCardLogModel';
-import {GameActivityKind, GameActivityModel} from '../../common/models/GameActivityModel';
+import {ActivityStep, DeckActivity, GameActivityKind, GameActivityModel} from '../../common/models/GameActivityModel';
 import {tileTypeToString} from '../../common/TileType';
+import {Color} from '../../common/Color';
+import {CardName} from '../../common/cards/CardName';
 
 // These are the public play events written by Player.playCard and Player.playCorporationCard.
 // Match the persisted templates so the history also works for existing saved games.
@@ -16,12 +18,109 @@ const cardPlayMessages = new Set(['${0} played ${1}', '${0} played ${1} [ ${2} ]
 
 type Activity = Omit<GameActivityModel, 'key'>;
 
+// Unit changes written by StockBase.logUnitDelta and the terraform rating logs. They follow the
+// activity that caused them, so they are folded into it as its gained / lost summary.
+const unitDeltaMessages = new Set([
+  '${0} gained ${1}${2}', '${0} lost ${1}${2}',
+  '${0} gained ${1}${2} from ${3}', '${0} lost ${1}${2} from ${3}',
+  '${0} gained ${1}${2} because of ${3}', '${0} lost ${1}${2} because of ${3}',
+  '${3} stole ${1} ${2} from ${0}',
+]);
+const trMessages = new Map<string, string>([
+  ['${0} gained ${1}:i:tr:', '+'], ['${0} gained ${1}:i:tr: from ${2}', '+'], ['${0} lost ${1}:i:tr:', '-'],
+]);
+
+/** Sums changes of the same unit, e.g. `+2:r:plants: +2:r:plants:` becomes `+4:r:plants:`. */
+function sumChanges(changes: ReadonlyArray<string>): string {
+  const totals = new Map<string, number>();
+  for (const change of changes) {
+    const match = /^([+-])(\d+)(.*)$/.exec(change);
+    if (match === null) {
+      continue;
+    }
+    const unit = match[3];
+    totals.set(unit, (totals.get(unit) ?? 0) + (match[1] === '-' ? -1 : 1) * Number(match[2]));
+  }
+  return Array.from(totals, ([unit, total]) => `${total >= 0 ? '+' : '-'}${Math.abs(total)}${unit}`)
+    .filter((text) => !/^[+-]0(?!\d)/.test(text))
+    .join(' ');
+}
+
+/** The card named as the source of a unit change ("... from ${3}"), if any. */
+function changeSource(message: LogMessage): CardName | undefined {
+  if (!/ (from|because of) \$\{\d\}$/.test(message.message)) {
+    return undefined;
+  }
+  const source = message.data.at(-1);
+  return source?.type === LogMessageDataType.CARD ? source.value as CardName : undefined;
+}
+
+/** One player's unit change as an icon shortcode, e.g. `+1:p:mc:`, or undefined for other messages. */
+function unitChange(message: LogMessage): {player: Color, text: string} | undefined {
+  const [first, amount, unit] = message.data;
+  // Messages with the amount and icon written into the template, e.g. '${0} gained 2:r:plants: from ${1}'.
+  const inline = /^\$\{0\} (gained|lost) (\d+)(:[a-z]+:[a-z-]+:)/.exec(message.message);
+  if (inline !== null && first?.type === LogMessageDataType.PLAYER) {
+    return {player: first.value, text: `${inline[1] === 'lost' ? '-' : '+'}${inline[2]}${inline[3]}`};
+  }
+  const count = Number(amount?.value);
+  if (first?.type !== LogMessageDataType.PLAYER || !Number.isFinite(count) || count === 0) {
+    return undefined;
+  }
+  const trSign = trMessages.get(message.message);
+  if (trSign !== undefined) {
+    return {player: first.value, text: `${trSign}${count}:i:tr:`};
+  }
+  if (!unitDeltaMessages.has(message.message) || unit === undefined) {
+    return undefined;
+  }
+  const icon = Log.shortcode(unit);
+  if (icon === undefined) {
+    return undefined;
+  }
+  const lost = message.message.startsWith('${0} lost') || message.message.startsWith('${3} stole');
+  return {player: first.value, text: `${lost ? '-' : '+'}${count}${icon}`};
+}
+
 const cardActions = new Map<string, GameActivityKind>([
   ['${0} used ${1} action', 'action'],
+  ['${0} used ${1} action with ${2}', 'action'],
   ['${0} used ${1} standard action', 'action'],
   ['${0} took the first action of ${1} corporation', 'action'],
   ['${0} used ${1} standard project', 'project'],
 ]);
+
+const deckMessages = new Map<string, DeckActivity['kind']>([
+  ['${0} revealed and discarded ${1}', 'discarded'],
+  ['${0} revealed ${1}', 'revealed'],
+  ['${0} revealed ${1} and ${2}', 'revealed'],
+  ['Discarded ${0} cards ${1}', 'discarded'],
+  ['Drew and discarded ${0} to place a ${1}', 'discarded'],
+  ['Drew and discarded ${0} and ${1} to place a ${2}', 'discarded'],
+  ['${0} drew ${1}', 'drawn'],
+  ['${0} was discarded.', 'discarded'],
+  ['${0} bought ${1}', 'bought'],
+  ['You bought ${0}', 'bought'],
+  ['${0} received ${1} from the project deck', 'offered'],
+  ['The automa revealed and discarded ${0}', 'discarded'],
+]);
+
+function deckActivity(message: LogMessage): DeckActivity | undefined {
+  const kind = deckMessages.get(message.message);
+  if (kind === undefined) {
+    return undefined;
+  }
+  const cards = message.data.flatMap((datum) => {
+    if (datum.type === LogMessageDataType.CARD) {
+      return [datum.value];
+    }
+    if (datum.type === LogMessageDataType.CARDS) {
+      return datum.value;
+    }
+    return [];
+  });
+  return cards.length ? {kind, cards} : undefined;
+}
 
 function toActivity(message: LogMessage): Activity | undefined {
   const [actor, detail, extra, location] = message.data;
@@ -34,7 +133,9 @@ function toActivity(message: LogMessage): Activity | undefined {
   const player = actor.value;
   const cardKind = cardPlayMessages.has(message.message) ? 'played' : cardActions.get(message.message);
   if (cardKind && detail?.type === LogMessageDataType.CARD) {
-    return {kind: cardKind, player, card: detail.value};
+    // '${0} played ${1} [ ${2} ]' carries the payment, e.g. `-13:r:mc: -2:r:steel:`.
+    const spent = cardKind === 'played' && extra?.type === LogMessageDataType.MARKDOWN && extra.value !== '0' ? String(extra.value) : undefined;
+    return {kind: cardKind, player, card: detail.value, ...(spent !== undefined ? {spent} : {})};
   }
   switch (message.message) {
   case '${0} ${1} ${2} at ${3}':
@@ -68,6 +169,18 @@ function toActivity(message: LogMessage): Activity | undefined {
   case '${0} raised the temperature ${1} step(s)':
   case '${0} acted as World Government and increased temperature':
     return {kind: 'temperature', player};
+  case '${0} raised temperature from ${1}°C to ${2}°C':
+    return {kind: 'temperature', player, subject: `${detail?.value}°C → ${extra?.value}°C`};
+  case '${0} raised oxygen from ${1}% to ${2}%':
+    return {kind: 'oxygen', player, subject: `${detail?.value}% → ${extra?.value}%`};
+  case '${0} raised Venus from ${1}% to ${2}%':
+    return {kind: 'venus', player, subject: `${detail?.value}% → ${extra?.value}%`};
+  case '${0} raised temperature to ${1}°C':
+    return {kind: 'temperature', player, subject: `${detail?.value}°C`};
+  case '${0} raised oxygen to ${1}%':
+    return {kind: 'oxygen', player, subject: `${detail?.value}%`};
+  case '${0} raised Venus to ${1}%':
+    return {kind: 'venus', player, subject: `${detail?.value}%`};
   case '${0} acted as World Government and increased oxygen level':
     return {kind: 'oxygen', player};
   case '${0} raised the Venus scale ${1} step(s)':
@@ -82,20 +195,179 @@ function toActivity(message: LogMessage): Activity | undefined {
 }
 
 export class GameLogs {
-  public getActivity(game: IGame): Array<GameActivityModel> {
+  public getActivity(game: IGame, viewer?: ParticipantId): Array<GameActivityModel> {
     const history: Array<GameActivityModel> = [];
-    for (let index = game.gameLog.length - 1; index >= 0; index--) {
+    let current: GameActivityModel | undefined;
+    let actionId: number | undefined;
+    let own: Array<string> = [];
+    let others = new Map<Color, Array<string>>();
+    // Attach the unit changes that followed an activity to it, newest activity first in the result.
+    const close = () => {
+      if (current !== undefined && own.length > 0) {
+        current.effects = sumChanges(own);
+      }
+      if (current !== undefined && others.size > 0) {
+        current.targets = Array.from(others, ([player, changes]) => ({player, effects: sumChanges(changes)}));
+      }
+      own = [];
+      others = new Map();
+    };
+    const addStep = (entry: GameActivityModel, step: ActivityStep) => {
+      entry.steps = [...(entry.steps ?? []), step];
+    };
+    const viewerColor = game.players.find((player) => player.id === viewer)?.color;
+    // How many cards each player was last dealt to choose from. Only the number is used for
+    // other players: which cards stays secret.
+    const offered = new Map<Color, number>();
+    for (let index = 0; index < game.gameLog.length; index++) {
       const message = game.gameLog[index];
-      if (!message || message.playerId !== undefined) {
+      if (message?.message === '${0} received ${1} from the project deck' && message.playerId !== undefined) {
+        const owner = game.players.find((player) => player.id === message.playerId)?.color;
+        const cards = message.data.find((datum) => datum.type === LogMessageDataType.CARDS)?.value;
+        if (owner !== undefined && Array.isArray(cards)) {
+          offered.set(owner, cards.length);
+        }
+      }
+      if (!message || (message.playerId !== undefined && message.playerId !== viewer)) {
         continue;
       }
-      const activity = toActivity(message);
+      // Another player buying cards outside a card action (e.g. in the research phase):
+      // a line of its own with how many were bought and discarded, and what it cost.
+      if (message.action === undefined && message.data[0]?.type === LogMessageDataType.PLAYER && message.data[0].value !== viewerColor &&
+        (message.message === '${0} bought no cards' || (message.message === '${0} ${1} ${2} card(s)' && message.data[1]?.value === 'bought'))) {
+        const buyer = message.data[0].value;
+        const bought = message.message === '${0} bought no cards' ? 0 : Number(message.data[2]?.value) || 0;
+        const dealt = offered.get(buyer);
+        offered.delete(buyer);
+        const discarded = dealt !== undefined ? Math.max(0, dealt - bought) : undefined;
+        const cardCost = game.players.find((player) => player.color === buyer)?.cardCost ?? 3;
+        close();
+        current = undefined;
+        history.push({
+          kind: 'bought',
+          player: buyer,
+          subject: `${bought} card(s)` + (discarded !== undefined ? `, discarded ${discarded}` : ''),
+          ...(bought > 0 ? {spent: `-${bought * cardCost}:r:mc:`} : {}),
+          key: `${index}:${message.timestamp}:bought:${buyer}`,
+        });
+        continue;
+      }
+      if (message.action?.id !== actionId) {
+        close();
+        current = undefined;
+        actionId = message.action?.id;
+      }
+      const activity = message.playerId === undefined ? toActivity(message) : undefined;
+      const deck = deckActivity(message);
+      const [actor, verb, count] = message.data;
+      const drawnCount = message.message === '${0} ${1} ${2} card(s)' && actor?.type === LogMessageDataType.PLAYER &&
+        verb?.value === 'drew' && Number(count?.value) > 0 ? Number(count?.value) : undefined;
+      const change = unitChange(message);
+      if (message.action && !current && (activity || deck || drawnCount || change)) {
+        current = {...activity, kind: activity?.kind ?? 'action', key: `action:${message.action.id}:${message.action.player}`, player: message.action.player};
+        history.push(current);
+        if (activity) {
+          continue;
+        }
+      } else if (message.action && current && activity) {
+        if (current.kind === 'action' && !current.card && (activity.card || !current.steps?.length)) {
+          Object.assign(current, activity, {player: message.action.player});
+        } else if ((activity.kind === 'placed' || activity.kind === 'removed') && activity.space && activity.subject) {
+          addStep(current, {kind: activity.kind, space: activity.space, subject: activity.subject});
+          if (activity.kind === 'placed') {
+            current.placements = [...(current.placements ?? []), {space: activity.space, subject: activity.subject}];
+          }
+        } else {
+          addStep(current, {kind: 'event', event: activity.kind, player: activity.player, card: activity.card, subject: activity.subject});
+        }
+        continue;
+      }
+      if (deck) {
+        const player = actor?.type === LogMessageDataType.PLAYER ? actor.value :
+          message.playerId ? game.players.find((candidate) => candidate.id === message.playerId)?.color : undefined;
+        if (current && (message.action || (current.player === player && ['played', 'action', 'project', 'placed'].includes(current.kind) &&
+          deck.kind !== 'offered' && deck.kind !== 'bought'))) {
+          const batch = player !== undefined && player !== current.player ? {...deck, player} : deck;
+          current.deck = [...(current.deck ?? []), batch];
+          const previousStep = current.steps?.at(-1);
+          if (deck.kind === 'drawn' && previousStep?.kind === 'draw' &&
+            (previousStep.player ?? current.player) === player && previousStep.count === deck.cards.length && !previousStep.deck) {
+            previousStep.deck = batch;
+          } else {
+            addStep(current, {kind: 'draw', deck: batch});
+          }
+          if (current.card === CardName.SEARCH_FOR_LIFE && message.message === '${0} revealed and discarded ${1}') {
+            current.scienceGained = 0;
+          }
+        } else {
+          history.push({kind: 'deck', player, deck: [deck], key: `${index}:${message.timestamp}:deck:${deck.cards.join(',')}`});
+        }
+        continue;
+      }
+      if (message.playerId !== undefined) {
+        continue;
+      }
       if (activity) {
+        if (activity.kind === 'placed' && activity.space && activity.subject && current?.player === activity.player &&
+          current && (current.kind === 'project' || current.kind === 'played' || current.kind === 'action')) {
+          current.placements = [...(current.placements ?? []), {space: activity.space, subject: activity.subject}];
+          addStep(current, {kind: 'placed', space: activity.space, subject: activity.subject});
+          continue;
+        }
+        close();
         const {kind, player, card, subject, space} = activity;
-        history.push({...activity, key: [index, message.timestamp, kind, player, card ?? subject, space].join(':')});
+        current = {...activity, key: [index, message.timestamp, kind, player, card ?? subject, space].join(':')};
+        history.push(current);
+        continue;
+      }
+      if (current?.player === undefined) {
+        continue;
+      }
+      if (drawnCount && (message.action || (actor?.value === current.player && ['project', 'played', 'action', 'placed'].includes(current.kind)))) {
+        current.drawnCount = (current.drawnCount ?? 0) + drawnCount;
+        const player = actor?.type === LogMessageDataType.PLAYER && actor.value !== current.player ? actor.value : undefined;
+        addStep(current, {kind: 'draw', count: drawnCount, ...(player ? {player} : {})});
+      }
+      // Buying cards is public in the board game (how many and what it cost); which cards stays secret.
+      const boughtCount = actor?.type === LogMessageDataType.PLAYER && actor.value === current.player ?
+        (message.message === '${0} ${1} ${2} card(s)' && verb?.value === 'bought' ? Number(count?.value) :
+          message.message === '${0} bought no cards' ? 0 : undefined) : undefined;
+      // Sell patents: how many cards went, and the M€ they gave.
+      if (message.message === '${0} sold ${1} patents' && actor?.type === LogMessageDataType.PLAYER && actor.value === current.player) {
+        const sold = Number(verb?.value);
+        if (Number.isFinite(sold) && sold > 0) {
+          addStep(current, {kind: 'event', event: 'sold', subject: `${sold} card(s)`});
+          own.push(`+${sold}:r:mc:`);
+        }
+      }
+      if (boughtCount !== undefined && Number.isFinite(boughtCount) && ['action', 'played', 'project'].includes(current.kind)) {
+        addStep(current, {kind: 'event', event: 'bought', subject: boughtCount === 0 ? 'no cards' : `${boughtCount} card(s)`});
+        if (boughtCount > 0) {
+          const cardCost = game.players.find((candidate) => candidate.color === current?.player)?.cardCost ?? 3;
+          own.push(`-${boughtCount * cardCost}:r:mc:`);
+        }
+      }
+      if (current.kind === 'action' && current.card === CardName.SEARCH_FOR_LIFE &&
+        actor?.type === LogMessageDataType.PLAYER && actor.value === current.player) {
+        if (message.message === '${0} found life!' && current.scienceGained === 0) {
+          current.scienceGained = 1;
+        }
+      }
+      if (change === undefined) {
+        continue;
+      }
+      const source = changeSource(message);
+      if (source !== undefined && source !== current.card) {
+        current.triggers = [...(current.triggers ?? []), {player: change.player, card: source, effects: change.text}];
+      }
+      if (change.player === current.player) {
+        own.push(change.text);
+      } else {
+        others.set(change.player, [...(others.get(change.player) ?? []), change.text]);
       }
     }
-    return history;
+    close();
+    return history.reverse();
   }
 
   public getPlayedCardHistory(game: IGame): Array<PlayedCardLogModel> {

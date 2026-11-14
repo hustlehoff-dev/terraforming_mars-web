@@ -30,6 +30,9 @@ export class JunkVentures extends CorporationCard implements ICorporationCard {
 
   public override initialAction(player: IPlayer) {
     const cards = player.game.projectDeck.drawN(player.game, 3);
+    if (cards.length) {
+      player.game.log('${0} revealed and discarded ${1}', (b) => b.player(player).cards(cards));
+    }
     for (const card of cards) {
       player.game.projectDeck.discard(card);
     }

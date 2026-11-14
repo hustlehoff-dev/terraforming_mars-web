@@ -231,6 +231,7 @@ export class MarsBotTilePlacer {
    */
   private randomTiebreak(spaces: ReadonlyArray<Space>): Space {
     const card = this.game.projectDeck.drawOrThrow(this.game);
+    this.game.log('The automa revealed and discarded ${0}', (b) => b.card(card));
     this.game.projectDeck.discard(card);
     const index = card.cost === 0 ? spaces.length - 1 : (card.cost - 1) % spaces.length;
     return spaces[index];

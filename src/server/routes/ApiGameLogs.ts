@@ -20,7 +20,7 @@ export class ApiGameLogs extends Handler {
       throw RouteError.notFound('game not found');
     }
     const view = ctx.url.searchParams.get('view');
-    const logs = view === 'activity' ? this.gameLogs.getActivity(game) : view === 'played-cards' ?
+    const logs = view === 'activity' ? this.gameLogs.getActivity(game, id) : view === 'played-cards' ?
       this.gameLogs.getPlayedCardHistory(game) : this.gameLogs.getLogsForGameView(id, game, generation);
     responses.writeJson(res, ctx, logs);
   }

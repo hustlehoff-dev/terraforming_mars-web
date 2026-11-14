@@ -4,8 +4,17 @@ import {CardType} from '../../../common/cards/CardType';
 import {IProjectCard} from '../IProjectCard';
 import {CardName} from '../../../common/cards/CardName';
 import {CardRenderer} from '../render/CardRenderer';
+import {IPlayer} from '../../IPlayer';
+import {InputError} from '../../inputs/InputError';
 
 export class EquatorialMagnetizer extends ActionCard implements IProjectCard {
+  public override action(player: IPlayer) {
+    if (!this.canAct(player)) {
+      throw new InputError('Equatorial Magnetizer action is no longer available');
+    }
+    return super.action(player);
+  }
+
   constructor() {
     super({
       type: CardType.ACTIVE,

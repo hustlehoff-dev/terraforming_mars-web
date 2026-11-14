@@ -9,6 +9,18 @@ import chaiAsPromised from 'chai-as-promised';
 import {testGame} from '@tests/TestGame';
 import {statusCode} from '@/common/http/statusCode';
 import {CardName} from '@/common/cards/CardName';
+import {Resource} from '@/common/Resource';
+import {SpaceBonus} from '@/common/boards/SpaceBonus';
+import {Payment} from '@/common/inputs/Payment';
+import {cast} from '@/common/utils/utils';
+import {ConvoyFromEuropa} from '@/server/cards/base/ConvoyFromEuropa';
+import {IoMiningIndustries} from '@/server/cards/base/IoMiningIndustries';
+import {PermafrostExtraction} from '@/server/cards/base/PermafrostExtraction';
+import {CupolaCity} from '@/server/cards/base/CupolaCity';
+import {OrOptions} from '@/server/inputs/OrOptions';
+import {SelectProjectCardToPlay} from '@/server/inputs/SelectProjectCardToPlay';
+import {SelectSpace} from '@/server/inputs/SelectSpace';
+import {SelectStandardProjectToPlay} from '@/server/inputs/SelectStandardProjectToPlay';
 use(chaiAsPromised);
 
 describe('ApiGameLogs', () => {
@@ -138,7 +150,7 @@ describe('ApiGameLogs', () => {
     game.log('${0} played ${1} [ ${2} ]', (b) => b.player(rival).cardName(CardName.BIRDS).markdown('payment'));
     game.log('${0} ${1} ${2} at ${3}', (b) => b.player(player).string('placed').string('ocean tile').space(game.board.spaces[0]));
     game.log('${0} played ${1}', (b) => b.player(player).cardName(CardName.FISH), {reservedFor: player});
-    game.log('${0} drew ${1}', (b) => b.player(rival).cardName(CardName.FISH));
+    game.log('${0} drew ${1}', (b) => b.player(rival).cardName(CardName.FISH), {reservedFor: rival});
     game.log('${0} ended turn', (b) => b.player(rival));
 
     scaffolding.url = '/api/game/logs?id=' + player.id + '&view=activity';
@@ -147,7 +159,7 @@ describe('ApiGameLogs', () => {
     expect(history.map(({key: _key, ...event}: {key: string}) => event)).deep.eq([
       {kind: 'ended', player: rival.color},
       {kind: 'placed', player: player.color, subject: 'ocean tile', space: game.board.spaces[0].id},
-      {kind: 'played', player: rival.color, card: CardName.BIRDS},
+      {kind: 'played', player: rival.color, card: CardName.BIRDS, spent: 'payment'},
       {kind: 'generation', subject: '2'},
     ]);
 
@@ -155,6 +167,80 @@ describe('ApiGameLogs', () => {
     game.log('An unrelated update');
     await scaffolding.get(ApiGameLogs.INSTANCE, refreshed);
     expect(JSON.parse(refreshed.content)).deep.eq(history);
+  });
+
+  it('folds payment, own changes and changes to other players into the activity', async () => {
+    const [game, player, rival] = testGame(2);
+    await scaffolding.ctx.gameLoader.add(game);
+    game.gameLog.length = 0;
+    game.log('${0} played ${1} [ ${2} ]', (b) => b.player(player).cardName(CardName.BIRDS).markdown('-10:r:mc:'));
+    player.production.add(Resource.MEGACREDITS, 1, {log: true});
+    player.production.add(Resource.ENERGY, -1, {log: true});
+    rival.production.add(Resource.PLANTS, -2, {log: true, from: {player}});
+    player.increaseTerraformRating(1, {log: true});
+    game.log('${0} passed', (b) => b.player(rival));
+
+    scaffolding.url = '/api/game/logs?id=' + player.id + '&view=activity';
+    await scaffolding.get(ApiGameLogs.INSTANCE, res);
+    const history = JSON.parse(res.content);
+    expect(history.map(({key: _key, ...event}: {key: string}) => event)).deep.eq([
+      {kind: 'passed', player: rival.color},
+      {
+        kind: 'played', player: player.color, card: CardName.BIRDS, spent: '-10:r:mc:',
+        effects: '+1:p:mc: -1:p:energy: +1:i:tr:',
+        targets: [{player: rival.color, effects: '-2:p:plants:'}],
+      },
+    ]);
+  });
+
+  it('groups the Convoy play, ocean placement and both draws across separate inputs', async () => {
+    const [game, player, rival] = testGame(2);
+    await scaffolding.ctx.gameLoader.add(game);
+    game.gameLog.length = 0;
+    const convoy = new ConvoyFromEuropa();
+    player.cardsInHand.push(convoy);
+    player.megaCredits = 30;
+    game.projectDeck.drawPile.push(new CupolaCity(), new PermafrostExtraction(), new IoMiningIndustries());
+    player.takeAction();
+    const options = cast(player.getWaitingFor(), OrOptions);
+    const index = options.options.findIndex((option) => option instanceof SelectProjectCardToPlay);
+    player.process({type: 'or', index, response: {type: 'projectCard', card: convoy.name, payment: Payment.of({megacredits: 15})}});
+
+    const ocean = cast(player.getWaitingFor(), SelectSpace).spaces[0];
+    ocean.bonus = [SpaceBonus.DRAW_CARD, SpaceBonus.DRAW_CARD];
+    player.process({type: 'space', spaceId: ocean.id});
+
+    const readActivity = async (id: string) => {
+      const response = new MockResponse();
+      scaffolding.url = `/api/game/logs?id=${id}&view=activity`;
+      await scaffolding.get(ApiGameLogs.INSTANCE, response);
+      return JSON.parse(response.content);
+    };
+    const own = await readActivity(player.id);
+    expect(own).has.length(1);
+    expect(own[0].card).eq(convoy.name);
+    expect(own[0].steps).deep.eq([
+      {kind: 'draw', count: 1, deck: {kind: 'drawn', cards: [CardName.IO_MINING_INDUSTRIES]}},
+      {kind: 'placed', space: ocean.id, subject: 'ocean tile'},
+      {kind: 'draw', count: 2, deck: {kind: 'drawn', cards: [CardName.PERMAFROST_EXTRACTION, CardName.CUPOLA_CITY]}},
+    ]);
+    const other = await readActivity(rival.id);
+    expect(other).has.length(1);
+    expect(other[0].key).eq(own[0].key);
+    expect(other[0].steps).deep.eq([
+      {kind: 'draw', count: 1},
+      {kind: 'placed', space: ocean.id, subject: 'ocean tile'},
+      {kind: 'draw', count: 2},
+    ]);
+
+    const next = cast(player.getWaitingFor(), OrOptions);
+    const project = next.options.findIndex((option) => option instanceof SelectStandardProjectToPlay);
+    player.process({type: 'or', index: project, response: {
+      type: 'projectCard', card: CardName.POWER_PLANT_STANDARD_PROJECT, payment: Payment.of({megacredits: 11}),
+    }});
+    const after = await readActivity(player.id);
+    expect(after.map((event: {card?: CardName}) => event.card)).deep.eq([CardName.POWER_PLANT_STANDARD_PROJECT, convoy.name]);
+    expect(after[1]).deep.eq(own[0]);
   });
 
   [{idx: 0, color: 'Yellow'}, {idx: 1, color: 'Orange'}, {idx: 2, color: 'Blue'}].forEach((entry) => {

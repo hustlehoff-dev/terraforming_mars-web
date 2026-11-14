@@ -18,6 +18,7 @@ export function pickByFlippedCard<T>(game: IGame, options: ReadonlyArray<T>): T 
   }
 
   const card = flipped[0];
+  game.log('The automa revealed and discarded ${0}', (b) => b.card(card));
   // Use positive modulo: cost=0 cards (e.g. IndenturedWorkers) would give -1 % N in JS
   const n = options.length;
   const index = ((card.cost - 1) % n + n) % n;

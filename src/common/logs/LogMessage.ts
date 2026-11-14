@@ -2,9 +2,11 @@ import {LogMessageType} from './LogMessageType';
 import {LogMessageData} from './LogMessageData';
 import {Message} from './Message';
 import {PlayerId} from '../Types';
+import {Color} from '../Color';
 
 export class LogMessage implements Message {
   public playerId?: PlayerId;
+  public action?: {id: number, player: Color};
   public timestamp = Date.now();
   public type?: LogMessageType;
   constructor(

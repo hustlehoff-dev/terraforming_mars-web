@@ -9,6 +9,12 @@ import {From} from './logs/From';
 import {SpaceType} from '@/common/boards/SpaceType';
 
 export class LogHelper {
+  static logProjectOffer(player: IPlayer, cards: ReadonlyArray<ICard>): void {
+    if (cards.length > 0) {
+      player.game.log('${0} received ${1} from the project deck', (b) => b.player(player).cards(cards), {reservedFor: player});
+    }
+  }
+
   static logAddResource(player: IPlayer, card: ICard, qty: number = 1, from?: From): void {
     if (from === undefined) {
       player.game.log('${0} added ${1}${2} to ${3}', (b) =>

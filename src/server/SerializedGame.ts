@@ -41,6 +41,7 @@ export type SerializedGame = {
     gagarinBase: Array<SpaceId>;
     gameAge: number;
     gameLog: Array<LogMessage>;
+    activityAction?: LogMessage['action'];
     gameOptions: GameOptions;
     generation: number;
     turn?: number;
