@@ -79,7 +79,12 @@ export default defineComponent({
     },
     saveData() {
       if (this.canSave() === false) {
-        alert('Not all options selected');
+        const root = this.$root as unknown as {showAlert?: (title: string, message: string) => void};
+        if (root.showAlert) {
+          root.showAlert('Error with input', 'Not all options selected');
+        } else {
+          alert('Not all options selected');
+        }
         return;
       }
       const refs = this.$refs.childInputs as Array<{saveData?: () => void}> | undefined;

@@ -3,7 +3,7 @@
     <label v-if="showtitle"><div>{{ $t(playerinput.title) }}</div></label>
     <label v-if="playerinput.warning !== undefined" class="card-warning"><div>({{ $t(playerinput.warning) }})</div></label>
     <div v-for="(option, idx) in displayedOptions" :key="idx">
-      <label class="form-radio" ref="optionLabels">
+      <label class="form-radio" ref="optionLabels" @click="chooseAtOnce(option, idx, $event)">
         <input v-model="selectedOption" type="radio" :name="radioElementName" :value="option">
         <i class="form-icon"></i>
         <span>{{ $t(option.title) }}</span>
@@ -144,6 +144,18 @@ export default defineComponent({
     // This allows the child to control the button label (e.g. "Sell 3 patents").
     showChildSaveButton(option: PlayerInputModel): boolean {
       return option.type === 'card' && !(option.max === 1 && option.min === 1);
+    },
+    /** In the game's HUD windows a plain option (no further input) is chosen with one click. */
+    chooseAtOnce(option: PlayerInputModel, displayedIdx: number, event: MouseEvent) {
+      const label = event.currentTarget;
+      if (!this.showsave || option.type !== 'option' || (option.warnings?.length ?? 0) > 0 || !(label instanceof HTMLElement)) {
+        return;
+      }
+      if (label.closest('#player-home.mission-cinematic, dialog.deck-choice-dialog') === null) {
+        return;
+      }
+      event.preventDefault();
+      this.playerFactorySaved(displayedIdx)({type: 'option'});
     },
     saveData() {
       let ref = this.$refs['inputfactory'] as {saveData: () => void} | Array<{saveData: () => void}>;

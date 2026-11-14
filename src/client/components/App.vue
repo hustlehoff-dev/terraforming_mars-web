@@ -1,7 +1,7 @@
 <template>
   <div :class="'topmost-'+screen">
     <section>
-      <dialog id="alert-dialog" class="alert-dialog">
+      <dialog id="alert-dialog" class="alert-dialog tm-dialog">
         <form method="dialog">
           <p id="alert-dialog-title" class="title" v-i18n>Error with input</p>
           <p id="alert-dialog-message"></p>
@@ -318,3 +318,5 @@ export default defineComponent({
   },
 });
 </script>
+
+<style lang="less" src="../../styles/game-dialogs.less"></style>

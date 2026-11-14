@@ -1,0 +1,266 @@
+// Game windows: alerts, confirmations, the card window (deck choice, card choices) and form
+// controls in the HUD style. Loaded by App.vue (bundled with the client).
+
+// ---- Game windows ----
+
+// Game windows (alerts, confirmations, bug report) and form controls in the HUD style:
+// dark navy panel, gold accent, light text, game buttons.
+dialog.tm-dialog {
+  // Always in the middle of the screen, whatever other styles or the dialog polyfill set.
+  position: fixed !important;
+  z-index: 1000;
+  inset: 0 !important;
+  width: fit-content;
+  height: fit-content;
+  max-height: calc(100dvh - 32px);
+  margin: auto !important;
+  overflow: auto;
+  transform: none !important;
+  min-width: min(420px, calc(100vw - 32px));
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 22px 26px 20px;
+  border: 1px solid #c9a35d;
+  border-top-width: 3px;
+  border-radius: 12px;
+  background: linear-gradient(#162533, #0b131b);
+  box-shadow: 0 0 0 1px #00000080, 0 24px 60px #000d;
+  color: #e7eff2;
+  font-family: Ubuntu, Arial, sans-serif;
+  text-align: center;
+
+  &::backdrop {
+    background: #03070cb3;
+    backdrop-filter: blur(4px);
+  }
+
+  .title,
+  .dialog-title {
+    margin: 0 0 12px;
+    padding: 0 0 10px;
+    border-bottom: 1px solid #ffffff1f;
+    color: #f6e2b8;
+    font-size: 0.9rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  p {
+    color: #e7eff2;
+    font-size: 1rem;
+    line-height: 1.45;
+  }
+
+  a,
+  a:link,
+  a:visited {
+    color: #a2eeff !important;
+  }
+
+  textarea {
+    border: 1px solid #6f8c98;
+    border-radius: 6px;
+    background: #0b141c;
+    color: #e7eff2;
+  }
+
+  menu,
+  .dialog-menu {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 16px 0 0;
+    padding: 0;
+  }
+
+  input[type='checkbox'] + label {
+    color: #b9c8ce;
+    font-size: 0.85rem;
+  }
+
+  .btn {
+    min-height: 40px;
+    padding: 8px 24px;
+    border: 1px solid #6f8c98;
+    border-radius: 8px;
+    background: linear-gradient(#1c2f3f, #0b141c);
+    box-shadow: inset 0 1px 0 #ffffff24, 0 4px 12px #0009;
+    color: #eef6f8;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+
+    &:hover,
+    &:focus-visible {
+      outline: none;
+      border-color: #b4ffeb;
+      background: linear-gradient(#24465a, #12232e);
+    }
+  }
+
+  .btn-primary {
+    border-color: #e2c27f;
+    background: linear-gradient(#6a4c18, #33240b);
+    color: #ffe9bd;
+    box-shadow: inset 0 1px 0 #ffffff33, 0 0 14px #e2c27f44, 0 4px 12px #0009;
+  }
+}
+
+// Warnings inside forms and decision windows.
+.tm-warning .label-error,
+.tm-warning .label {
+  display: inline-block;
+  padding: 6px 12px;
+  border: 1px solid #ff7a5c;
+  border-left-width: 4px;
+  border-radius: 6px;
+  background: #3a120cee;
+  color: #ffd2c4;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: normal;
+}
+
+.card-warning {
+  color: #ffb39f;
+}
+
+// Form controls inside the game's windows and the decision bar.
+#player-home.mission-cinematic .mission-panel,
+dialog.deck-choice-dialog,
+.mission-stage,
+dialog.tm-dialog {
+  select,
+  .form-select,
+  input[type='number'],
+  input[type='text'],
+  .form-input {
+    min-height: 34px;
+    padding: 4px 10px;
+    border: 1px solid #6f8c98;
+    border-radius: 6px;
+    background: #0b141c;
+    color: #eef6f8;
+
+    &:focus {
+      outline: none;
+      border-color: #b4ffeb;
+      box-shadow: 0 0 0 2px #b4ffeb33;
+    }
+  }
+
+  .form-radio,
+  .form-checkbox {
+    color: #e7eff2;
+
+    .form-icon {
+      border-color: #6f8c98;
+      background: #0b141c;
+    }
+
+    input:checked + .form-icon {
+      border-color: #e2c27f;
+      background: #e2c27f;
+    }
+  }
+}
+
+// Cards in the deck and HUD windows: no leftover margin from the classic card style, so they are centred.
+dialog.deck-choice-dialog {
+  .deck-deal {
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  .deck-deal > .cardbox,
+  .deck-deal > .cardbox .card-container {
+    margin: 0 !important;
+  }
+
+  .deck-deal > .nofloat {
+    display: flex;
+    flex-basis: 100%;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  // Every card choice opens in the card window: playing a card from a list, the start of the game,
+  // and lists of options that contain cards are laid out centred like a deal from the deck.
+  .payments_cont {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    text-align: center;
+
+    > :not(.payments_cards) {
+      flex-basis: 100%;
+    }
+  }
+
+  .wf-options {
+    text-align: center;
+  }
+
+  .select-initial-cards {
+    max-width: min(1400px, 94vw);
+  }
+}
+
+// No focus rectangle around game windows when clicked; keyboard focus on buttons stays visible.
+dialog:focus,
+dialog:focus-visible,
+.mission-stage:focus,
+.mission-panel:focus,
+.wf-root:focus,
+.deck-deal:focus {
+  outline: none !important;
+}
+
+// Cards that need no selection (a single optional card, or cards all given) carry the gold frame.
+.cardbox--featured .card-container {
+  box-shadow: 0 0 0 4px #e2c27f, 0 0 22px #e2c27f99 !important;
+}
+
+// The buttons of a card window (Buy, Pass, Select, OK...) never scroll away: they stay at the
+// bottom of the window, above "Show the game", over a dark fade so the cards pass behind them.
+dialog.deck-choice-dialog:not(.mission-hud-dialog) .deck-deal > .nofloat:last-child {
+  position: sticky;
+  z-index: 3;
+  bottom: 0;
+  margin-top: 8px;
+  padding: 18px 0 8px;
+  background: linear-gradient(transparent, #0b131bf2 45%);
+}
+
+dialog.deck-choice-dialog .dialog-peek {
+  z-index: 4;
+}
+
+dialog.deck-choice-dialog:not(.mission-hud-dialog):has(> .dialog-peek) .deck-deal > .nofloat:last-child {
+  bottom: 54px;
+}
+
+// Choosing cards in the card window: once a card is chosen it is bright and raised, the others
+// step back (dark), so it is obvious which cards are kept and which go away.
+dialog.deck-choice-dialog .deck-deal:has(> .cardbox input:checked) > .cardbox {
+  transition: filter 160ms ease, transform 160ms ease;
+
+  &:not(:has(input:checked)) {
+    filter: brightness(0.42) saturate(0.55);
+  }
+
+  &:not(:has(input:checked)):hover {
+    filter: brightness(0.7) saturate(0.8);
+  }
+
+  &:has(input:checked) {
+    transform: translateY(-8px);
+    filter: brightness(1.08);
+  }
+
+  &:has(input:checked) .card-container {
+    box-shadow: 0 0 0 4px #e2c27f, 0 0 30px #e2c27fcc, 0 18px 30px #000c !important;
+  }
+}
+

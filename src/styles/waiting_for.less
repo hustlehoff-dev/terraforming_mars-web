@@ -41,3 +41,84 @@
     color: red;
   }
 }
+
+.deck-deal__origin {
+  width: 37px;
+  height: 50px;
+  margin: 6px 5px 10px;
+  border: 1px solid #c3a374;
+  border-radius: 4px;
+  background: radial-gradient(circle at 50% 48%, #bd6a43 12%, #612a20 29%, #131b28 31%, #080e18 55%);
+  box-shadow: 2px 2px #131923, 4px 4px #c3a374;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .deck-deal > label {
+    animation: project-deck-deal 340ms ease-out var(--deal-delay, 0ms) both;
+  }
+}
+
+@keyframes project-deck-deal {
+  from { opacity: 0; transform: translate(-25px, -18px) scale(0.76); }
+  to { opacity: 1; transform: none; }
+}
+
+.deck-choice-dialog {
+  width: fit-content;
+  max-width: calc(100vw - 20px);
+  max-height: calc(100dvh - 20px);
+  margin: auto;
+  padding: clamp(12px, 3vw, 28px);
+  border: 1px solid #8cabb6;
+  border-radius: 8px;
+  background: #101a24;
+  color: #f1f7f9;
+  box-shadow: 0 16px 70px #000b;
+  overscroll-behavior: contain;
+
+  &::backdrop {
+    background: #03070cbb;
+    backdrop-filter: blur(4px);
+  }
+
+  .deck-deal {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 12px;
+    text-align: center;
+
+    > :not(.cardbox) {
+      flex-basis: 100%;
+    }
+
+    > .deck-deal__origin {
+      flex-basis: 37px;
+      margin-inline: calc(50% - 19px);
+    }
+
+    > .cardbox {
+      cursor: pointer;
+
+      &:focus-within {
+        outline: 2px solid #a8edff;
+        outline-offset: 4px;
+      }
+    }
+
+    input {
+      display: block;
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+    }
+  }
+}
+
+@media (max-width: 800px) {
+  .deck-choice-dialog .deck-deal > .cardbox {
+    zoom: 0.78;
+  }
+}

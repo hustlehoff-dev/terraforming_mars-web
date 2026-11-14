@@ -1,9 +1,11 @@
 <template>
-  <div class="wf-component wf-component--select-card">
+  <div class="wf-component wf-component--select-card" :class="{'deck-deal': playerinput.dealtFromDeck || cardDialog}">
     <div v-if="showtitle === true" class="nofloat wf-component-title">{{ $t(playerinput.title) }}</div>
-    <label v-for="card in getOrderedCards()" :key="card.name" :class="getCardBoxClass(card)">
-      <template v-if="!card.isDisabled">
-        <input v-if="selectOnlyOneCard" type="radio" v-model="cards" :value="card">
+    <div v-if="playerinput.dealtFromDeck" class="deck-deal__origin" aria-hidden="true"></div>
+    <label v-for="(card, index) in getOrderedCards()" :key="card.name" :class="[getCardBoxClass(card), {'cardbox--featured': featuredCards}]"
+      :style="playerinput.dealtFromDeck ? {'--deal-delay': Math.min(index, 10) * 65 + 'ms'} : undefined">
+      <template v-if="!card.isDisabled && !featuredCards && !nothingToChoose">
+        <input v-if="selectOnlyOneCard" type="radio" v-model="cards" :value="card" :name="selectionGroup" :aria-label="$t(card.name)">
         <input v-else type="checkbox" v-model="cards" :value="card" :disabled="playerinput.max !== undefined && Array.isArray(cards) && cards.length >= playerinput.max && cards.includes(card) === false">
       </template>
       <Card :card="card" :actionUsed="isCardActivated(card)" :robotCard="robotCard(card)">
@@ -18,15 +20,27 @@
     <WarningsComponent :warnings="warnings" />
     <div v-if="showsave === true" class="nofloat">
       <AppButton v-if="showSelectAll" @click="toggleSelectAll" type="submit" :title="allSelected ? $t('Deselect All') : $t('Select All')" />
-      <AppButton :disabled="isOptionalToManyCards && cardsSelected === 0" type="submit" @click="saveData" :title="buttonLabel" />
-      <AppButton :disabled="isOptionalToManyCards && cardsSelected > 0" v-if="isOptionalToManyCards" @click="saveData" type="submit" :title="$t('Skip this action')" />
+      <!-- Optional choice from the project deck: one card offers Buy / Pass; several cards turn Pass into "Buy N" as they are selected. -->
+      <!-- Nothing can be taken (e.g. no M€ to buy the drawn cards): one OK, no selection. -->
+      <AppButton v-if="nothingToChoose" type="submit" @click="onsave({type: 'card', cards: []})" :title="$t('OK')" />
+      <AppButton v-else-if="allGiven" type="submit" @click="onsave({type: 'card', cards: selectableCards.map((card) => card.name)})" :title="$t('OK')" />
+      <template v-else-if="optionalDeckChoice && selectableCards.length === 1">
+        <AppButton type="submit" @click="onsave({type: 'card', cards: [selectableCards[0].name]})" :title="$t(playerinput.buttonLabel)" />
+        <AppButton type="submit" @click="onsave({type: 'card', cards: []})" :title="$t('Pass')" />
+      </template>
+      <AppButton v-else-if="optionalDeckChoice" type="submit" @click="saveData" :title="cardsSelected === 0 ? $t('Pass') : buttonLabel" />
+      <template v-else>
+        <AppButton :disabled="(isOptionalToManyCards && cardsSelected === 0) || (playerinput.dealtFromDeck === true && cardsSelected < playerinput.min)"
+          type="submit" @click="saveData" :title="draftPick ? $t('Lock in') : buttonLabel" />
+        <AppButton :disabled="isOptionalToManyCards && cardsSelected > 0" v-if="isOptionalToManyCards" @click="saveData" type="submit" :title="$t('Skip this action')" />
+      </template>
     </div>
   </div>
 </template>
 
 <script lang="ts">
 
-import {defineComponent} from 'vue';
+import {computed, defineComponent, inject, useId} from 'vue';
 import AppButton from '@/client/components/common/AppButton.vue';
 import WarningsComponent from '@/client/components/WarningsComponent.vue';
 import {Color} from '@/common/Color';
@@ -57,6 +71,7 @@ type WidgetDataModel = {
 
 export default defineComponent({
   name: 'SelectCard',
+  setup: () => ({selectionGroup: useId(), cardDialog: inject('cardDialog', computed(() => false))}),
   emits: ['cardschanged'],
   props: {
     playerView: {
@@ -100,6 +115,9 @@ export default defineComponent({
   },
   methods: {
     getOrderedCards(): ReadonlyArray<CardModel> {
+      if (this.playerinput.dealtFromDeck) {
+        return this.playerinput.cards;
+      }
       let cards: ReadonlyArray<CardModel> = [];
       if (this.playerinput.cards !== undefined) {
         if (this.playerinput.selectBlueCardAction) {
@@ -183,6 +201,26 @@ export default defineComponent({
     },
   },
   computed: {
+    /** A draft pick: keep exactly N of the dealt cards, the rest goes to the next player. */
+    draftPick(): boolean {
+      return this.playerinput.dealtFromDeck === true && this.playerinput.min > 0 && this.playerinput.min === this.playerinput.max;
+    },
+    /** No card can be taken at all (max 0), e.g. drawn cards the player cannot afford. */
+    nothingToChoose(): boolean {
+      return this.playerinput.max === 0;
+    },
+    /** Every offered card has to be taken: nothing to choose. */
+    allGiven(): boolean {
+      const count = this.selectableCards.length;
+      return count > 0 && count === this.playerinput.cards.length && this.playerinput.min === count && (this.playerinput.max ?? count) === count;
+    },
+    /** Shown with a gold frame and without a selection box: a single optional card, or cards that are all given. */
+    featuredCards(): boolean {
+      return !this.nothingToChoose && (this.allGiven || (this.optionalDeckChoice && this.selectableCards.length === 1));
+    },
+    optionalDeckChoice(): boolean {
+      return this.playerinput.dealtFromDeck === true && this.playerinput.min === 0;
+    },
     selectOnlyOneCard() : boolean {
       return this.playerinput.max === 1 && this.playerinput.min === 1;
     },
@@ -211,6 +249,9 @@ export default defineComponent({
       return 1;
     },
     cardNames(): Array<CardName> {
+      if (this.$data.cards === undefined) {
+        return [];
+      }
       return Array.isArray(this.$data.cards) ? this.$data.cards.map((card) => card.name) : [this.$data.cards.name];
     },
     buttonLabel(): string | Message {

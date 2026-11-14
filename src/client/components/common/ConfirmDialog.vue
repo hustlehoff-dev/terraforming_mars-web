@@ -1,5 +1,5 @@
 <template>
-  <dialog ref="dialog">
+  <dialog ref="dialog" class="tm-dialog">
     <form method="dialog">
       <p v-i18n class="newlines">{{ message }}</p>
       <menu class="dialog-menu centered-content">

@@ -11,22 +11,28 @@
         (⌛ <span v-for="color in playersWaitingFor" class="log-player" :class="playerColorClass(color, 'bg')" :key="color">{{ getPlayerName(color) }}</span>)
       </template>
     </template>
-    <div v-if="waitingfor !== undefined" class="wf-root">
-      <PlayerInputFactory :players="playerView.players"
-        :playerView="playerView"
-        :playerinput="waitingfor"
-        :onsave="onsave"
-        :showsave="true"
-        :showtitle="true"
-        :key="inputKey" />
-    </div>
+    <Teleport v-if="waitingfor !== undefined && !hideInput" to="body" :disabled="!showDeckDialog">
+      <component :is="showDeckDialog ? 'dialog' : 'div'" ref="inputContainer" class="wf-root"
+        :class="{'deck-choice-dialog': showDeckDialog}" :aria-label="showDeckDialog ? $t(waitingfor.title) : undefined" @cancel.prevent>
+        <PlayerInputFactory :players="playerView.players"
+          :playerView="playerView"
+          :playerinput="waitingfor"
+          :onsave="onsave"
+          :showsave="true"
+          :showtitle="true"
+          :key="inputKey" />
+        <DialogPeek v-if="showDeckDialog && !cardsAllGiven" />
+      </component>
+    </Teleport>
   </div>
 </template>
 
 <script lang="ts">
 /* global RequestInit */
 
-import {defineComponent} from 'vue';
+import {computed, defineComponent} from 'vue';
+import {isDraftRepick, showsCards} from '@/client/components/board/MissionQuickAction';
+import DialogPeek from '@/client/components/common/DialogPeek.vue';
 import * as constants from '@/common/constants';
 import raw_settings from '@/genfiles/settings.json';
 import {vueRoot} from '@/client/components/vueRoot';
@@ -76,7 +82,14 @@ const CANNOT_CONTACT_SERVER = 'Unable to reach the server. It may be restarting 
 
 export default defineComponent({
   name: 'WaitingFor',
+  components: {DialogPeek},
+  // Card inputs inside the card window lay their cards out like a deal from the deck.
+  provide() {
+    return {cardDialog: computed(() => this.showDeckDialog)};
+  },
   props: {
+    centerDeckChoice: Boolean,
+    hideInput: Boolean,
     playerView: {
       type: Object as () => ViewModel,
       required: true,
@@ -97,6 +110,7 @@ export default defineComponent({
     };
   },
   watch: {
+    showDeckDialog: {flush: 'post', handler: 'openDeckDialog'},
     playerView() {
       this.inputKey++;
       this.stop();
@@ -104,6 +118,12 @@ export default defineComponent({
     },
   },
   methods: {
+    openDeckDialog() {
+      const dialog = this.$refs.inputContainer;
+      if (this.showDeckDialog && dialog instanceof HTMLDialogElement && !dialog.open) {
+        dialog.showModal();
+      }
+    },
     start() {
       document.title = gameDocumentTitle(this.playerView.game);
       if (getPreferences().experimental_ui) {
@@ -323,11 +343,20 @@ export default defineComponent({
   },
   mounted() {
     this.start();
+    this.openDeckDialog();
   },
   beforeUnmount() {
     this.stop();
   },
   computed: {
+    /** Cards that are simply received (nothing to choose): no "Show the game" in their window. */
+    cardsAllGiven(): boolean {
+      const input = this.waitingfor;
+      return input?.type === 'card' && input.min === input.cards.length && (input.max ?? input.cards.length) === input.cards.length;
+    },
+    showDeckDialog(): boolean {
+      return this.centerDeckChoice && !this.hideInput && showsCards(this.waitingfor) && !isDraftRepick(this.waitingfor);
+    },
     Phase(): typeof Phase {
       return Phase;
     },
