@@ -2,12 +2,10 @@
   "Terraforming Mars": "Terraformacja Marsa",
   "Create New Game": "Nowa gra",
   "№ of Players": "Liczba graczy",
-
   "Solo": "Wariant jednoosobowy",
   "Expansions": "Rozszerzenia",
   "Options": "Ustawienia",
   "Promos": "Karty promo",
-
   "Starting Corporations": "Początkowe korporacje",
   "Starting CEOs": "Początkowi CEO",
   "Corporations": "Korporacje",
@@ -16,7 +14,6 @@
   "Your name": "Twoje imię",
   "Board": "Plansza",
   "Beginner?": "Początkujący?",
-
   "Red": "Czerwony",
   "Green": "Zielony",
   "Yellow": "Żółty",
@@ -26,7 +23,6 @@
   "Orange": "Pomarańczowy",
   "Pink": "Różowy",
   "Turquoise": "Turkusowy",
-
   "victoryPoints": "Punkty Zwycięstwa",
   "terraformRating": "Współczynnik Terraformacji",
   "milestones": "Tytuł",
@@ -34,7 +30,6 @@
   "milestone": " tytuł",
   "greenery": "zieleń",
   "city": "miasto",
-
   "MegaCredits [M€]": "Megakredyt (M€)",
   "Steel": "Stal",
   "Titanium": "Tytan",
@@ -62,7 +57,6 @@
   "city-count": "Liczba miast",
   "colony-count": "Liczba kolonii",
   "Influence-Count": "Liczba Wpływu",
-
   "tharsis": "",
   "hellas": "",
   "elysium": "",
@@ -70,7 +64,6 @@
   "random all": "Losowa",
   "random": "Losowa",
   "GEN": "Pokolenie",
-
   "Venus scale": "Współczynnik Terraformacji Wenus",
   "Generation Marker": "Wskaźnik pokolenia",
   "Turn": "Tura",
@@ -117,10 +110,8 @@
   "of 12": "z 12",
   "You": "Ty",
   "you": "ty",
-
   "researching": "badania",
   "Milestones": "Tytuły",
-
   "Builder": "Konstruktor",
   "Have 8 building tags in play": "Gracz posiada co najmniej 8 symboli Budowli.",
   "Diversifier": "Dywersyfikator",
@@ -197,7 +188,6 @@
   "Have 3 different types of non-standard resources": "Gracz posiada co najmniej 3 różne zasoby niestandardowe.",
   "Tropicalist": "Eksplorator Równika",
   "Own 3 tiles in the middle 3 equatorial rows": "Gracz posiada co najmniej 3 obszary przy równiku (3 środkowe rzędy planszy).",
-
   "Awards": "Nagrody",
   "Landlord": "Potentat Ziemski",
   "Own the most tiles": "Gracz posiada najwięcej obszarów na planszy.",
@@ -275,7 +265,6 @@
   "Have the most Jovian tags in play": "Gracz posiada najwięcej symboli Jowisza.",
   "Cosmic Settler": "Kosmiczny Osadnik",
   "Own the most cities not on Mars": "Gracz posiada najwięcej obszarów miast poza powierzchnią Marsa.",
-
   "Actions": "Akcje",
   "Hide active cards": "Ukryj aktywne karty",
   "Show active cards": "Pokaż aktywne karty",
@@ -290,10 +279,8 @@
   "Select initial cards:": "Wybierz początkowe karty:",
   "Select initial cards to buy": "Wybierz początkowe karty do zakupu",
   "You haven't selected any project cards": "Nie wybrano żadnej karty projektu",
-
   "Select 2 Prelude cards": "Wybierz 2 karty Preludiów",
   "Select 2 preludes": "Wybierz 2 karty Preludiów",
-
   "Game details": "Szczegóły gry",
   "Milestones and awards": "Tytuły i nagrody",
   "Turn order": "Kolejność",
@@ -317,7 +304,6 @@
   "Choose a highlighted sector.": "Wybierz podświetlone pole.",
   "Point to a sector or select it to see what is there.": "Wskaż lub wybierz pole, aby zobaczyć szczegóły.",
   "ocean": "obszar oceanu",
-
   "toggle tags view:": "Przełącz widok symboli:",
   "concise": "zwięzłe",
   "CONCISE": "zwięzłe",
@@ -334,7 +320,6 @@
   "Convert 7 heat into temperature": "Wydaj 7 jednostek ciepła, aby podnieść temperaturę",
   "Convert 8 heat into temperature": "Wydaj 8 jednostek ciepła, aby podnieść temperaturę",
   "Convert ${0} plants into greenery": "Wydaj ${0} jednostek roślinności, aby umieścić na planszy obszar zieleni",
-
   "Colonies": "Kolonie",
   "funded by": "ufundowany przez:",
   "claimed by": "zdobyta przez:",
@@ -350,7 +335,6 @@
   "Undo last action": "Cofnij ostatnią akcję",
   "End Turn": "Zakończ turę",
   "Perform an action from a played card": "Wykonaj akcję z zagranej karty",
-
   "Power plant (11 M€)": "Elektrownia (11 M€)",
   "Asteroid (14 M€)": "Asteroida (14 M€)",
   "Aquifer (18 M€)": "Nawodnienie (18 M€)",
@@ -362,7 +346,6 @@
   "Aquifer": "Nawodnienie",
   "Greenery": "Zieleń",
   "Buffer Gas": "Gaz buforowy",
-
   "Pay ${0} M€": "Wydaj ${0} M€",
   "Pay ${0} energy": "Wydaj ${0} jednostki energii",
   "Pay ${0} titanium": "Wydaj ${0} jednostki tytanu",
@@ -400,8 +383,6 @@
   "Use action": "Użyj akcji",
   "Click again to pass": "Kliknij ponownie, aby spasować",
   "Not available now: not enough resources or no legal target": "Teraz niedostępne: brak zasobów albo legalnego celu",
-  "Asteroid": "Asteroida",
-  "City": "Miasto",
   "Actions available: ${0}": "Dostępne akcje: ${0}",
   "Click again to end turn": "Kliknij ponownie, aby zakończyć turę",
   "Not available now": "Teraz niedostępne",
@@ -409,7 +390,6 @@
   "Fund": "Ufunduj",
   "Claim": "Odbierz",
   "${0}'s turn": "Tura gracza ${0}",
-  "Research phase": "Faza badań",
   "Production phase": "Faza produkcji",
   "Waiting": "Oczekiwanie",
   "Show played cards": "Pokaż zagrane karty",
@@ -419,11 +399,8 @@
   "hand": "ręka",
   "events": "wydarzenia",
   "Choose": "Wybierz",
-  "Total": "Razem",
   "Turn time limit": "Limit czasu tury",
-  "Off": "Wyłączony",
   "Auto pass in": "Automatyczny pas za",
-  "Sell patents": "Sprzedaj patenty",
   "Your decision": "Twoja decyzja",
   "You are overpaying by ${0} M€. Press again to confirm.": "Nadpłacasz ${0} M€. Naciśnij ponownie, aby potwierdzić.",
   "Show the game": "Pokaż grę",
@@ -444,7 +421,6 @@
   "Others passed: no action limit": "Inni spasowali: akcje bez limitu",
   "Effects": "Efekty",
   "Card effects": "Efekty kart",
-  "sold": "sprzedał",
   "Click to use the action": "Kliknij, aby użyć akcji",
   "Colored border and inner ring": "Kolorowa ramka i wewnętrzny pierścień",
   "Music track": "Utwór muzyczny",
@@ -548,7 +524,6 @@
   "Select card(s) to buy": "Wybierz karty które chcesz kupić",
   "Starting M€:": "Startowe Megakredyty:",
   "After Preludes:": "Po preludiach:",
-
   "Select a card to keep and pass the rest to ${0}": "Wybierz kartę, którą chcesz zatrzymać i przekaż resztę do ${0}",
   "Select two cards to keep and pass the rest to ${0}": "Wybierz dwie karty, które chcesz zatrzymać i przekaż resztę do ${0}",
   "Game Home": "Strona główna",
@@ -559,7 +534,6 @@
   "Select space for second ocean": "Wybierz pole do umieszczenia drugiego obszaru oceanu",
   "Select space for city tile": "Wybierz pole do umieszczenia obszaru miasta",
   "Select space for greenery tile": "Wybierz pole do umieszczenia obszaru zieleni",
-
   "show": "Pokaż",
   "hide": "Ukryj",
   "Game Log": "Dziennik gry",
@@ -593,7 +567,6 @@
   "All*": "Wszystkie*",
   "None": "Żadne",
   "None*": "Żadne*",
-
   "Corporate Era": "Era Korporacyjna",
   "Randomize board tiles": "Losowe rozłożenie pól na planszy",
   "Set Predefined Game": "Ustaw predefiniowaną rozgrywkę",
@@ -606,7 +579,6 @@
   "vastitas borealis": "",
   "amazonis p.": "Amazonis Planitia",
   "t. cimmeria": "Terra Cimmeria",
-
   "Escape Velocity": "Prędkość ucieczki",
   "After": "Co",
   "min": "min.",
@@ -615,7 +587,6 @@
   "Reduce": "Zmniejsz",
   "VP every": "Wszystkie PZ",
   "After ${0} min, reduce ${1} VP every ${2} min. (${3} bonus sec. per action.)": "Po ${0} min zmniejszaj ${1} PZ co ${2} min (${3} dodatkowych sekund za akcję)",
-
   "Exclude some cards": "Wyklucz karty",
   "Custom Colonies list": "Niestandardowa lista kolonii",
   "Remove negative Global Events": "Usuń negatywne Wydarzenia globalne",
@@ -665,12 +636,10 @@
   "TR all": "WT bez limitu",
   "63 TR": "63 WT",
   "Ok": "",
-
   "Place your tile here?": "Postawić kafel w tym miejscu?",
   "Yes": "Tak",
   "No": "Nie",
   "Don't show this again": "Nie pokazuj tego więcej",
-
   "Escape Velocity penalty": "Kara prędkości ucieczki",
   "Actions taken this game": "Liczba akcji podczas rozgrywki",
   "Show information that can be helpful to players who are still learning the games": "Pokaż informacje przydatne dla graczy początkujących",
