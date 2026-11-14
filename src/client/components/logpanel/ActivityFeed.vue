@@ -82,6 +82,7 @@ import ActivityCardReveal from './ActivityCardReveal.vue';
 import {getCard} from '@/client/cards/ClientCardManifest';
 import {translateText, translateTextWithParams} from '@/client/directives/i18n';
 import {renderIcons} from '@/client/markdown/markdown';
+import {zoomCard} from '@/client/components/board/cardZoom';
 import {getAward, getMilestone} from '@/client/MilestoneAwardManifest';
 import {AwardName} from '@/common/ma/AwardName';
 import {MilestoneName} from '@/common/ma/MilestoneName';
@@ -440,12 +441,13 @@ function inspect(entry: GameActivityModel) {
   if (entry.deck?.length) {
     closePreview();
     reveal.value = entry;
+  } else if (entry.card && getCard(entry.card)) {
+    const model = (entry.player && players.value.get(entry.player)?.tableau.find((card) => card.name === entry.card)) || {name: entry.card} as CardModel;
+    closePreview();
+    zoomCard(model);
   } else if (entry.placements?.[0]) {
     closePreview();
     emit('spaceClicked', entry.placements[0].space);
-  } else if (entry.card) {
-    previewPinned = previewKey.value !== entry.key || !previewPinned;
-    previewKey.value = previewPinned ? entry.key : undefined;
   } else if (entry.space) {
     closePreview();
     expanded.value = false;
@@ -700,7 +702,7 @@ button.activity-feed__entry {
 
   :deep(.card-container) {
     margin: 0;
-    zoom: 0.55;
+    zoom: 0.8;
   }
 }
 
@@ -714,7 +716,11 @@ button.activity-feed__entry {
 
   :deep(.card-container) {
     margin: 0;
-    zoom: 0.85;
+    zoom: 1.15;
+
+    @media (max-height: 760px) {
+      zoom: 0.95;
+    }
   }
 }
 

@@ -25,7 +25,8 @@
               <template v-if="group.hidden">
                 <div class="nofloat mission-hud-dialog__hint" v-i18n>Event cards are face down: only their number is public.</div>
               </template>
-              <div v-else v-for="card in group.cards" :key="card.name" class="cardbox mission-hud-dialog__played">
+              <div v-else v-for="card in group.cards" :key="card.name" class="cardbox mission-hud-dialog__played" style="cursor: zoom-in"
+                :title="$t('Click to view up close')" @click="zoomCard(card)">
                 <Card :card="card" autoTall :actionUsed="playedPlayer?.actionsThisGeneration.includes(card.name)" :cubeColor="playedPlayer?.color" />
               </div>
             </template>
@@ -140,6 +141,7 @@
 </template>
 
 <script setup lang="ts">
+import {zoomCard} from '@/client/components/board/cardZoom';
 import {computed, nextTick, ref, watch} from 'vue';
 import Card from '@/client/components/card/Card.vue';
 import AppButton from '@/client/components/common/AppButton.vue';

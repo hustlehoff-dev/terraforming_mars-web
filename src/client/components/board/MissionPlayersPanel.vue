@@ -33,7 +33,9 @@
       </button>
       <div v-if="player.played" :key="player.played.key" class="mission-players__played" role="status">
         <p class="mission-players__played-label" :class="'player_bg_color_' + player.color">{{ player.name }} <span v-i18n>played</span></p>
-        <Card :card="{name: player.played.card}" autoTall />
+        <button type="button" class="mission-players__played-card" :title="$t('Click to view up close')" @click="zoomCard(playedModel(player))">
+          <Card :card="playedModel(player)" autoTall />
+        </button>
       </div>
     </div>
   </section>
@@ -42,6 +44,8 @@
 <script setup lang="ts">
 import {computed, onBeforeUnmount, reactive} from 'vue';
 import Card from '@/client/components/card/Card.vue';
+import {zoomCard} from '@/client/components/board/cardZoom';
+import {CardModel} from '@/common/models/CardModel';
 import {getCard} from '@/client/cards/ClientCardManifest';
 import {CardType} from '@/common/cards/CardType';
 import {Color} from '@/common/Color';
@@ -105,6 +109,12 @@ const rows = computed(() => props.players.map((player) => ({
   corporation: player.tableau.find((card) => getCard(card.name)?.type === CardType.CORPORATION)?.name,
   events: player.tableau.filter((card) => getCard(card.name)?.type === CardType.EVENT).length,
 })));
+
+/** The played card as it is on the player's table (with resources), or just its name. */
+function playedModel(player: {played?: PlayedCardLogModel, tableau: ReadonlyArray<CardModel>}): CardModel {
+  const name = player.played?.card;
+  return player.tableau.find((card) => card.name === name) ?? {name} as CardModel;
+}
 
 function formatProduction(value: number): string {
   return value > 0 ? `+${value}` : String(value);
@@ -200,6 +210,14 @@ function productionClass(value: number): string {
       zoom: 0.8;
     }
   }
+}
+
+.mission-players__played-card {
+  padding: 0;
+  border: 0;
+  background: none;
+  pointer-events: auto;
+  cursor: zoom-in;
 }
 
 .mission-players__played-label {

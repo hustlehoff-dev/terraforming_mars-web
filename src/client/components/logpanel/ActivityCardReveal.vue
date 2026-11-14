@@ -9,7 +9,7 @@
           <div v-if="groupIndex === 0" class="deck-deal__origin" aria-hidden="true"></div>
           <div v-for="(name, index) in group.cards" :key="groupIndex + ':' + index" class="cardbox"
             :style="{'--deal-delay': Math.min(index, 10) * 65 + 'ms'}">
-            <Card v-if="getCard(name)" :card="{name}" />
+            <Card v-if="getCard(name)" :card="{name}" style="cursor: zoom-in" :title="$t('Click to view up close')" @click="zoomCard({name} as CardModel)" />
             <strong v-else>{{ $t(name) }}</strong>
           </div>
         </template>
@@ -23,6 +23,8 @@
 
 <script setup lang="ts">
 import Card from '@/client/components/card/Card.vue';
+import {zoomCard} from '@/client/components/board/cardZoom';
+import {CardModel} from '@/common/models/CardModel';
 import AppButton from '@/client/components/common/AppButton.vue';
 import {getCard} from '@/client/cards/ClientCardManifest';
 import {translateText, translateTextWithParams} from '@/client/directives/i18n';
