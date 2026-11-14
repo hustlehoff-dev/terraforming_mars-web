@@ -63,7 +63,7 @@ import {MiningCard} from './cards/base/MiningCard';
 import {AddResourcesToCard} from './deferredActions/AddResourcesToCard';
 import {ColonyDeserializer} from './colonies/ColonyDeserializer';
 import {GameLoader} from './database/GameLoader';
-import {DEFAULT_GAME_OPTIONS, GameOptions} from './game/GameOptions';
+import {buyTimeLimit, DEFAULT_GAME_OPTIONS, GameOptions} from './game/GameOptions';
 import {CorporationDeck, PreludeDeck, ProjectDeck, CeoDeck} from './cards/Deck';
 import {Logger} from './logs/Logger';
 import {addDays, stringToNumber} from './database/utils';
@@ -1147,7 +1147,7 @@ export class Game implements IGame, Logger {
    * have that many seconds. When time is up, those still choosing buy nothing.
    */
   private startBuyClock(): void {
-    const limit = this.gameOptions.buyTimeLimit ?? 0;
+    const limit = buyTimeLimit(this.gameOptions);
     if (limit <= 0 || this.generation <= 1 || this.phase !== Phase.RESEARCH || this.draftDeadline !== undefined) {
       return;
     }

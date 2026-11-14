@@ -1,7 +1,7 @@
 import {CardModel} from '../../common/models/CardModel';
 import {Color} from '../../common/Color';
 import {IGame} from '../IGame';
-import {GameOptions} from '../game/GameOptions';
+import {buyTimeLimit, GameOptions} from '../game/GameOptions';
 import {SimpleGameModel} from '../../common/models/SimpleGameModel';
 import {GameOptionsModel} from '../../common/models/GameOptionsModel';
 import {Board} from '../boards/Board';
@@ -485,7 +485,7 @@ export class Server {
       showTimers: options.showTimers,
       turnTimeLimit: options.turnTimeLimit ?? 0,
       draftTimeLimit: options.draftTimeLimit ?? 0,
-      buyTimeLimit: options.buyTimeLimit ?? 0,
+      buyTimeLimit: buyTimeLimit(options),
       shuffleMapOption: options.shuffleMapOption,
       solarPhaseOption: options.solarPhaseOption,
       soloTR: options.soloTR,
