@@ -1,0 +1,552 @@
+// Layout of the in-game HUD (cinematic view): where the panels, dock, hand, turn button and
+// windows sit, and how they look together. Loaded by PlayerHome.vue (bundled with the client),
+// so a change needs only a client build. Components keep their own look in scoped styles.
+
+// ---- Dock, hand row, HUD windows, decision window, right column ----
+
+// HUD layout: one bottom baseline for the dock, hand right after the resources,
+// camera controls above the turn button instead of under it.
+body #player-home.mission-cinematic {
+  .mission-dock {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: end;
+    // The turn button lives in the right column now: the hand runs to the right edge.
+    padding: 0 10px 10px;
+  }
+
+  // Corporation, resources and the card buttons stand on the bottom edge, like the turn button.
+  .mission-player-hud > :not(.mission-hand) {
+    translate: 0 14px;
+  }
+
+  .mission-dock__played--actions {
+    border-color: #3c9be6;
+    box-shadow: 0 0 14px #3c9be666;
+  }
+
+  .mission-dock__count {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border-radius: 50%;
+    background: #3c9be6;
+    color: #fff;
+    font-size: 1.3rem;
+  }
+
+  .mission-dock__side {
+    display: flex;
+    align-items: end;
+    gap: 10px;
+    pointer-events: auto;
+  }
+
+  .mission-dock__played {
+    display: grid;
+    width: 92px;
+    height: calc(352px * var(--mission-card-scale));
+    place-items: center;
+    align-content: center;
+    gap: 8px;
+    border: 1px solid #6f8c98;
+    border-radius: 10px;
+    background: linear-gradient(#18293a, #0b141c);
+    color: #eef6f8;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-align: center;
+    text-transform: uppercase;
+    cursor: pointer;
+
+    img {
+      width: 34px;
+      height: 46px;
+    }
+
+    &:hover,
+    &:focus-visible {
+      outline: none;
+      border-color: #b4ffeb;
+    }
+  }
+
+  // Corporation flush left without its background; corporation, resources and hand share one height.
+  .mission-player-hud {
+    gap: 12px;
+    grid-column: 1;
+    justify-self: start;
+    align-items: end;
+  }
+
+  .mission-player-hud__corporations {
+    height: auto !important;
+    max-height: none !important;
+    margin: 0;
+    padding: 0;
+    overflow: visible !important;
+    border: 0;
+    background: none;
+
+    button {
+      height: auto !important;
+      overflow: visible !important;
+    }
+  }
+
+  .mission-player-hud__corp-art {
+    display: none;
+  }
+
+  .mission-player-hud__stocks {
+    height: calc(352px * var(--mission-card-scale));
+    align-content: space-evenly;
+    margin: 0;
+  }
+
+  .mission-hand__slot {
+    height: calc(352px * var(--mission-card-scale) + 4px);
+  }
+
+  // Room above the cards for the cost and tags that stick out (the scroller clips vertically),
+  // and no gap below so the hand sits on the same baseline as the corporation and resources.
+  .mission-hand {
+    align-self: end;
+    // The hand ends before the turn button column (margin, not padding: a scroller's padding
+    // still shows overflowing cards), so no card lies under the button or its labels.
+    padding: 34px 10px 0;
+    scrollbar-width: none;
+  }
+
+  // Cards stand on the bottom of their slot (no gap below) in a gentle arc:
+  // the middle card is highest, the outer ones lower and slightly turned.
+  .mission-hand__face:not(.mission-hand__face--raised) {
+    inset: auto auto 0 0 !important;
+    rotate: calc(var(--card-tilt) * 0.6) !important;
+    translate: 0 calc((var(--card-drop) * 1.6 - 10px) / var(--hand-scale)) !important;
+  }
+
+  .mission-player-hud__stocks,
+  .mission-hud-menus {
+    margin-bottom: 0;
+  }
+
+  .mission-hand {
+    justify-content: start;
+
+    &::before,
+    &::after {
+      display: none;
+    }
+  }
+
+  .mars-camera {
+    right: clamp(10px, 2vw, 30px);
+    bottom: calc(var(--dock-height) + 24px);
+  }
+
+  .mission-dock__commands {
+    align-self: end;
+  }
+}
+
+// Confirm / cancel buttons in the game's windows (deck choice, card stage, decision panel, card reveal)
+// in the HUD style: dark navy, gold border on the main action, teal on hover.
+.deck-choice-dialog,
+.mission-stage,
+#player-home.mission-cinematic .mission-panel {
+  .btn {
+    min-height: 40px;
+    margin: 4px;
+    padding: 8px 22px;
+    border: 1px solid #6f8c98 !important;
+    border-radius: 8px !important;
+    background: linear-gradient(#1c2f3f, #0b141c) !important;
+    box-shadow: inset 0 1px 0 #ffffff24, 0 4px 12px #0009 !important;
+    color: #eef6f8 !important;
+    font-size: 0.9rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition: border-color 120ms ease, background 120ms ease;
+
+    &:hover:not(:disabled),
+    &:focus-visible {
+      outline: none;
+      border-color: #b4ffeb !important;
+      background: linear-gradient(#24465a, #12232e) !important;
+    }
+
+    &:disabled {
+      border-color: #46545b !important;
+      color: #8a979d !important;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+  }
+
+  .btn-primary,
+  .btn-success,
+  .payments_save .btn,
+  .mission-stage__use .btn {
+    border-color: #e2c27f !important;
+    background: linear-gradient(#6a4c18, #33240b) !important;
+    color: #ffe9bd !important;
+    box-shadow: inset 0 1px 0 #ffffff33, 0 0 14px #e2c27f44, 0 4px 12px #0009 !important;
+
+    &:hover:not(:disabled),
+    &:focus-visible {
+      border-color: #fff3c4 !important;
+      background: linear-gradient(#86602000, #4a340f) !important;
+      background-color: #7a5a1c !important;
+    }
+  }
+}
+
+// Deck choices and card reveals: no panel behind the cards, they float over the blurred game.
+dialog.deck-choice-dialog {
+  border: 0;
+  background: none;
+  box-shadow: none;
+
+  .wf-component-title {
+    text-shadow: 0 2px 6px #000;
+  }
+
+  .deck-deal > .cardbox,
+  .deck-deal > .cardbox:focus-within {
+    outline: none;
+  }
+
+  .deck-deal > .cardbox:has(input:checked) .card-container {
+    box-shadow: 0 0 0 4px #e2c27f, 0 0 22px #e2c27f99;
+  }
+}
+
+// Decisions (follow-up choices and quick actions) open in a window in the centre, styled like the
+// card window: dark glass, gold edge, the game dimmed behind it. Choices are tiles, not radio lists.
+#player-home.mission-cinematic .mission-panel.mission-panel--decision {
+  inset: 50% auto auto 50% !important;
+  width: min(760px, calc(100vw - 24px)) !important;
+  max-height: min(78dvh, 760px);
+  border: 1px solid #e2c27f99 !important;
+  border-radius: 14px !important;
+  background: linear-gradient(#152330ee, #0b131bee) !important;
+  box-shadow: 0 0 0 100vmax #03070c99, 0 0 0 1px #e2c27f44, 0 24px 60px #000d !important;
+  backdrop-filter: blur(6px);
+  transform: translate(-50%, -50%);
+
+  .mission-panel__nav {
+    justify-content: center;
+    padding: 10px 14px 4px;
+    border-bottom: 0;
+
+    strong {
+      color: #f6e2b8;
+      font-size: 0.85rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+  }
+
+  .mission-panel__body {
+    overflow: auto;
+    padding: 6px 18px 18px;
+    scrollbar-width: thin;
+    scrollbar-color: #6f8c98 transparent;
+  }
+}
+
+// Shared look of choices in the decision window and the card window.
+#player-home.mission-cinematic .mission-panel.mission-panel--decision,
+dialog.deck-choice-dialog {
+  .player_home_block--actions,
+  .wf-root {
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .wf-component-title,
+  .wf-options > label:first-child,
+  .wf-title {
+    margin: 0 0 12px;
+    color: #f6e2b8;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .wf-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  // Option, player and resource choices as tiles.
+  label.form-radio,
+  .wf-component--select-resource label,
+  .wf-options .form-group > label {
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    min-height: 48px;
+    margin: 0 !important;
+    padding: 10px 16px !important;
+    border: 1px solid #6f8c9899;
+    border-radius: 10px;
+    background: linear-gradient(#1c2f3fcc, #0b141ccc);
+    box-shadow: inset 0 1px 0 #ffffff14;
+    color: #eef6f8;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+
+    &:hover {
+      border-color: #b4ffeb;
+      background: linear-gradient(#24465acc, #12232ecc);
+      transform: translateY(-1px);
+    }
+
+    &:has(input:checked) {
+      border-color: #e2c27f;
+      box-shadow: 0 0 0 1px #e2c27f, 0 0 16px #e2c27f55;
+    }
+
+    .form-icon,
+    input[type='radio'] {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+    }
+  }
+
+  // Players side by side.
+  label.form-radio.form-inline {
+    display: inline-flex !important;
+    margin: 4px !important;
+  }
+
+  // A nested input under the chosen option.
+  .wf-options > div > div[style] {
+    margin: 8px 0 4px 12px !important;
+    padding-left: 12px;
+    border-left: 2px solid #e2c27f66;
+  }
+
+  .wf-action,
+  .wf-options > div:last-child:has(> .wf-action) {
+    display: flex;
+    justify-content: center;
+  }
+
+  .wf-action {
+    margin: 12px 0 0 !important;
+  }
+
+  // Colonies and parties: picked like cards.
+  .wf-component--select-party label,
+  .wf-component--select-card > label.cardbox:has(.colony) {
+    border-radius: 10px;
+    cursor: pointer;
+
+    &:has(input:checked) {
+      outline: 2px solid #e2c27f;
+      outline-offset: 3px;
+    }
+  }
+
+  // Production and resource steppers.
+  .wf-component--select-production-to-lose .payments_type {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 6px 0;
+  }
+
+  .payments_input {
+    width: 64px;
+    border: 1px solid #e2c27f;
+    border-radius: 8px;
+    background: #0b141c;
+    color: #fff3c4;
+    font-size: 1.2rem;
+    font-weight: 800;
+    text-align: center;
+  }
+
+  .nofloat:has(> .btn-submit),
+  .nofloat:has(> .btn) {
+    display: flex;
+    justify-content: center;
+  }
+}
+
+body #player-home.mission-cinematic .mission-right-column {
+  position: absolute;
+  z-index: 12;
+  top: 60px;
+  right: var(--hud-right, 24px);
+  display: flex;
+  width: 300px;
+  flex-direction: column;
+  gap: 14px;
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
+
+  .mission-params {
+    position: static !important;
+  }
+
+  .mission-turn {
+    position: static;
+    justify-items: center;
+  }
+
+  .mission-turn__caption {
+    max-width: none;
+  }
+}
+
+// ---- Top-right toolbar and parameters panel placement ----
+
+// The new panel replaces the old generation box and metric columns, and the scene keeps clear of it.
+body #player-home.mission-cinematic {
+  .mission-status__metrics,
+  .mission-status__generation {
+    display: none !important;
+  }
+
+  .atlas-stage:has(.mars-surface--scene) .mars-surface.mars-surface--scene {
+    --scene-safe-right: 330px;
+  }
+
+  // Top right: one toolbar row (map tools, sound, settings) the width of the panel, panel right below.
+  --hud-right: clamp(12px, 2vw, 30px);
+
+  .mission-settings-trigger,
+  .mission-sound {
+    top: 14px !important;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px !important;
+  }
+
+  .mission-settings-trigger {
+    right: var(--hud-right) !important;
+  }
+
+  .mission-sound {
+    right: calc(var(--hud-right) + 44px) !important;
+  }
+
+  .atlas-inspector {
+    position: fixed;
+    z-index: 110;
+    top: 14px !important;
+    right: calc(var(--hud-right) + 88px) !important;
+    width: auto !important;
+  }
+
+  .atlas-inspector__tools {
+    flex-wrap: nowrap;
+    margin: 0;
+
+    button {
+      height: 36px;
+      padding: 0 12px;
+      border: 1px solid #6f8c98;
+      border-radius: 8px;
+      background: linear-gradient(#18293af0, #0b141cf0);
+      color: #eef6f8;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      white-space: nowrap;
+
+      &:hover,
+      &[aria-pressed='true'] {
+        border-color: #b4ffeb;
+      }
+    }
+  }
+
+  .mission-params {
+    top: 60px;
+    right: var(--hud-right);
+  }
+}
+
+@media (max-width: 760px) {
+  body #player-home.mission-cinematic .atlas-stage:has(.mars-surface--scene) .mars-surface.mars-surface--scene {
+    --scene-safe-right: 8px;
+  }
+}
+
+// ---- Players panel replaces the old rival panel ----
+
+// This panel replaces the logo and the old rival panel on wide screens.
+@media (min-width: 761px) {
+  body #player-home.mission-cinematic {
+    .rival-panel,
+    .mission-status__title,
+    .mission-banner {
+      display: none !important;
+    }
+  }
+}
+
+// ---- Choosing a space on the map ----
+
+// Choosing a space (banner: MissionPlacementBanner): everything except the legal spaces is
+// dimmed, the planet in the shader, tiles and HUD here.
+.atlas-stage--placing [data_space_id]:not(.atlas-sector--legal) {
+  filter: brightness(0.35) saturate(0.6);
+}
+
+#player-home.mission-placing {
+  .mission-params,
+  .mission-players,
+  .mission-dock,
+  .mission-turn,
+  .mission-pins,
+  .atlas-orbit {
+    opacity: 0.3;
+    filter: saturate(0.5);
+    transition: opacity 200ms ease;
+  }
+
+  // While choosing a space only the map and Cancel respond: no playing cards from the hand.
+  .mission-params,
+  .mission-players,
+  .mission-dock,
+  .mission-turn,
+  .mission-pins,
+  .mission-right-column,
+  .atlas-orbit {
+    pointer-events: none !important;
+
+    * {
+      pointer-events: none !important;
+    }
+  }
+
+  .mission-quick-cancel {
+    z-index: 31;
+    opacity: 1;
+    pointer-events: auto !important;
+  }
+}
+
+// ---- Owned spaces on the 3D planet: the owner's colour is drawn as the space border by the
+// planet shader, so the inner ring of the space element is hidden.
+#player-home.mission-cinematic .atlas-stage:has(.mars-surface--scene) #main_board > .board-space.atlas-owned::after {
+  display: none !important;
+}
+

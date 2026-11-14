@@ -1,0 +1,311 @@
+<template>
+  <section class="mission-players" :aria-label="$t('Players')">
+    <button v-for="player in rows" :key="player.color" type="button" class="mission-players__row"
+      :class="['mission-players__row--' + player.color, {'mission-players__row--active': player.color === activeColor, 'mission-players__row--me': player.color === myColor}]"
+      :title="$t('Show played cards')" @click="emit('open', player.color)">
+      <span class="mission-players__strip" aria-hidden="true"></span>
+      <span class="mission-players__who">
+        <span class="mission-players__corp">{{ player.corporation ? $t(player.corporation) : '—' }}</span>
+        <strong class="mission-players__name">
+          <span class="mission-players__nick">{{ player.name }}</span>
+          <span v-if="player.color === activeColor" class="mission-players__turn">{{ player.color === myColor ? $t('Your turn') : $t('Turn') }}</span>
+        </strong>
+      </span>
+      <span class="mission-players__facts">
+        <span class="mission-players__fact mission-players__fact--tr" :title="$t('Terraform Rating')">
+          <small>TR</small><strong>{{ player.terraformRating }}</strong>
+        </span>
+        <span class="mission-players__fact" :title="$t('Cards in hand')">
+          <img src="assets/resources/card.png" alt=""><strong>{{ player.cardsInHandNbr }}</strong>
+        </span>
+        <span class="mission-players__fact mission-players__fact--events" :title="$t('Played events (face down)')">
+          <span class="mission-players__event-icon" aria-hidden="true"></span><strong>{{ player.events }}</strong>
+        </span>
+      </span>
+      <ul class="mission-players__stock" :aria-label="$t('Resources')">
+        <li v-for="resource in RESOURCES" :key="resource.key" :title="$t(resource.label)">
+          <img :src="resource.icon" alt="">
+          <strong>{{ player[resource.key] }}</strong>
+          <small :class="productionClass(player[resource.production])">{{ formatProduction(player[resource.production]) }}</small>
+        </li>
+      </ul>
+    </button>
+  </section>
+</template>
+
+<script setup lang="ts">
+import {computed} from 'vue';
+import {getCard} from '@/client/cards/ClientCardManifest';
+import {CardType} from '@/common/cards/CardType';
+import {Color} from '@/common/Color';
+import {PublicPlayerModel} from '@/common/models/PlayerModel';
+
+/*
+ * Every player in the game as a low, wide card in the top-left corner, showing what is public in
+ * the board game: corporation, name, terraform rating, resources and production, the number of
+ * cards in hand and the number of played events (their content stays hidden).
+ */
+const props = defineProps<{players: ReadonlyArray<PublicPlayerModel>, activeColor?: Color, myColor: Color}>();
+const emit = defineEmits<{open: [color: Color]}>();
+
+type StockKey = 'megacredits' | 'steel' | 'titanium' | 'plants' | 'energy' | 'heat';
+type ProductionKey = 'megacreditProduction' | 'steelProduction' | 'titaniumProduction' | 'plantProduction' | 'energyProduction' | 'heatProduction';
+const RESOURCES: ReadonlyArray<{key: StockKey, production: ProductionKey, icon: string, label: string}> = [
+  {key: 'megacredits', production: 'megacreditProduction', icon: 'assets/resources/megacredit.png', label: 'Megacredits'},
+  {key: 'steel', production: 'steelProduction', icon: 'assets/resources/steel.png', label: 'Steel'},
+  {key: 'titanium', production: 'titaniumProduction', icon: 'assets/resources/titanium.png', label: 'Titanium'},
+  {key: 'plants', production: 'plantProduction', icon: 'assets/resources/plant.png', label: 'Plants'},
+  {key: 'energy', production: 'energyProduction', icon: 'assets/resources/power.png', label: 'Energy'},
+  {key: 'heat', production: 'heatProduction', icon: 'assets/resources/heat.png', label: 'Heat'},
+];
+
+const rows = computed(() => props.players.map((player) => ({
+  ...player,
+  corporation: player.tableau.find((card) => getCard(card.name)?.type === CardType.CORPORATION)?.name,
+  events: player.tableau.filter((card) => getCard(card.name)?.type === CardType.EVENT).length,
+})));
+
+function formatProduction(value: number): string {
+  return value > 0 ? `+${value}` : String(value);
+}
+
+function productionClass(value: number): string {
+  return value > 0 ? 'up' : value < 0 ? 'down' : 'zero';
+}
+</script>
+
+<style scoped lang="less">
+.mission-players {
+  position: absolute;
+  z-index: 9;
+  top: clamp(12px, 2dvh, 20px);
+  left: clamp(10px, 2vw, 30px);
+  display: grid;
+  width: min(440px, 36vw);
+  justify-items: start;
+  gap: 6px;
+}
+
+.mission-players__row {
+  --player: #9aa4ab;
+
+  display: grid;
+  width: 92%;
+  grid-template-columns: 5px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'strip who facts'
+    'strip stock stock';
+  align-items: center;
+  gap: 4px 10px;
+  padding: 5px 8px 5px 0;
+  overflow: hidden;
+  border: 1px solid #ffffff24;
+  border-radius: 8px;
+  background: linear-gradient(100deg, #132230f0, #0b131bd9);
+  box-shadow: inset 0 1px 0 #ffffff14, 0 4px 12px #0008;
+  color: #eef4f6;
+  text-align: left;
+  cursor: pointer;
+  transition: width 160ms ease;
+
+  &--red { --player: #e2462f; }
+  &--green { --player: #3fb44a; }
+  &--yellow { --player: #f2c22e; }
+  &--blue { --player: #3a8fe6; }
+  &--black { --player: #9aa4ab; }
+  &--purple { --player: #a057d8; }
+  &--orange { --player: #f08a2c; }
+  &--pink { --player: #ee6fb0; }
+
+  &--active {
+    width: 100%;
+    padding-block: 7px;
+    border-color: var(--player);
+    box-shadow: 0 0 0 1px var(--player), 0 0 16px color-mix(in srgb, var(--player) 50%, transparent), 0 4px 12px #0008;
+  }
+
+  &:hover,
+  &:focus-visible {
+    outline: none;
+    background: linear-gradient(100deg, #1b3242f0, #0f1c26d9);
+  }
+}
+
+.mission-players__strip {
+  grid-area: strip;
+  align-self: stretch;
+  margin: -10px 0;
+  background: var(--player);
+}
+
+.mission-players__who {
+  display: grid;
+  min-width: 0;
+  grid-area: who;
+  justify-items: start;
+  gap: 1px;
+}
+
+.mission-players__corp {
+  max-width: 100%;
+  overflow: hidden;
+  color: #f6e2b8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.mission-players__name {
+  display: flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.2rem;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.mission-players__nick {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mission-players__row--active .mission-players__name {
+  font-size: 1.35rem;
+}
+
+.mission-players__turn {
+  flex: none;
+  padding: 1px 6px;
+  border: 1px solid var(--player);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--player) 30%, #0b131b);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mission-players__row--me .mission-players__turn {
+  border-color: #e2c27f;
+  background: #5a4116;
+  color: #ffe2a8;
+}
+
+// Terraform rating, cards in hand and face-down events as three labelled boxes.
+.mission-players__facts {
+  display: flex;
+  grid-area: facts;
+  gap: 5px;
+}
+
+.mission-players__fact {
+  display: grid;
+  min-width: 40px;
+  grid-template-columns: auto auto;
+  align-items: center;
+  justify-content: center;
+  column-gap: 3px;
+  padding: 3px 6px;
+  border: 1px solid #ffffff1f;
+  border-radius: 6px;
+  background: #0b141c;
+
+  img {
+    width: 14px;
+    height: 19px;
+  }
+
+  strong {
+    font-size: 1.15rem;
+    line-height: 1;
+  }
+
+  small {
+    grid-column: 1 / -1;
+    color: #9fb1b9;
+    font-size: 0.55rem;
+    letter-spacing: 0.06em;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  &--tr {
+    grid-template-columns: auto;
+    border-color: #d27a20;
+    background: linear-gradient(#ffcf7a, #d27a20);
+    color: #241200;
+
+    small {
+      grid-row: 1;
+      color: #5a3200;
+      font-weight: 800;
+    }
+
+    strong {
+      font-size: 1.35rem;
+    }
+  }
+}
+
+.mission-players__event-icon {
+  width: 12px;
+  height: 17px;
+  border: 1px solid #ffffff59;
+  border-radius: 2px;
+  background: linear-gradient(135deg, #e2582a, #8a2a10);
+}
+
+// Resources: six equal tiles across the full width.
+.mission-players__stock {
+  display: grid;
+  grid-area: stock;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 3px 2px;
+    border-radius: 5px;
+    background: #ffffff0d;
+    font-variant-numeric: tabular-nums;
+  }
+
+  img {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+  }
+
+  strong {
+    font-size: 1rem;
+  }
+
+  small {
+    font-size: 0.68rem;
+    font-weight: 700;
+
+    &.up { color: #8dffb9; }
+    &.zero { color: #7d8b92; }
+    &.down { color: #ff9c8a; }
+  }
+}
+
+@media (max-width: 760px) {
+  .mission-players {
+    display: none;
+  }
+}
+</style>
+

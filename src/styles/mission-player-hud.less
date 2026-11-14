@@ -211,3 +211,176 @@
     }
   }
 }
+
+#player-home.mission-cinematic {
+  --mission-card-scale: 0.46;
+  --dock-height: 190px;
+
+  .mission-player-hud {
+    grid-template-columns: minmax(0, calc(240px * var(--mission-card-scale) + 10px)) minmax(0, max-content) minmax(0, 1fr);
+  }
+
+  .mission-hand,
+  .mission-player-hud__corporations {
+    --hand-scale: var(--mission-card-scale);
+  }
+
+  .mission-player-hud__corporations {
+    max-height: none;
+  }
+
+  .mission-player-hud__stocks {
+    gap: 5px;
+    padding: 7px;
+
+    li {
+      gap: 4px;
+      font-size: 0.95rem;
+      line-height: 1.1;
+    }
+
+    .mission-player-hud__production {
+      color: #d9ffec;
+      font-size: 0.66rem;
+      font-weight: 700;
+    }
+
+    .resource_icon {
+      width: 24px;
+      height: 24px;
+      flex: 0 0 24px;
+    }
+  }
+
+  .mission-panel__nav {
+    align-items: center;
+    justify-content: space-between;
+
+    strong {
+      padding-inline: 4px;
+    }
+  }
+}
+
+.mission-quick-actions,
+.mission-quick-cancel {
+  position: absolute;
+  z-index: 8;
+  right: clamp(8px, 2vw, 30px);
+  bottom: calc(var(--dock-height) + 65px);
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.mission-quick-cancel {
+  padding: 7px 12px;
+  border: 1px solid #aac8c8;
+  border-radius: 4px;
+  background: #101b23;
+  color: #f2f5f5;
+  cursor: pointer;
+}
+
+.mission-quick-actions__button {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 1px solid #72d8b9;
+  border-radius: 5px;
+  background: #14282ff0;
+  color: #ecfff8;
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  .resource_icon {
+    width: 27px;
+    height: 27px;
+    flex: none;
+  }
+
+  &:hover,
+  &:focus-visible {
+    outline: 2px solid #b4ffeb;
+    outline-offset: 2px;
+    background: #245044;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mission-quick-actions__button {
+    animation: mission-action-glow 2.8s ease-in-out 3 alternate;
+  }
+}
+
+@keyframes mission-action-glow {
+  from { box-shadow: 0 0 3px #6df4c32e; }
+  to { box-shadow: 0 0 13px #6df4c38a; }
+}
+
+@media (max-width: 760px) {
+  #player-home.mission-cinematic {
+    --mission-card-scale: 0.35;
+    --dock-height: 235px;
+
+    .mission-player-hud {
+      grid-template-columns: calc(240px * var(--mission-card-scale) + 10px) minmax(0, 1fr);
+      grid-template-rows: 63px minmax(0, 1fr);
+    }
+
+    .mission-player-hud__corporations {
+      height: calc(325px * var(--mission-card-scale) + 8px);
+
+      button {
+        width: calc(240px * var(--mission-card-scale));
+        height: calc(325px * var(--mission-card-scale));
+        flex-basis: calc(240px * var(--mission-card-scale));
+      }
+    }
+
+    .mission-player-hud__stocks {
+      gap: 2px;
+      padding: 4px;
+
+      li {
+        gap: 2px;
+        font-size: 0.8rem;
+      }
+
+      .mission-player-hud__production {
+        font-size: 0.62rem;
+      }
+
+      .resource_icon {
+        width: 21px;
+        height: 21px;
+        flex-basis: 21px;
+      }
+    }
+  }
+
+  .mission-quick-actions,
+  .mission-quick-cancel {
+    top: 25%;
+    bottom: auto;
+    gap: 4px;
+  }
+
+  .mission-quick-actions__button {
+    width: 38px;
+    min-height: 38px;
+    justify-content: center;
+    padding: 3px;
+
+    .mission-quick-actions__label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+  }
+}

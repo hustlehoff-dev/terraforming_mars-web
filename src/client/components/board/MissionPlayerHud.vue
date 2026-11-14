@@ -6,33 +6,35 @@
         :key="card.name"
         type="button"
         :class="{'mission-card-available': actionCards.has(card.name)}"
-        aria-haspopup="dialog"
         :aria-label="$t(card.name)"
-        @click="openCorporation(card)">
+        :aria-pressed="inspected === card.name"
+        @click="emit('preview', card, ($event.currentTarget as HTMLElement).getBoundingClientRect())">
         <Card :card="card" inert aria-hidden="true" />
         <span class="mission-player-hud__corp-art" aria-hidden="true" inert></span>
         <span v-if="actionCards.has(card.name)" class="mission-player-hud__corp-status" aria-hidden="true">●</span>
       </button>
     </div>
     <ul class="mission-player-hud__stocks" :aria-label="$t('Resources')">
-      <li v-for="resource in ALL_RESOURCES" :key="resource">
+      <li v-for="resource in ALL_RESOURCES" :key="resource" :class="{'mission-player-hud__stock--ready': conversions?.[resource]}"
+        :title="conversions?.[resource] ? $t(conversions[resource]!.label) : undefined"
+        :role="conversions?.[resource] ? 'button' : undefined" :tabindex="conversions?.[resource] ? 0 : undefined"
+        @click="conversions?.[resource] && emit('convert', conversions[resource]!)"
+        @keydown.enter="conversions?.[resource] && emit('convert', conversions[resource]!)">
         <ResourceIcon :resource="resource" />
         <strong :key="player[resource]" class="mission-status__value">{{ player[resource] }}</strong>
-        <span class="mission-player-hud__production" :aria-label="$t(resource === 'megacredits' ? 'Income per generation' : 'Production') + ' ' + formatProduction(productionFor(resource))">({{ formatProduction(productionFor(resource)) }})</span>
+        <span v-if="resource === 'megacredits'" class="mission-player-hud__production"
+          :aria-label="$t('Terraform rating') + ' ' + formatProduction(player.terraformRating) + ', ' + $t('Production') + ' ' + formatProduction(player.megacreditProduction)"
+          :title="$t('Terraform rating') + ' + ' + $t('Production')">({{ formatProduction(player.terraformRating) }} TR {{ formatProduction(player.megacreditProduction) }})</span>
+        <span v-else class="mission-player-hud__production" :aria-label="$t('Production') + ' ' + formatProduction(productionFor(resource))">({{ formatProduction(productionFor(resource)) }})</span>
       </li>
     </ul>
-    <MissionHand :cards="cards" :playableCards="playableCards" />
-    <dialog ref="dialog" class="mission-player-hud__dialog" :aria-label="selected && $t(selected.name)" @close="selected = undefined">
-      <form method="dialog"><button type="submit" autofocus v-i18n>Close</button></form>
-      <Card v-if="selected" :card="selected" autoTall />
-    </dialog>
+    <slot name="afterStocks"></slot>
+    <MissionHand :cards="cards" :playableCards="playableCards" :inspected="inspected" @preview="(card, origin) => emit('preview', card, origin)" @play="(card, origin) => emit('play', card, origin)" @pin="(card, x, y) => emit('pin', card, x, y)" />
   </div>
 </template>
 
 <script setup lang="ts">
-import {computed, nextTick, onMounted, ref} from 'vue';
-import dialogPolyfill from 'dialog-polyfill';
-import {hasShowModal, showModal} from '@/client/components/HTMLDialogElementCompatibility';
+import {computed} from 'vue';
 import MissionHand from '@/client/components/board/MissionHand.vue';
 import Card from '@/client/components/card/Card.vue';
 import ResourceIcon from '@/client/components/common/ResourceIcon.vue';
@@ -42,16 +44,19 @@ import {CardType} from '@/common/cards/CardType';
 import {CardModel} from '@/common/models/CardModel';
 import {PublicPlayerModel} from '@/common/models/PlayerModel';
 import {ALL_RESOURCES} from '@/common/Resource';
+import type {MissionQuickAction} from '@/client/components/board/MissionQuickAction';
 
 const props = defineProps<{
   player: PublicPlayerModel;
   cards: ReadonlyArray<CardModel>;
   playableCards: ReadonlySet<CardName>;
   actionCards: ReadonlySet<CardName>;
+  /** Conversions usable now, keyed by the resource they spend (e.g. 8 heat → temperature). */
+  conversions?: Partial<Record<string, MissionQuickAction>>;
+  inspected?: CardName;
 }>();
+const emit = defineEmits<{preview: [card: CardModel, origin: DOMRect], play: [card: CardModel, origin: DOMRect], convert: [action: MissionQuickAction], pin: [card: CardModel, x: number, y: number]}>();
 const corporations = computed(() => getCardsByType(props.player.tableau, [CardType.CORPORATION]));
-const dialog = ref<HTMLDialogElement>();
-const selected = ref<CardModel>();
 
 function productionFor(resource: typeof ALL_RESOURCES[number]): number {
   switch (resource) {
@@ -67,18 +72,126 @@ function productionFor(resource: typeof ALL_RESOURCES[number]): number {
 function formatProduction(value: number): string {
   return `${value >= 0 ? '+' : ''}${value}`;
 }
+</script>
 
-onMounted(() => {
-  if (dialog.value && !hasShowModal(dialog.value)) {
-    dialogPolyfill.registerDialog(dialog.value);
-  }
-});
+<style lang="less">
+// Larger hand, corporation card and resource readouts (bundled here, independent of the cached stylesheet).
+@media (min-width: 761px) {
+  body #player-home.mission-cinematic {
+    --mission-card-scale: 0.6;
 
-async function openCorporation(card: CardModel) {
-  selected.value = card;
-  await nextTick();
-  if (dialog.value) {
-    showModal(dialog.value);
+    // One row: corporation, resources, played cards, card actions, then the hand taking the rest.
+    .mission-player-hud {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+
+      > * {
+        flex: none;
+      }
+
+      > .mission-hand {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+    }
+
+    .mission-player-hud__corporations {
+      width: auto;
+    }
+    --dock-height: 262px;
+
+    .mission-player-hud__stocks {
+      gap: 8px 14px;
+      padding: 10px 12px;
+
+      li {
+        gap: 6px;
+        font-size: 1.45rem;
+        line-height: 1.05;
+      }
+
+      .mission-player-hud__production {
+        font-size: 0.95rem;
+      }
+
+      .resource_icon {
+        width: 38px;
+        height: 38px;
+        flex: 0 0 38px;
+      }
+    }
   }
 }
-</script>
+
+// Resources in two rows of three, styled as tiles; a resource that can be converted now glows.
+body #player-home.mission-cinematic {
+  .mission-player-hud__stocks {
+    grid-template-columns: repeat(3, minmax(0, max-content));
+    align-self: end;
+    background: linear-gradient(#1c2a35f2, #0c141bf2);
+    box-shadow: inset 0 1px 0 #ffffff1c, 0 6px 16px #0009;
+
+    li {
+      padding: 4px 8px;
+      border: 1px solid #ffffff1f;
+      border-radius: 6px;
+      background: linear-gradient(#26384599, #0f1a2299);
+    }
+  }
+
+  .mission-player-hud__stock--ready {
+    border-color: #ffd36b !important;
+    cursor: pointer;
+    animation: mission-stock-ready 1.1s ease-in-out infinite alternate;
+
+    &:hover,
+    &:focus-visible {
+      outline: 2px solid #fff3c4;
+      animation: none;
+      background: #5a3d12 !important;
+    }
+  }
+
+  // The hand sits on the same baseline as the corporation and the resources.
+  .mission-hand {
+    align-self: end;
+    padding-top: 6px;
+  }
+
+  .mission-hand__slot {
+    height: calc(325px * var(--hand-scale) + 6px);
+  }
+
+
+}
+
+@keyframes mission-stock-ready {
+  from { box-shadow: 0 0 2px #ffd36b66; background-color: #2a2412; }
+  to { box-shadow: 0 0 14px #ffd36bcc; background-color: #5a3d12; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body #player-home.mission-cinematic .mission-player-hud__stock--ready {
+    animation: none;
+    box-shadow: 0 0 10px #ffd36bcc;
+  }
+}
+
+@media (max-width: 760px) {
+  body #player-home.mission-cinematic {
+    --mission-card-scale: 0.42;
+    --dock-height: 260px;
+
+    .mission-player-hud__stocks li {
+      font-size: 1.05rem;
+    }
+
+    .mission-player-hud__stocks .resource_icon {
+      width: 26px;
+      height: 26px;
+      flex-basis: 26px;
+    }
+  }
+}
+</style>
