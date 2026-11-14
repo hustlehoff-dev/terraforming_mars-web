@@ -165,8 +165,8 @@ export const DEFAULT_GAME_OPTIONS: GameOptions = {
 
 /**
  * Seconds for buying cards. Games created before this option existed have no value: those with
- * a draft time limit get one minute, so a running game gets the limit too.
+ * a draft time limit get 15 seconds, so a running game gets the limit too.
  */
 export function buyTimeLimit(options: Partial<GameOptions>): number {
-  return options.buyTimeLimit ?? ((options.draftTimeLimit ?? 0) > 0 ? 60 : 0);
+  return options.buyTimeLimit ?? ((options.draftTimeLimit ?? 0) > 0 ? 15 : 0);
 }

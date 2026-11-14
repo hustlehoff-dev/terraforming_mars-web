@@ -244,6 +244,7 @@
               <span v-i18n>Card buying time limit</span>
               <select id="buy-time-limit" v-model.number="buyTimeLimit" :title="$t('Time left for the others once one player has bought cards; then they buy nothing')">
                 <option :value="0" v-i18n>Off</option>
+                <option :value="15">15 s</option>
                 <option :value="30">30 s</option>
                 <option :value="45">45 s</option>
                 <option :value="60">1 min</option>
