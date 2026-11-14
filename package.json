@@ -20,7 +20,7 @@
     "three": "0.170.0",
     "uuid": "^14.0.2",
     "vue": "^3.4.0",
-    "webpack": "^5.111.1",
+    "webpack": "^5.112.2",
     "webpack-cli": "^7.2.3"
   },
   "devDependencies": {
