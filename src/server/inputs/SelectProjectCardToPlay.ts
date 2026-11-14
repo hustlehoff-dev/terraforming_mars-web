@@ -4,6 +4,8 @@ import {Units} from '../../common/Units';
 import {MoonExpansion} from '../moon/MoonExpansion';
 import {IPlayer} from '../IPlayer';
 import {Config, SelectCardToPlay} from './SelectCardToPlay';
+import {SpaceId} from '../../common/Types';
+import {InputError} from './InputError';
 
 export class SelectProjectCardToPlay extends SelectCardToPlay<IProjectCard> {
   constructor(
@@ -25,7 +27,10 @@ export class SelectProjectCardToPlay extends SelectCardToPlay<IProjectCard> {
   }
 
   // Public for tests
-  public payAndPlay(card: IProjectCard, payment: Payment) {
+  public payAndPlay(card: IProjectCard, payment: Payment, spaceId?: SpaceId) {
+    if (spaceId !== undefined) {
+      throw new InputError('This project card does not accept a sector');
+    }
     this.player.checkPaymentAndPlayCard(card, payment, this.config?.action);
     this.cb(card);
   }

@@ -6,6 +6,10 @@
       :tileView="tileView"
     />
     <div class="board-space-text" v-if="text" v-i18n>{{ text }}</div>
+    <div v-if="sectorName && tileView !== 'coords'" class="board-space-landmark" :class="{'board-space-landmark--occupied': isNoctisCity}">
+      <img v-if="isNoctisCity && tileView === 'show'" src="assets/tiles/city.png" alt="">
+      <span>{{ $t(sectorName) }}</span>
+    </div>
     <Bonus :bonus="space.bonus" v-if="showBonus" />
     <template v-if="tileView === 'coords'">
       <div class="board-space-coords">{{ space.a9 ?? 'n/a' }}</div>
@@ -43,6 +47,7 @@ import {SpaceModel} from '@/common/models/SpaceModel';
 import {getPreferences} from '../utils/PreferencesManager';
 import {ClaimedToken} from '@/common/underworld/UnderworldPlayerData';
 import {SpaceType} from '@/common/boards/SpaceType';
+import {TileType} from '@/common/TileType';
 export default defineComponent({
   name: 'BoardSpace',
   props: {
@@ -54,6 +59,7 @@ export default defineComponent({
       type: String,
       default: '',
     },
+    sectorName: String,
     aresExtension: {
       type: Boolean,
     },
@@ -69,6 +75,9 @@ export default defineComponent({
     UndergroundToken,
   },
   computed: {
+    isNoctisCity(): boolean {
+      return this.space.highlight === 'noctis' && this.space.tileType === TileType.CITY;
+    },
     mainClass(): string {
       let css = 'board-space board-space-' + this.space?.id.toString();
       css += ' board-space-selectable';
@@ -101,4 +110,34 @@ export default defineComponent({
 });
 
 </script>
+
+<style scoped lang="less">
+.board-space-landmark {
+  position: absolute;
+  z-index: 5;
+  inset: 7px 4px auto;
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  color: #fff0d3;
+  font-size: 7.5px;
+  font-weight: 800;
+  line-height: 1.05;
+  text-align: center;
+  text-transform: uppercase;
+  text-shadow: 0 1px 1px #000, 0 0 3px #000, 0 0 4px #000;
+  pointer-events: none;
+
+  &--occupied {
+    inset: auto 4px 8px;
+  }
+
+  img {
+    width: 12px;
+    height: 12px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 2px #0b1016);
+  }
+}
+</style>
 

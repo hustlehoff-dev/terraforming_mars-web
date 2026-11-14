@@ -62,10 +62,11 @@ export interface SelectProjectCardToPlayResponse {
   type: 'projectCard',
   card: CardName;
   payment: Payment;
+  spaceId?: SpaceId;
 }
 
 export function isSelectProjectCardToPlayResponse(response: InputResponse): response is SelectProjectCardToPlayResponse {
-  return response.type === 'projectCard' && matches(response, ['type', 'card', 'payment']);
+  return response.type === 'projectCard' && matches(response, response.spaceId === undefined ? ['type', 'card', 'payment'] : ['type', 'card', 'payment', 'spaceId']);
 }
 
 export interface SelectSpaceResponse {

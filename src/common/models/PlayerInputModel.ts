@@ -44,6 +44,7 @@ export type SelectOptionModel = BaseInputModel & {
 
 export type SelectProjectCardToPlayModel = BaseInputModel & {
   type: 'projectCard';
+  greeneryPlacement?: SelectSpaceModel;
   cards: ReadonlyArray<CardModel>;
   paymentOptions: Partial<PaymentOptions>,
   microbes: number;

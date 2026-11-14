@@ -8,6 +8,7 @@
         <small v-if="ready" v-i18n>Select this sector to place the tile.</small>
         <small v-else v-i18n>Choose a highlighted sector.</small>
       </div>
+      <button v-if="cancel" type="button" class="mission-placement__cancel" @click="cancel" v-i18n>Cancel</button>
     </div>
   </Teleport>
 </template>
@@ -20,7 +21,7 @@ import {Message} from '@/common/logs/Message';
  * The one banner for every tile placement on the map (greenery, ocean, city, special tiles):
  * what is being placed, with the tile's picture when the action names it, at the top centre.
  */
-const props = defineProps<{title: string | Message, ready: boolean}>();
+const props = defineProps<{title: string | Message, ready: boolean, cancel?: () => void}>();
 
 const TILES: ReadonlyArray<[RegExp, string]> = [
   [/ocean|aquifer/, 'ocean'],
@@ -77,6 +78,19 @@ const tileImage = computed(() => {
     color: #b4ffeb;
     font-size: 0.9rem;
   }
+}
+
+.mission-placement__cancel {
+  flex: none;
+  min-height: 44px;
+  margin-inline-start: auto;
+  padding: 6px 12px;
+  border: 1px solid #aac8c8;
+  border-radius: 6px;
+  background: #101b23;
+  color: #f2f5f5;
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 .mission-placement__caption {

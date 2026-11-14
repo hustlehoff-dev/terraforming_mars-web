@@ -6,6 +6,10 @@ import {CardName} from '../../common/cards/CardName';
 import {InputError} from './InputError';
 import {PaymentOptions} from '../../common/inputs/Payment';
 import {Config, PlayCardMetadata, SelectCardToPlay} from './SelectCardToPlay';
+import {GreeneryStandardProject} from '../cards/base/standardProjects/GreeneryStandardProject';
+import {SelectProjectCardToPlayModel} from '../../common/models/PlayerInputModel';
+import {SpaceId} from '../../common/Types';
+import {Units} from '../../common/Units';
 
 export class SelectStandardProjectToPlay extends SelectCardToPlay<IStandardProjectCard> {
   constructor(
@@ -14,6 +18,18 @@ export class SelectStandardProjectToPlay extends SelectCardToPlay<IStandardProje
     config?: Config) {
     super(player, cards, config);
     this.buttonLabel = config?.buttonLabel ?? 'Play Standard Project';
+  }
+
+  public override toModel(player: IPlayer): SelectProjectCardToPlayModel {
+    const model = super.toModel(player);
+    const project = this.cards.find((card) => card instanceof GreeneryStandardProject);
+    if (project) {
+      const spaces = project.placementSpaces(player, this.extras.get(project.name)?.overriddenCost);
+      if (spaces.length > 0) {
+        model.greeneryPlacement = {type: 'space', title: 'Select space for greenery tile', buttonLabel: 'Confirm', spaces: spaces.map(({id}) => id)};
+      }
+    }
+    return model;
   }
 
   public validate(card: IStandardProjectCard, input: SelectProjectCardToPlayResponse, details: PlayCardMetadata) {
@@ -56,8 +72,22 @@ export class SelectStandardProjectToPlay extends SelectCardToPlay<IStandardProje
   }
 
   // Public for tests
-  public payAndPlay(card: IStandardProjectCard, payment: Payment) {
-    card.payAndExecute(this.player, payment);
+  public payAndPlay(card: IStandardProjectCard, payment: Payment, spaceId?: SpaceId) {
+    if (spaceId === undefined) {
+      card.payAndExecute(this.player, payment);
+    } else {
+      if (!(card instanceof GreeneryStandardProject)) {
+        throw new InputError('This standard project does not accept a sector');
+      }
+      const space = card.placementSpaces(this.player, this.extras.get(card.name)?.overriddenCost).find(({id}) => id === spaceId);
+      const reserveUnits = Units.of({megacredits: payment.megacredits, heat: payment.heat, titanium: payment.titanium});
+      if (!space || !this.player.game.board.canAfford(this.player, space, {
+        cost: 0, reserveUnits, heat: this.player.canUseHeatAsMegaCredits, lunaTradeFederationTitanium: this.player.canUseTitaniumAsMegacredits,
+      })) {
+        throw new InputError('Space not available');
+      }
+      card.payAndPlace(this.player, payment, space);
+    }
     this.cb(card);
   }
 }

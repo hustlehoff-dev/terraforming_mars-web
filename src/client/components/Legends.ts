@@ -1,4 +1,76 @@
 import {BoardName} from '@/common/boards/BoardName';
+import {SpaceName} from '@/common/boards/SpaceName';
+import {SpaceId} from '@/common/Types';
+
+// The classic legends use SVG coordinates. The 3D view anchors each name to its hex instead.
+const sectorNames: Partial<Record<BoardName, Partial<Record<SpaceId, string>>>> = {
+  [BoardName.THARSIS]: {
+    '09': 'Tharsis Tholus',
+    '14': 'Ascraeus Mons',
+    '21': 'Pavonis Mons',
+    '29': 'Arsia Mons',
+    [SpaceName.NOCTIS_CITY]: 'Noctis City',
+  },
+  [BoardName.HELLAS]: {
+    [SpaceName.HELLAS_OCEAN_TILE]: 'South Pole',
+  },
+  [BoardName.ELYSIUM]: {
+    '08': 'Hecates Tholus',
+    '14': 'Elysium Mons',
+    '20': 'Olympus Mons',
+    '37': 'Arsia Mons',
+  },
+  [BoardName.ARABIA_TERRA]: {
+    '20': 'Tikhonarov',
+    '55': 'Ladon',
+    '58': 'Flaugergues',
+    '63': 'Charybdis',
+  },
+  [BoardName.AMAZONIS]: {
+    '09': 'Albor Tholus',
+    '35': 'Anseris Mons',
+    '43': 'Pindus Mons',
+    '49': 'Ulysses Tholus',
+  },
+  [BoardName.VASTITAS_BOREALIS]: {
+    '07': 'Elysium Mons',
+    '12': 'Alba Fossae',
+    '21': 'Ceranius Fossae',
+    '22': 'Alba Mons',
+  },
+  [BoardName.VASTITAS_BOREALIS_NOVA]: {
+    '05': 'Hecates Tholus',
+    '13': 'Elysium Mons',
+    '21': 'Alba Mons',
+    '28': 'Viking 2',
+    '46': 'Uranius Tholus',
+    '59': 'Viking 1',
+  },
+  [BoardName.TERRA_CIMMERIA]: {
+    '05': 'Albor Tholus',
+    '21': 'Tyrrhenus Mons',
+    '27': 'Apollinaris Mons',
+    '38': 'Hadriacus Mons',
+  },
+  [BoardName.TERRA_CIMMERIA_NOVA]: {
+    '05': 'Albor Tholus',
+    '16': 'MSL Curiosity',
+    '21': 'Tyrrhenus Mons',
+    '27': 'Apollinaris Mons',
+    '38': 'Hadriacus Mons',
+  },
+  [BoardName.AMAZONIS_PLANITIA]: {
+    '33': 'Hecates Tholus',
+    '70': 'Olympus Mons',
+    '72': 'Ascraeus Mons',
+    '80': 'Pavonis Mons',
+    '87': 'Arsia Mons',
+  },
+};
+
+export function sectorName(board: BoardName, id: SpaceId): string | undefined {
+  return sectorNames[board]?.[id];
+}
 
 export type Key = {
   position: [number, number],

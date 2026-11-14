@@ -57,7 +57,7 @@
         </span>
       </div>
     </Teleport>
-    <MissionPlacementBanner v-if="activePlacement" :title="activePlacement.title" :ready="canPlace" />
+    <MissionPlacementBanner v-if="activePlacement" :title="activePlacement.title" :ready="canPlace" :cancel="cancelPlacement" />
 
     <Teleport to="body">
       <div
@@ -69,7 +69,7 @@
         :style="tooltipPosition">
         <p class="atlas-tooltip__sector">
           <span v-i18n>Sector</span>
-          <strong>{{ sector.a9 ?? sector.id }}</strong>
+          <strong>{{ sector.a9 ?? sector.id }}<template v-if="landmark"> · {{ $t(landmark) }}</template></strong>
         </p>
         <p class="atlas-tooltip__terrain" v-i18n>{{ terrain }}</p>
         <dl class="atlas-tooltip__facts">
@@ -107,6 +107,7 @@
 <script lang="ts">
 import {CSSProperties, defineComponent, inject, ref, useId} from 'vue';
 import Board from '@/client/components/Board.vue';
+import {sectorName} from '@/client/components/Legends';
 import MarsSurface from '@/client/components/board/MarsSurface.vue';
 import MissionPlacementBanner from '@/client/components/board/MissionPlacementBanner.vue';
 import {mapPlacementKey} from '@/client/components/board/MapPlacement';
@@ -170,7 +171,8 @@ export default defineComponent({
     },
   },
   setup() {
-    return {BoardName, mapPlacement: inject(mapPlacementKey, undefined)?.input, sectorTooltipId: useId(), orbitDock: ref<HTMLElement>()};
+    const placement = inject(mapPlacementKey, undefined);
+    return {BoardName, mapPlacement: placement?.input, cancelPlacement: placement?.requestCancel, sectorTooltipId: useId(), orbitDock: ref<HTMLElement>()};
   },
   data() {
     return {
@@ -195,6 +197,9 @@ export default defineComponent({
     },
     sector(): SpaceModel | undefined {
       return this.inspectedSpace === undefined ? undefined : spacesById(this.spaces).get(this.inspectedSpace);
+    },
+    landmark(): string | undefined {
+      return this.sector && sectorName(this.game.gameOptions.boardName, this.sector.id);
     },
     terrain(): string {
       if (this.sector === undefined) {

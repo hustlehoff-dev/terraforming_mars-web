@@ -3,6 +3,8 @@ import {CardName} from '../../../../common/cards/CardName';
 import {CardRenderer} from '../../render/CardRenderer';
 import {StandardProjectCard} from '../../StandardProjectCard';
 import {PlaceGreeneryTile} from '../../../deferredActions/PlaceGreeneryTile';
+import {Payment} from '../../../../common/inputs/Payment';
+import {Space} from '../../../boards/Space';
 
 export class GreeneryStandardProject extends StandardProjectCard {
   constructor() {
@@ -39,5 +41,16 @@ export class GreeneryStandardProject extends StandardProjectCard {
 
   actionEssence(player: IPlayer): void {
     player.game.defer(new PlaceGreeneryTile(player));
+  }
+
+  public placementSpaces(player: IPlayer, cost = this.getAdjustedCost(player)): ReadonlyArray<Space> {
+    const board = player.game.board;
+    return board.filterSpacesAroundRedCity(board.getAvailableSpacesForGreenery(player, {...this.canPlayOptions(player), cost}));
+  }
+
+  public payAndPlace(player: IPlayer, payment: Payment, space: Space): void {
+    player.pay(payment);
+    this.projectPlayed(player);
+    player.defer(() => player.game.addGreenery(player, space));
   }
 }

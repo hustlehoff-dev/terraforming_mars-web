@@ -21,7 +21,7 @@
 </template>
 
 <script lang="ts">
-import {defineComponent, inject} from 'vue';
+import {defineComponent, inject, onBeforeUnmount, watch} from 'vue';
 import {SelectSpaceModel} from '@/common/models/PlayerInputModel';
 import {PlayerViewModel} from '@/common/models/PlayerModel';
 import {getPreferences, PreferencesManager} from '@/client/utils/PreferencesManager';
@@ -37,7 +37,6 @@ type Refs = {
 };
 
 type DataModel = {
-  spaces: Set<SpaceId>;
   selectedTile: HTMLElement | undefined,
   spaceId: SpaceId | undefined;
   warning: string | undefined;
@@ -45,8 +44,22 @@ type DataModel = {
 
 export default defineComponent({
   name: 'SelectSpace',
-  setup() {
-    return {mapPlacement: inject(mapPlacementKey, undefined)};
+  setup(props) {
+    const mapPlacement = inject(mapPlacementKey, undefined);
+    let unregister: (() => void) | undefined;
+    function clearPlacement() {
+      unregister?.();
+      unregister = undefined;
+    }
+    const register = mapPlacement?.register;
+    if (register) {
+      watch([() => props.playerinput, () => props.playerView], ([input]) => {
+        clearPlacement();
+        unregister = register(input);
+      }, {immediate: true});
+    }
+    onBeforeUnmount(clearPlacement);
+    return {mapPlacement};
   },
   props: {
     playerView: {
@@ -58,7 +71,7 @@ export default defineComponent({
       required: true,
     },
     onsave: {
-      type: Function as unknown as () => (out: SelectSpaceResponse) => void,
+      type: Function as unknown as () => (out: SelectSpaceResponse) => void | Promise<boolean>,
       required: true,
     },
     showsave: {
@@ -72,7 +85,6 @@ export default defineComponent({
   },
   data(): DataModel {
     return {
-      spaces: new Set(this.playerinput.spaces),
       selectedTile: undefined,
       spaceId: undefined,
       warning: undefined,
@@ -83,6 +95,9 @@ export default defineComponent({
     GoToMap,
   },
   computed: {
+    spaces(): ReadonlySet<SpaceId> {
+      return new Set(this.playerinput.spaces);
+    },
     typedRefs(): Refs {
       return this.$refs as unknown as Refs;
     },
@@ -111,11 +126,6 @@ export default defineComponent({
       this.animateSpaces(this.getSelectableSpaces());
     },
     confirmPlacement() {
-      const tiles = this.getSelectableSpaces();
-      tiles.forEach((tile) => {
-        tile.onclick = null;
-      });
-
       if (this.selectedTile === undefined) {
         throw new Error('unexpected, no tile selected!');
       }
@@ -152,6 +162,16 @@ export default defineComponent({
     hideDialog(hide: boolean) {
       PreferencesManager.INSTANCE.set('hide_tile_confirmation', hide);
     },
+    onBoardClick(event: MouseEvent) {
+      if (this.spaceId !== undefined || (this.mapPlacement && this.mapPlacement.input.value !== this.playerinput) || !(event.target instanceof Element)) {
+        return;
+      }
+      const tile = event.target.closest<HTMLElement>('.board-space-selectable[data_space_id]');
+      const id = tile?.getAttribute('data_space_id') as SpaceId | null | undefined;
+      if (tile && id && this.spaces.has(id)) {
+        this.onTileSelected(tile);
+      }
+    },
     onTileSelected(tile: HTMLElement) {
       this.selectedTile = tile;
       this.disableAnimation();
@@ -164,40 +184,28 @@ export default defineComponent({
         this.typedRefs.confirmation.show();
       }
     },
-    saveData() {
+    async saveData() {
       if (this.spaceId === undefined) {
         this.warning = 'Must select a space';
         return;
       }
-      this.onsave({type: 'space', spaceId: this.spaceId});
+      const result = await this.onsave({type: 'space', spaceId: this.spaceId});
+      if (result === false) {
+        this.spaceId = undefined;
+        this.selectedTile = undefined;
+        this.disableAnimation();
+        this.animateSpaces(this.getSelectableSpaces());
+      }
     },
   },
   mounted() {
-    if (this.mapPlacement !== undefined) {
-      this.mapPlacement.input.value = this.playerinput;
-    }
     this.disableAnimation();
-    const tiles = this.getSelectableSpaces();
-    this.animateSpaces(tiles);
-    for (let i = 0, length = tiles.length; i < length; i++) {
-      const tile = tiles[i];
-      const spaceId = tile.getAttribute('data_space_id') as SpaceId;
-
-      if (spaceId === null || this.spaces.has(spaceId) === false) {
-        continue;
-      }
-
-      tile.onclick = () => this.onTileSelected(tile);
-    }
+    this.animateSpaces(this.getSelectableSpaces());
+    document.addEventListener('click', this.onBoardClick);
   },
   beforeUnmount() {
-    if (this.mapPlacement?.input.value === this.playerinput) {
-      this.mapPlacement.input.value = undefined;
-    }
     this.disableAnimation();
-    for (const tile of this.getSelectableSpaces()) {
-      tile.onclick = null;
-    }
+    document.removeEventListener('click', this.onBoardClick);
   },
 });
 

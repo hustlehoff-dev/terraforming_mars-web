@@ -41,7 +41,10 @@ describe('SelectSpace', () => {
     document.body.appendChild(board);
 
     const wrapper = shallowMount(SelectSpace, {
-      global: {...globalConfig.global, provide: {[mapPlacementKey]: {input}}},
+      global: {...globalConfig.global, provide: {[mapPlacementKey]: {input, register: (selection: SelectSpaceModel) => {
+        input.value = selection;
+        return () => { input.value = undefined; };
+      }}}},
       props: {
         playerView: {} as PlayerViewModel,
         playerinput: {
@@ -57,13 +60,13 @@ describe('SelectSpace', () => {
     });
 
     expect(tile.classList.contains('board-space--available')).is.true;
-    expect(tile.onclick).is.not.null;
     expect(input.value?.spaces).to.deep.eq(['03']);
+    tile.click();
+    expect(wrapper.vm.selectedTile).eq(tile);
 
     wrapper.unmount();
 
     expect(tile.classList.contains('board-space--available')).is.false;
-    expect(tile.onclick).is.null;
     expect(input.value).is.undefined;
 
     board.remove();

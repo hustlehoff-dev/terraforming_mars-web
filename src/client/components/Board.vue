@@ -99,10 +99,11 @@
         :space="curSpace"
         :aresExtension="expansions.ares"
         :tileView="tileView"
+        :sectorName="cinematicTerrain ? sectorName(boardName, curSpace.id) : undefined"
         :class="[atlasSpaceClasses(curSpace.id), ownershipClasses(curSpace)]"
         :tabindex="atlas ? (atlasTabStop === curSpace.id ? 0 : -1) : undefined"
         :role="atlas ? 'button' : undefined"
-        :aria-label="atlas ? $t('Sector') + ' ' + (curSpace.a9 ?? curSpace.id) : undefined"
+        :aria-label="atlas ? sectorAriaLabel(curSpace) : undefined"
         :aria-describedby="inspectedSpace === curSpace.id ? sectorDescriptionId : undefined"
         data-test="board-space"
       />
@@ -385,7 +386,7 @@ import {SpaceType} from '@/common/boards/SpaceType';
 import {SpaceId} from '@/common/Types';
 import {TileView} from '@/client/components/board/TileView';
 import {BoardName} from '@/common/boards/BoardName';
-import {LEGENDS} from '@/client/components/Legends';
+import {LEGENDS, sectorName} from '@/client/components/Legends';
 import {Expansion} from '@/common/cards/GameModule';
 import {SpaceName} from '@/common/boards/SpaceName';
 import {SoundManager} from '@/client/utils/SoundManager';
@@ -469,6 +470,12 @@ export default defineComponent({
     BoardSpace,
   },
   methods: {
+    sectorName,
+    sectorAriaLabel(space: SpaceModel): string {
+      const coordinate = `${this.$t('Sector')} ${space.a9 ?? space.id}`;
+      const name = sectorName(this.boardName, space.id);
+      return name === undefined ? coordinate : `${coordinate} · ${this.$t(name)}`;
+    },
     ownershipClasses(space: SpaceModel): string[] {
       if (!this.atlas || this.tileView !== 'show' || space.color === undefined || space.color === 'bronze' || space.color === 'neutral') {
         return [];
