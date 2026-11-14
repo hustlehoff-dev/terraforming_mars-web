@@ -58,6 +58,15 @@
         </div>
       </div>
     </div>
+    <!-- Milestone or award: its tile, name and what it asks for. -->
+    <div v-else-if="previewMa" class="activity-feed__preview" aria-hidden="true">
+      <div class="activity-feed__ma">
+        <img :src="previewMa.icon" alt="" @error="($event.target as HTMLImageElement).style.visibility = 'hidden'">
+        <small>{{ $t(previewMa.kind) }}</small>
+        <strong>{{ $t(previewMa.name) }}</strong>
+        <p>{{ $t(previewMa.description) }}</p>
+      </div>
+    </div>
     <div v-else-if="previewCard || previewEntry?.stepLines.length" class="activity-feed__preview" aria-hidden="true">
       <p v-if="previewEntry?.stepLines.length" class="activity-feed__summary">{{ previewEntry.text }}</p>
       <Card v-if="previewCard" :key="previewCard.name" :card="previewCard" autoTall />
@@ -73,6 +82,9 @@ import ActivityCardReveal from './ActivityCardReveal.vue';
 import {getCard} from '@/client/cards/ClientCardManifest';
 import {translateText, translateTextWithParams} from '@/client/directives/i18n';
 import {renderIcons} from '@/client/markdown/markdown';
+import {getAward, getMilestone} from '@/client/MilestoneAwardManifest';
+import {AwardName} from '@/common/ma/AwardName';
+import {MilestoneName} from '@/common/ma/MilestoneName';
 import {paths} from '@/common/app/paths';
 import {CardModel} from '@/common/models/CardModel';
 import {CardName} from '@/common/cards/CardName';
@@ -230,6 +242,20 @@ const previewCard = computed<CardModel | undefined>(() => {
   return (event.player && players.value.get(event.player)?.tableau.find((model) => model.name === card)) || {name: card};
 });
 const previewEntry = computed(() => entries.value.find((entry) => entry.key === previewKey.value));
+const previewMa = computed(() => {
+  const entry = previewEntry.value;
+  if (!entry?.subject || (entry.kind !== 'milestone' && entry.kind !== 'award')) {
+    return undefined;
+  }
+  const name = entry.subject;
+  const description = entry.kind === 'award' ? getAward(name as AwardName)?.description : getMilestone(name as MilestoneName)?.description;
+  return {
+    kind: entry.kind === 'award' ? 'Award' : 'Milestone',
+    name,
+    description: description ?? '',
+    icon: `assets/ma/${name.toLowerCase().replace(/[^a-z0-9]/g, '')}.png`,
+  };
+});
 
 let request: AbortController | undefined;
 let highlightTimer: number | undefined;
@@ -399,7 +425,7 @@ function toggleFeed() {
 }
 
 function hoverEntry(entry: GameActivityModel) {
-  if ((entry.card || entry.steps?.length || entry.deck?.length) && !previewPinned) {
+  if ((entry.card || entry.steps?.length || entry.deck?.length || entry.kind === 'milestone' || entry.kind === 'award') && !previewPinned) {
     previewKey.value = entry.key;
   }
 }
@@ -748,6 +774,44 @@ button.activity-feed__entry {
 
   .activity-feed__body {
     background: none;
+  }
+}
+
+.activity-feed__ma {
+  display: grid;
+  width: 240px;
+  justify-items: center;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid #e2c27f;
+  border-radius: 14px;
+  background: linear-gradient(#152330f5, #0b131bf5);
+  box-shadow: 0 12px 30px #000c;
+  color: #eef6f8;
+  text-align: center;
+
+  img {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+  }
+
+  small {
+    color: #e2c27f;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  strong {
+    color: #fff3c4;
+    font-size: 1.3rem;
+  }
+
+  p {
+    margin: 0;
+    color: #cfe0e6;
+    font-size: 0.9rem;
   }
 }
 </style>
