@@ -1,7 +1,7 @@
 <template>
   <div class="payments_cont">
     <div v-if="showtitle === true">{{ $t(playerinput.title) }}</div>
-    <template v-for="c in cards" :key="c.name">
+    <template v-for="c in selectedCard ? [] : cards" :key="c.name">
       <label v-if="experimentalUI || !c.isDisabled" class="payments_cards">
         <input v-if="!c.isDisabled" class="hidden" type="radio" v-model="cardName" :value="c.name">
         <Card class="cardbox" :card="c" />
@@ -31,14 +31,16 @@
       :order="order"
       :ledger="ledger"
       :showsave="showsave"
-      :buttonLabel="playerinput.buttonLabel"
+      :compact="useCompactPayment"
+      :autoSave="autoSave && !card?.warnings?.length && card?.additionalProjectCosts === undefined"
+      :buttonLabel="selectedCard && !card?.standardProjectCanPayWith ? 'Play card' : playerinput.buttonLabel"
       @change="(p) => payment = p"
       @save="doSave" />
   </div>
 </template>
 
 <script lang="ts">
-import {defineComponent} from 'vue';
+import {defineComponent, inject, ref} from 'vue';
 import {SpendableResource} from '@/common/inputs/Spendable';
 import Card from '@/client/components/card/Card.vue';
 import {getCardOrThrow} from '@/client/cards/ClientCardManifest';
@@ -55,9 +57,13 @@ import WarningsComponent from '@/client/components/WarningsComponent.vue';
 import PaymentForm from '@/client/components/PaymentForm.vue';
 import {Ledger} from '@/client/components/PaymentLedger';
 import {getPreferences} from '@/client/utils/PreferencesManager';
+import {Payment} from '@/common/inputs/Payment';
 
 export default defineComponent({
   name: 'SelectProjectCardToPlay',
+  setup() {
+    return {missionCompactProjectPayment: inject('missionCompactProjectPayment', ref(false))};
+  },
   mixins: [PaymentWidgetMixin],
   props: {
     playerView: {
@@ -78,8 +84,15 @@ export default defineComponent({
     showtitle: {
       type: Boolean,
     },
+    selectedCard: String as () => CardName | undefined,
+    compactPayment: Boolean,
+    // With selectedCard: play straight away when there is no payment choice to make.
+    autoSave: Boolean,
   },
   computed: {
+    useCompactPayment(): boolean {
+      return this.missionCompactProjectPayment || this.compactPayment || this.selectedCard !== undefined;
+    },
     order(): ReadonlyArray<SpendableResource> {
       return ([
         'steel',
@@ -140,7 +153,12 @@ export default defineComponent({
         CardOrderStorage.getCardOrder(this.playerView.id),
         this.playerinput.cards,
       );
-      card = cards[0];
+      if (this.selectedCard !== undefined) {
+        card = cards.find((option) => option.name === this.selectedCard);
+      } else {
+        const compact = this.missionCompactProjectPayment || this.compactPayment;
+        card = compact ? cards.find((option) => !option.isDisabled) : cards[0];
+      }
     }
     return {
       cardName: card?.name,
@@ -264,11 +282,11 @@ export default defineComponent({
         this.doSave();
       }
     },
-    doSave() {
+    doSave(payment?: Payment) {
       if (this.card === undefined) {
         return;
       }
-      this.onsave({type: 'projectCard', card: this.card.name, payment: this.payment});
+      this.onsave({type: 'projectCard', card: this.card.name, payment: payment ?? this.payment});
     },
   },
 });

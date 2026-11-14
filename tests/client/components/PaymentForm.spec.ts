@@ -11,6 +11,7 @@ function mountPaymentForm(overrides: {
   order?: ReadonlyArray<SpendableResource>,
   ledger?: Partial<Ledger>,
   showsave?: boolean,
+  compact?: boolean,
 }) {
   const order = overrides.order ?? ['megacredits'];
   const ledger = overrides.ledger ?? {};
@@ -19,6 +20,7 @@ function mountPaymentForm(overrides: {
     order,
     ledger: {...newDefaultLedger(), ...ledger},
     showsave: overrides.showsave ?? true,
+    compact: overrides.compact,
     buttonLabel: 'Save',
   };
 
@@ -29,6 +31,20 @@ function mountPaymentForm(overrides: {
 }
 
 describe('PaymentForm', () => {
+  it('submits a selected split payment that preserves a resource when credits alone are insufficient', async () => {
+    const wrapper = mountPaymentForm({cost: 7, compact: true, order: ['steel', 'titanium', 'megacredits'], ledger: {
+      steel: {available: 2, rate: 2},
+      titanium: {available: 2, rate: 3},
+      megacredits: {available: 3, rate: 1},
+    }});
+
+    expect(wrapper.find('.payments_table').exists()).is.false;
+    const option = wrapper.findAll('label').find((label) => label.text().includes('Keep steel'));
+    expect(option).to.exist;
+    await option!.get('input').setValue(true);
+    await wrapper.get('[data-test=save]').trigger('click');
+    expect(wrapper.emitted('save')?.[0]).to.deep.eq([{...Payment.EMPTY, titanium: 2, megacredits: 1}]);
+  });
   it('renders only resources in spendableResources', async () => {
     const wrapper = mountPaymentForm({
       cost: 10,

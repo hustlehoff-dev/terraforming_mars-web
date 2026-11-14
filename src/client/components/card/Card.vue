@@ -6,8 +6,12 @@
         <div v-if="showPlayerCube" :class="playerCubeClass"></div>
         <CardHelp v-if="helpText !== undefined" :name="card.name" :helpText="helpText" :hovering="hovering" />
         <CardTags :tags="tags" />
+        <span v-if="framed && cardSkin !== 'arena' && cardMetadata.cardNumber" class="card-printed-number" aria-hidden="true">#{{ cardMetadata.cardNumber }}</span>
       </div>
+      <CardArt v-if="showArt && cardSkin === 'arena'" :name="card.name" :tags="tags" />
       <CardTitle :title="card.name" :type="cardType" />
+      <CardArt v-if="showArt && cardSkin !== 'arena'" :name="card.name" :tags="tags" />
+      <div v-if="showArt && cardSkin === 'printed'" class="card-printed-band" aria-hidden="true">{{ moduleName }}</div>
       <CardContent
         :metadata="cardMetadata"
         :requirements="cardRequirements"
@@ -24,7 +28,7 @@
 
 <script lang="ts">
 
-import {defineComponent} from 'vue';
+import {computed, defineComponent, inject} from 'vue';
 
 import {CardModel} from '@/common/models/CardModel';
 import CardTitle from './CardTitle.vue';
@@ -36,22 +40,27 @@ import CardTags from './CardTags.vue';
 import CardVictoryPoints from './CardVictoryPoints.vue';
 import CardContent from './CardContent.vue';
 import CardHelp from './CardHelp.vue';
+import CardArt from './CardArt.vue';
 import {CardType} from '@/common/cards/CardType';
 import {CardMetadata} from '@/common/cards/CardMetadata';
 import {Tag} from '@/common/cards/Tag';
-import {getPreferences} from '@/client/utils/PreferencesManager';
+import {CardSkin, getPreferences} from '@/client/utils/PreferencesManager';
 import {CardResource} from '@/common/CardResource';
 import {getCardOrThrow} from '@/client/cards/ClientCardManifest';
 import {ClientCard} from '@/common/cards/ClientCard';
 import {Color} from '@/common/Color';
 import {CardRequirementDescriptor} from '@/common/cards/CardRequirementDescriptor';
-import {GameModule} from '@/common/cards/GameModule';
+import {GameModule, MODULE_NAMES} from '@/common/cards/GameModule';
 
 
 export default defineComponent({
   name: 'Card',
+  setup() {
+    return {missionCards: inject('missionCards', computed(() => false))};
+  },
   components: {
     CardTitle,
+    CardArt,
     CardHelp,
     CardResourceCounter,
     CardCost,
@@ -80,6 +89,12 @@ export default defineComponent({
       type: String as () => Color,
       required: false,
       default: 'neutral',
+    },
+    // When true, project cards use the illustrated game frame.
+    art: {
+      type: Boolean,
+      required: false,
+      default: false,
     },
     // When true, the card is automatically sized regardless of hover.
     autoTall: {
@@ -147,6 +162,11 @@ export default defineComponent({
       if (this.isStandardProject) {
         classes.push('card-standard-project');
       }
+      if (this.showArt) {
+        classes.push('card-container--art', 'card-container--' + this.cardType, 'card-skin--' + this.cardSkin);
+      } else if (this.framed) {
+        classes.push('card-container--' + this.cardType, 'card-skin--' + this.cardSkin);
+      }
       if (this.autoTall) {
         classes.push('card-auto-tall');
       } else if (getPreferences().experimental_ui) {
@@ -173,6 +193,29 @@ export default defineComponent({
     isProjectCard(): boolean {
       const type = this.cardType;
       return type === CardType.AUTOMATED || type === CardType.ACTIVE || type === CardType.EVENT;
+    },
+    moduleName(): string {
+      return MODULE_NAMES[this.cardExpansion];
+    },
+    cardSkin(): CardSkin {
+      return getPreferences().card_skin;
+    },
+    /** A project card shown in the mission hand or card stage, styled by the chosen skin. */
+    framed(): boolean {
+      if (this.art) {
+        return this.isProjectCard;
+      }
+      // Elsewhere in the game (windows, choices) the classic skin covers every player card.
+      return this.missionCards && this.cardSkin === 'classic' && (this.isProjectCard || this.isPlayerCard);
+    },
+    /** Corporations, preludes and CEOs: framed with the same skin as project cards during the game. */
+    isPlayerCard(): boolean {
+      const type = this.cardType;
+      return type === CardType.CORPORATION || type === CardType.PRELUDE || type === CardType.CEO;
+    },
+    showArt(): boolean {
+      // The classic skin is the original card, so it never gets the illustrated frame.
+      return this.art && this.isProjectCard && this.cardSkin !== 'classic';
     },
     isStandardProject() : boolean {
       return this.cardType === CardType.STANDARD_PROJECT || this.cardType === CardType.STANDARD_ACTION;
