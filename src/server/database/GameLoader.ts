@@ -1,3 +1,4 @@
+import {multiInstance} from '../utils/multiInstance';
 import prometheus from '@prometheus-io/client';
 import {Database} from './Database';
 import {Game} from '../Game';
@@ -190,7 +191,7 @@ export class GameLoader implements IGameLoader {
 
     // 1. Check the cache as long as forceLoad isn't true, and the database has nothing newer.
     const cached = d.games.get(gameId);
-    if (forceLoad === false && cached !== undefined && await this.hasNewerSave(cached)) {
+    if (multiInstance && forceLoad === false && cached !== undefined && await this.hasNewerSave(cached)) {
       console.log(`GameLoader: ${gameId} has a newer save in the database, reloading`);
       forceLoad = true;
     }
@@ -339,7 +340,9 @@ export class GameLoader implements IGameLoader {
   private readonly pendingSaves = new Map<IGame['id'], Promise<void>>();
 
   public async waitForSaves(gameId: IGame['id']): Promise<void> {
-    await this.pendingSaves.get(gameId);
+    if (multiInstance) {
+      await this.pendingSaves.get(gameId);
+    }
   }
 
   public async maintenance() {

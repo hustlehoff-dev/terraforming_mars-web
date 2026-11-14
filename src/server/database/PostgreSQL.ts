@@ -1,3 +1,4 @@
+import {multiInstance} from '../utils/multiInstance';
 import prometheus from '@prometheus-io/client';
 import pg from 'pg';
 import {IDatabase} from './IDatabase';
@@ -399,8 +400,10 @@ export class PostgreSQL implements IDatabase {
       // Several server instances can share this database. Saves of one game are serialized, and a
       // copy that fell behind (another instance saved a newer state meanwhile) is not written over
       // it. Undo deliberately rewrites older saves, so games with undo keep the old behavior.
-      await this.client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [game.id]);
-      if (!game.gameOptions.undoOption) {
+      if (multiInstance) {
+        await this.client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [game.id]);
+      }
+      if (multiInstance && !game.gameOptions.undoOption) {
         const latest = await this.client.query('SELECT MAX(save_id) AS max FROM games WHERE game_id = $1', [game.id]);
         const max = latest.rows[0]?.max;
         if (max !== null && max !== undefined && Number(max) > thisSaveId) {
