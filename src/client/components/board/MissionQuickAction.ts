@@ -104,7 +104,16 @@ function pointless(card: CardModel): boolean {
   return (card.warnings ?? []).some((warning) => PARAMETER_MAXED.includes(warning));
 }
 
-export function getMissionQuickActions(input: PlayerInputModel | undefined): MissionQuickAction[] {
+/** Which global parameters are already at their maximum (actions that only raise them are pointless). */
+export type MaxedParameters = {temperature?: boolean, oceans?: boolean, venus?: boolean};
+
+const MAXED_PROJECTS: Partial<Record<CardName, keyof MaxedParameters>> = {
+  [CardName.AQUIFER_STANDARD_PROJECT]: 'oceans',
+  [CardName.ASTEROID_STANDARD_PROJECT]: 'temperature',
+  [CardName.AIR_SCRAPPING_STANDARD_PROJECT]: 'venus',
+};
+
+export function getMissionQuickActions(input: PlayerInputModel | undefined, maxed: MaxedParameters = {}): MissionQuickAction[] {
   if (input?.type !== 'or' || input.optional) {
     return [];
   }
@@ -114,7 +123,8 @@ export function getMissionQuickActions(input: PlayerInputModel | undefined): Mis
     if (option.type === 'space' && title === 'Convert ${0} plants into greenery') {
       actions.push({id: 'plants', label: 'Plant greenery', index, effects: [{img: resourceImage('plant'), text: '−8'}, {img: tileImage('greenery'), text: '+'}]});
     }
-    if (option.type === 'option' && option.buttonLabel === 'Convert heat') {
+    // At the top temperature, converting heat does nothing: not offered (nor lit on the heat tile).
+    if (option.type === 'option' && option.buttonLabel === 'Convert heat' && !maxed.temperature && !(option.warnings ?? []).includes('maxtemp')) {
       actions.push({id: 'heat', label: 'Raise temperature', index, effects: [{img: resourceImage('heat'), text: '−8'}, {img: TEMPERATURE, text: '+1'}]});
     }
     if (option.type === 'card' && title === 'Sell patents') {
@@ -130,7 +140,7 @@ export function getMissionQuickActions(input: PlayerInputModel | undefined): Mis
           label: known?.label ?? card.name.replace(':SP', ''),
           effects: known?.effects,
           cost: card.calculatedCost,
-          disabled: card.isDisabled === true || pointless(card),
+          disabled: card.isDisabled === true || pointless(card) || maxed[MAXED_PROJECTS[card.name] ?? 'none' as keyof MaxedParameters] === true,
         });
       }
     }
