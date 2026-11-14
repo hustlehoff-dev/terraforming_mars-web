@@ -21,7 +21,7 @@ Aktualizuj ten plik po każdej istotnej zmianie. Ostatnia aktualizacja: 2026-11-
 - `src/client/components/logpanel/ActivityFeed.vue`, `overview/RivalPanel.vue`, `MissionSettings.vue` elementy HUD.
 - HUD w trybie misji (`board/`): `MissionPlayersPanel` (gracze, lewy górny róg), prawa kolumna `MissionParameters` (tory i bonusy) + `MissionTurnButton` (tura, licznik akcji, zegar), `MissionStandardProjects` (projekty u góry), `MissionHudMenus` (okna: nagrody, kamienie, zagrane karty, akcje kart, sprzedaż), `MissionPinnedCards` (karty odłożone z ręki, układy 1-3), `MissionPlacementBanner` (jeden baner dla każdego stawiania kafelka), `common/DialogPeek` („Pokaż grę” w oknach wyboru).
 - Style: `src/styles/mission-hud-layout.less` (układ HUD-a, ładowany z `PlayerHome.vue`) i `src/styles/game-dialogs.less` (okna gry, ładowane z `App.vue`). Oba są w paczce klienta, nie w `common.less`: zmiana wymaga tylko buildu klienta. Komponenty trzymają własny wygląd w stylach scoped.
-- `src/client/utils/SoundManager.ts` dźwięki i muzyka misji (`assets/audio/mars-orbit.mp3`), głośność w `MissionSettings`.
+- `src/client/utils/SoundManager.ts` odtwarza dźwięki misji i zapętla trzy utwory MP3 z `assets/audio/`. Głośność i źródło muzyki można zmienić w `MissionSettings`.
 - `src/styles/mission-*.less` style trybu misji (`mission-map.less` scena i plansza, `mission-cinematic.less` układ ekranu, `mission-orbit-layout.less`, `mission-hand.less`, `mission-player-hud.less`, `mission-card-frame.less`).
 - `tests/client/` testy komponentów, `tests/` testy serwera.
 
