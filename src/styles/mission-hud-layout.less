@@ -552,3 +552,42 @@ body #player-home.mission-cinematic {
   display: none !important;
 }
 
+
+// ---- Activity feed: tall and readable, from below the players panel down to the dock.
+body #player-home.mission-cinematic .activity-feed {
+  width: clamp(270px, 26vw, 420px);
+  font-size: 0.84rem;
+
+  .activity-feed__header {
+    min-height: 32px;
+    font-size: 0.9rem;
+  }
+
+  .activity-feed__list {
+    max-height: max(220px, calc(100dvh - var(--dock-height, 240px) - 360px));
+    gap: 6px;
+    scrollbar-color: #8fa3adb3 transparent;
+  }
+
+  .activity-feed__entry {
+    gap: 7px;
+    padding: 7px 11px;
+    border-color: #ffffff2e;
+    background: linear-gradient(100deg, #0d1620e6, #0d1620b8);
+    color: #dbe3e7;
+    line-height: 1.45;
+  }
+
+  .activity-feed__marker {
+    width: 8px;
+    height: 8px;
+  }
+
+  .activity-feed__units .markdown-resource,
+  .activity-feed__units .markdown-icon,
+  .activity-feed__reveal .markdown-resource,
+  .activity-feed__reveal .markdown-icon {
+    width: 18px;
+    height: 18px;
+  }
+}
