@@ -1,4 +1,5 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
+import {SoundManager} from '@/client/utils/SoundManager';
 
 describe('Mars soundtrack', () => {
   afterEach(() => {
@@ -7,50 +8,41 @@ describe('Mars soundtrack', () => {
     vi.unstubAllGlobals();
   });
 
-  let SoundManager: typeof import('../../src/client/utils/SoundManager').SoundManager;
+  it('plays the three MP3 tracks in order, loops the playlist and stops the active track', () => {
+    const tracks: Array<FakeAudio> = [];
+    class FakeAudio extends EventTarget {
+      loop = false;
+      volume = 0;
+      play = vi.fn(async () => {});
+      pause = vi.fn();
 
-  it('waits for decoding, respects a stop during loading, and loops only one source on restart', async () => {
-    vi.resetModules();
-    ({SoundManager} = await import('../../src/client/utils/SoundManager'));
-    const connect = vi.fn();
-    const start = vi.fn();
-    const stop = vi.fn();
-    const source = {connect, start, stop, loop: false, loopStart: 0, loopEnd: 0};
-    connect.mockReturnValue({connect: vi.fn()});
-    const createBufferSource = vi.fn(() => source);
-    const setTargetAtTime = vi.fn();
-    let finishDecoding!: (buffer: AudioBuffer) => void;
-    const decoding = new Promise<AudioBuffer>((resolve) => {
-      finishDecoding = resolve;
-    });
-    const decodeAudioData = vi.fn(() => decoding);
-    const fetchTrack = vi.fn(async () => ({ok: true, arrayBuffer: async () => new ArrayBuffer(0)}));
-    vi.stubGlobal('fetch', fetchTrack);
-    vi.stubGlobal('AudioContext', class {
-      state = 'running';
-      currentTime = 0;
-      decodeAudioData = decodeAudioData;
-      createBufferSource = createBufferSource;
-      createGain = () => ({gain: {setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), cancelScheduledValues: vi.fn(), setTargetAtTime}});
-    });
+      constructor(public src: string) {
+        super();
+        tracks.push(this);
+      }
+    }
+    vi.stubGlobal('Audio', FakeAudio);
     vi.spyOn(document, 'hidden', 'get').mockReturnValue(false);
-
-    SoundManager.startMissionAmbience();
-    await vi.waitFor(() => expect(decodeAudioData).toHaveBeenCalledOnce());
-    SoundManager.stopMissionAmbience();
-    finishDecoding({} as AudioBuffer);
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(createBufferSource).not.toHaveBeenCalled();
+    vi.spyOn(document, 'hasFocus').mockReturnValue(true);
 
     SoundManager.startMissionAmbience();
     SoundManager.startMissionAmbience();
-    await vi.waitFor(() => expect(start).toHaveBeenCalledOnce());
-    expect(fetchTrack).toHaveBeenCalledOnce();
-    expect(source.loop).toBe(true);
-    SoundManager.setMissionMusicVolume(0);
-    expect(setTargetAtTime.mock.calls[0][0]).toBe(0);
-    expect(stop).not.toHaveBeenCalled();
+    expect(tracks).toHaveLength(1);
+    for (let i = 0; i < 3; i++) {
+      expect(tracks[i].loop).toBe(false);
+      tracks[i].dispatchEvent(new Event('ended'));
+    }
+    expect(tracks.map(({src}) => src)).toEqual([
+      '/assets/audio/red-planet-stillness-01.mp3',
+      '/assets/audio/quiet-expansion-01.mp3',
+      '/assets/audio/quiet-expansion-02.mp3',
+      '/assets/audio/red-planet-stillness-01.mp3',
+    ]);
+    SoundManager.setMissionMusicVolume(25);
+    expect(tracks[3].volume).toBe(0.25);
     SoundManager.stopMissionAmbience();
-    expect(stop).toHaveBeenCalledOnce();
+    expect(tracks[3].pause).toHaveBeenCalledOnce();
+    tracks[3].dispatchEvent(new Event('ended'));
+    expect(tracks).toHaveLength(4);
   });
 });

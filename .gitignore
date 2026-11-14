@@ -29,3 +29,6 @@ node_modules/
 
 # For any local work you don't want caught up in git.
 local/
+
+# Uncompressed music masters (served locally, too large for the repository)
+assets/audio/*.wav

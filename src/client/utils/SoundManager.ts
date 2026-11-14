@@ -6,13 +6,11 @@ export namespace SoundManager {
 
   let context: AudioContext | undefined;
   let noiseBuffer: AudioBuffer | undefined;
-  let soundtrack: Promise<AudioBuffer> | undefined;
-  let ambience: AudioBufferSourceNode | undefined;
-  let ambienceGain: GainNode | undefined;
   let ambienceRequested = false;
   /** A chosen track (link or own file) plays in an audio element: links from other sites work without CORS. */
   let customAudio: HTMLAudioElement | undefined;
   let customUrl: string | undefined;
+  let sourceRequest = 0;
 
   async function customSource(): Promise<string | undefined> {
     const prefs = getPreferences();
@@ -33,28 +31,50 @@ export namespace SoundManager {
     return undefined;
   }
 
-  function startCustom(src: string) {
+  /**
+   * The game's own playlist: "Red Planet Stillness" first, then the "Quiet Expansion" pieces,
+   * then around again.
+   */
+  const PLAYLIST: ReadonlyArray<string> = [
+    '/assets/audio/red-planet-stillness-01.mp3',
+    '/assets/audio/quiet-expansion-01.mp3',
+    '/assets/audio/quiet-expansion-02.mp3',
+  ];
+
+  function startPlaylist(index = 0) {
+    startCustom(PLAYLIST[index % PLAYLIST.length], () => startPlaylist(index + 1));
+  }
+
+  function startCustom(src: string, onEnded?: () => void) {
     const audio = new Audio(src);
-    audio.loop = true;
+    const request = sourceRequest;
+    audio.loop = onEnded === undefined;
+    if (onEnded !== undefined) {
+      audio.addEventListener('ended', () => {
+        if (customAudio === audio && ambienceRequested) {
+          onEnded();
+        }
+      });
+    }
     audio.volume = 0;
     customAudio = audio;
     void audio.play().then(() => {
-      const target = getPreferences().music_volume / 100;
       const started = performance.now();
       const fade = () => {
-        if (customAudio !== audio) {
+        if (customAudio !== audio || request !== sourceRequest) {
           return;
         }
         const k = Math.min(1, (performance.now() - started) / 2000);
-        audio.volume = target * k;
+        audio.volume = getPreferences().music_volume / 100 * k;
         if (k < 1) {
           requestAnimationFrame(fade);
         }
       };
       fade();
     }).catch(() => {
-      if (customAudio === audio) {
+      if (customAudio === audio && request === sourceRequest) {
         customAudio = undefined;
+        ambienceRequested = false;
       }
     });
   }
@@ -116,65 +136,50 @@ export namespace SoundManager {
     source.stop(start + duration);
   }
 
-  function loadSoundtrack(audio: AudioContext): Promise<AudioBuffer> {
-    return soundtrack ??= fetch('/assets/audio/mars-orbit.mp3').then((response) => {
-      if (!response.ok) {
-        throw new Error('Could not load the Mars soundtrack');
-      }
-      return response.arrayBuffer();
-    }).then((data) => audio.decodeAudioData(data)).catch((error) => {
-      soundtrack = undefined;
-      throw error;
-    });
-  }
-
   export function startMissionAmbience() {
-    ambienceRequested = true;
-    if (ambience !== undefined || customAudio !== undefined || document.hidden || !document.hasFocus() || !getPreferences().enable_music || !getPreferences().enable_sounds) {
+    const prefs = getPreferences();
+    if (document.hidden || !document.hasFocus() || !prefs.enable_music || !prefs.enable_sounds) {
       return;
     }
-    if (getPreferences().music_track !== 'builtin') {
-      void customSource().then((src) => {
-        if (src === undefined || !ambienceRequested || customAudio !== undefined || document.hidden) {
-          return;
+    if (ambienceRequested) {
+      return;
+    }
+    ambienceRequested = true;
+    if (customAudio !== undefined) {
+      const audio = customAudio;
+      const request = sourceRequest;
+      audio.volume = prefs.music_volume / 100;
+      void audio.play().catch(() => {
+        if (customAudio === audio && request === sourceRequest) {
+          ambienceRequested = false;
         }
-        startCustom(src);
       });
       return;
     }
-    playInContext((audio) => {
-      void loadSoundtrack(audio).then((buffer) => {
-        if (!ambienceRequested || ambience !== undefined || document.hidden || !document.hasFocus() || !getPreferences().enable_sounds || !getPreferences().enable_music) {
-          return;
+    if (prefs.music_track === 'builtin') {
+      startPlaylist();
+      return;
+    }
+    const request = ++sourceRequest;
+    void customSource().then((src) => {
+      if (request === sourceRequest) {
+        if (src === undefined) {
+          ambienceRequested = false;
+        } else {
+          startCustom(src);
         }
-        const source = audio.createBufferSource();
-        const gain = audio.createGain();
-        source.buffer = buffer;
-        source.loop = true;
-        // The MP3 includes one second of adjacent music at both ends to keep
-        // the loop points clear of the encoder's delay and padding.
-        source.loopStart = 1;
-        source.loopEnd = 61;
-        gain.gain.setValueAtTime(0, audio.currentTime);
-        gain.gain.linearRampToValueAtTime(getPreferences().music_volume / 100, audio.currentTime + 2);
-        source.connect(gain).connect(audio.destination);
-        source.onended = () => {
-          source.disconnect();
-          gain.disconnect();
-        };
-        source.start(0, source.loopStart);
-        ambience = source;
-        ambienceGain = gain;
-      }).catch(() => {});
-    }, true);
+      }
+    });
+  }
+
+  export function pauseMissionAmbience() {
+    ambienceRequested = false;
+    sourceRequest++;
+    customAudio?.pause();
   }
 
   export function stopMissionAmbience() {
-    ambienceRequested = false;
-    ambience?.stop();
-    ambience = undefined;
-    ambienceGain = undefined;
-    customAudio?.pause();
+    pauseMissionAmbience();
     customAudio = undefined;
   }
 
@@ -187,11 +192,6 @@ export namespace SoundManager {
   export function setMissionMusicVolume(volume: number) {
     if (customAudio !== undefined) {
       customAudio.volume = Math.max(0, Math.min(1, volume / 100));
-    }
-    if (context !== undefined && ambienceGain !== undefined) {
-      const now = context.currentTime;
-      ambienceGain.gain.cancelScheduledValues(now);
-      ambienceGain.gain.setTargetAtTime(volume / 100, now, 0.035);
     }
   }
 

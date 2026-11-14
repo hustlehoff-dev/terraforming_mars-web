@@ -10,7 +10,7 @@
         <label class="preference-fields__language">
           <span>{{ $t('Music track') }}</span>
           <select :value="prefs.music_track" @change="setMusicTrack">
-            <option value="builtin">{{ $t('Mars Orbit (built in)') }}</option>
+            <option value="builtin">{{ $t('Game soundtrack (built in)') }}</option>
             <option value="url">{{ $t('Link to an audio file') }}</option>
             <option value="file">{{ $t('My own file') }}</option>
           </select>
