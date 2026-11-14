@@ -81,7 +81,7 @@ export default defineComponent({
     }
     return {
       radioElementName: 'selectOption' + unique++,
-      selectedOption: this.defaultOption(displayedOptions[selectedIdx]),
+      selectedOption: this.defaultOption(displayedOptions[selectedIdx], displayedOptions),
     };
   },
   computed: {
@@ -105,7 +105,7 @@ export default defineComponent({
     displayedOptions(newOptions: Array<PlayerInputModel>) {
       // Learner mode can hide the selected option.
       if (this.selectedOption !== undefined && !newOptions.includes(this.selectedOption)) {
-        this.selectedOption = this.defaultOption(newOptions[0]);
+        this.selectedOption = this.defaultOption(newOptions[0], newOptions);
       }
     },
     canCancelGreenery(active: boolean) {
@@ -139,8 +139,9 @@ export default defineComponent({
     }
   },
   methods: {
-    defaultOption(option: PlayerInputModel | undefined): PlayerInputModel | undefined {
-      return this.showsave && this.displayedOptions.length > 1 && isGreeneryChoice(option) ? undefined : option;
+    // Takes the options explicitly: data() calls this before computed properties exist.
+    defaultOption(option: PlayerInputModel | undefined, options: ReadonlyArray<PlayerInputModel>): PlayerInputModel | undefined {
+      return this.showsave && options.length > 1 && isGreeneryChoice(option) ? undefined : option;
     },
     cancelGreenery() {
       this.selectedOption = undefined;
