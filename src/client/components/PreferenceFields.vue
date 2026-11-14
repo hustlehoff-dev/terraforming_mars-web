@@ -7,12 +7,45 @@
           <span>{{ $t('Music volume') }} <span class="preference-fields__value">{{ prefs.music_volume }}%</span></span>
           <input type="range" min="0" max="100" :value="prefs.music_volume" @input="setMusicVolume">
         </label>
+        <label class="preference-fields__language">
+          <span>{{ $t('Music track') }}</span>
+          <select :value="prefs.music_track" @change="setMusicTrack">
+            <option value="builtin">{{ $t('Mars Orbit (built in)') }}</option>
+            <option value="url">{{ $t('Link to an audio file') }}</option>
+            <option value="file">{{ $t('My own file') }}</option>
+          </select>
+        </label>
+        <form v-if="prefs.music_track === 'url'" class="preference-fields__music" @submit.prevent="applyMusicUrl">
+          <input v-model="musicUrl" type="url" :placeholder="$t('https://... .mp3 or .ogg')" :aria-label="$t('Link to an audio file')">
+          <button type="submit">{{ $t('Play') }}</button>
+          <small>{{ $t('A direct link to the file (ends with .mp3, .ogg...), not a YouTube or Spotify page.') }}</small>
+        </form>
+        <div v-if="prefs.music_track === 'file'" class="preference-fields__music">
+          <input type="file" accept="audio/*" :aria-label="$t('My own file')" @change="chooseMusicFile">
+          <small>{{ musicFileNote || $t('The file stays in this browser.') }}</small>
+        </div>
       </div>
       <label v-for="field in group.fields" :key="field.key" class="preference-fields__toggle">
         <span :title="field.hint ? $t(field.hint) : undefined">{{ $t(field.label) }}</span>
         <input type="checkbox" :checked="prefs[field.key]" :data-test="field.key" @change="setToggle(field.key, $event)">
       </label>
     </details>
+    <label v-if="mission" class="preference-fields__language">
+      <span>{{ $t('Tile ownership') }}</span>
+      <select :value="prefs.map_owner_square ? 'square' : prefs.map_owner_ring ? 'ring' : 'border'" @change="setOwnerMarker">
+        <option value="border">{{ $t('Colored border') }}</option>
+        <option value="ring">{{ $t('Colored border and inner ring') }}</option>
+        <option value="square">{{ $t('Square marker') }}</option>
+      </select>
+    </label>
+    <label v-if="mission" class="preference-fields__language">
+      <span>{{ $t('Card style') }}</span>
+      <select :value="prefs.card_skin" data-test="card_skin" @change="setCardSkin">
+        <option value="classic">{{ $t('Classic Terraforming Mars') }}</option>
+        <option value="printed">{{ $t('Printed card') }}</option>
+        <option value="arena">{{ $t('Dark arena') }}</option>
+      </select>
+    </label>
     <label v-if="mission" class="preference-fields__language">
       <span>{{ $t('Language') }}</span>
       <select :value="prefs.lang" @change="setLanguage">
@@ -23,7 +56,10 @@
 </template>
 
 <script setup lang="ts">
-import {computed} from 'vue';
+import {computed, ref} from 'vue';
+import {SoundManager} from '@/client/utils/SoundManager';
+import {saveOwnTrack} from '@/client/utils/musicStore';
+import {translateText} from '@/client/directives/i18n';
 import {Preferences, PreferencesManager} from '@/client/utils/PreferencesManager';
 import {ALL_LANGUAGES, LANGUAGES} from '@/common/constants';
 
@@ -35,7 +71,7 @@ const prefs = computed(() => props.preferencesManager.values());
 
 const soundToggle: Toggle = {key: 'enable_sounds', label: 'Enable sounds'};
 const groups: Array<{title: string; fields: Toggle[]}> = [
-  {title: 'Audio', fields: [soundToggle]},
+  {title: 'Audio', fields: [soundToggle, {key: 'enable_music', label: 'Music'}]},
   {title: 'Display', fields: [
     {key: 'hide_awards_and_milestones', label: 'Hide awards and milestones'},
     {key: 'small_cards', label: 'Smaller cards'},
@@ -61,8 +97,41 @@ function setToggle(key: ToggleKey, event: Event) {
   props.preferencesManager.set(key, (event.target as HTMLInputElement).checked);
 }
 
+const musicUrl = ref(prefs.value.music_url);
+const musicFileNote = ref('');
+
+function setMusicTrack(event: Event) {
+  props.preferencesManager.set('music_track', (event.target as HTMLSelectElement).value);
+  SoundManager.restartMissionAmbience();
+}
+
+function applyMusicUrl() {
+  props.preferencesManager.set('music_url', musicUrl.value.trim());
+  SoundManager.restartMissionAmbience();
+}
+
+async function chooseMusicFile(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0];
+  if (file === undefined) {
+    return;
+  }
+  await saveOwnTrack(file);
+  musicFileNote.value = `${translateText('Playing')}: ${file.name}`;
+  SoundManager.restartMissionAmbience();
+}
+
 function setMusicVolume(event: Event) {
   props.preferencesManager.set('music_volume', (event.target as HTMLInputElement).valueAsNumber);
+}
+
+function setOwnerMarker(event: Event) {
+  const value = (event.target as HTMLSelectElement).value;
+  props.preferencesManager.set('map_owner_square', value === 'square');
+  props.preferencesManager.set('map_owner_ring', value === 'ring');
+}
+
+function setCardSkin(event: Event) {
+  props.preferencesManager.set('card_skin', (event.target as HTMLSelectElement).value);
 }
 
 function setLanguage(event: Event) {
@@ -135,3 +204,27 @@ function setLanguage(event: Event) {
   color: #ebf7f7;
 }
 </style>
+
+<style lang="less">
+.preference-fields__music {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  margin-top: 6px;
+
+  input[type='url'],
+  input[type='file'] {
+    min-width: 0;
+  }
+
+  input[type='file'] {
+    grid-column: 1 / -1;
+  }
+
+  small {
+    grid-column: 1 / -1;
+    opacity: 0.75;
+  }
+}
+</style>
+

@@ -1,9 +1,16 @@
 import {reactive} from 'vue';
 import {safeLocalStorage} from '@/client/utils/SafeLocalStorage';
 
+// classic: the original Terraforming Mars web cards, 1:1. printed and arena: illustrated mission frames.
+export const CARD_SKINS = ['classic', 'printed', 'arena'] as const;
+export type CardSkin = typeof CARD_SKINS[number];
+export const MUSIC_TRACKS = ['builtin', 'url', 'file'] as const;
+export type MusicTrack = typeof MUSIC_TRACKS[number];
+
 export type Preferences = {
   learner_mode: boolean,
   enable_sounds: boolean,
+  enable_music: boolean,
   music_volume: number,
   magnify_cards: boolean,
   show_alerts: boolean,
@@ -22,10 +29,17 @@ export type Preferences = {
   hide_animated_sidebar: boolean,
   debug_view: boolean,
   symbol_overlay: boolean,
+  map_owner_square: boolean,
+  /** The old ring inside owned spaces, on top of the coloured border. */
+  map_owner_ring: boolean,
   animated_title: boolean,
   experimental_ui: boolean,
   remember_create_game_settings: boolean,
   lang: string,
+  card_skin: CardSkin,
+  /** Game music: the built-in track, a link to an audio file, or the player's own file. */
+  music_track: MusicTrack,
+  music_url: string,
 }
 
 export type Preference = keyof Preferences;
@@ -33,10 +47,14 @@ export type Preference = keyof Preferences;
 const defaults: Preferences = {
   learner_mode: true,
   enable_sounds: true,
+  enable_music: true,
   music_volume: 65,
   magnify_cards: true,
   show_alerts: true,
   lang: 'en',
+  card_skin: 'classic',
+  music_track: 'builtin',
+  music_url: '',
 
   hide_hand: false,
   hide_awards_and_milestones: false,
@@ -53,6 +71,8 @@ const defaults: Preferences = {
   hide_animated_sidebar: false,
 
   symbol_overlay: false,
+  map_owner_square: false,
+  map_owner_ring: false,
   animated_title: true,
 
   experimental_ui: false,
@@ -83,6 +103,12 @@ export class PreferencesManager {
   private _set(key: Preference, val: string | boolean | number) {
     if (key === 'lang') {
       this._values.lang = String(val);
+    } else if (key === 'card_skin') {
+      this._values.card_skin = (CARD_SKINS as ReadonlyArray<string>).includes(String(val)) ? val as CardSkin : defaults.card_skin;
+    } else if (key === 'music_track') {
+      this._values.music_track = (MUSIC_TRACKS as ReadonlyArray<string>).includes(String(val)) ? val as MusicTrack : defaults.music_track;
+    } else if (key === 'music_url') {
+      this._values.music_url = String(val);
     } else if (key === 'music_volume') {
       const volume = Number(val);
       this._values.music_volume = Number.isFinite(volume) ? Math.min(100, Math.max(0, Math.round(volume))) : defaults.music_volume;

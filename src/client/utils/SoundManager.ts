@@ -1,4 +1,5 @@
 import {getPreferences} from '@/client/utils/PreferencesManager';
+import {loadOwnTrack} from '@/client/utils/musicStore';
 
 export namespace SoundManager {
   type MissionCue = 'sector' | 'card' | 'project' | 'placement' | 'turn';
@@ -9,6 +10,54 @@ export namespace SoundManager {
   let ambience: AudioBufferSourceNode | undefined;
   let ambienceGain: GainNode | undefined;
   let ambienceRequested = false;
+  /** A chosen track (link or own file) plays in an audio element: links from other sites work without CORS. */
+  let customAudio: HTMLAudioElement | undefined;
+  let customUrl: string | undefined;
+
+  async function customSource(): Promise<string | undefined> {
+    const prefs = getPreferences();
+    if (prefs.music_track === 'url') {
+      return prefs.music_url.trim() || undefined;
+    }
+    if (prefs.music_track === 'file') {
+      const blob = await loadOwnTrack();
+      if (blob === undefined) {
+        return undefined;
+      }
+      if (customUrl !== undefined) {
+        URL.revokeObjectURL(customUrl);
+      }
+      customUrl = URL.createObjectURL(blob);
+      return customUrl;
+    }
+    return undefined;
+  }
+
+  function startCustom(src: string) {
+    const audio = new Audio(src);
+    audio.loop = true;
+    audio.volume = 0;
+    customAudio = audio;
+    void audio.play().then(() => {
+      const target = getPreferences().music_volume / 100;
+      const started = performance.now();
+      const fade = () => {
+        if (customAudio !== audio) {
+          return;
+        }
+        const k = Math.min(1, (performance.now() - started) / 2000);
+        audio.volume = target * k;
+        if (k < 1) {
+          requestAnimationFrame(fade);
+        }
+      };
+      fade();
+    }).catch(() => {
+      if (customAudio === audio) {
+        customAudio = undefined;
+      }
+    });
+  }
 
   function playInContext(play: (audio: AudioContext) => void, allowResume = false) {
     if (!getPreferences().enable_sounds || !window.AudioContext) {
@@ -81,12 +130,21 @@ export namespace SoundManager {
 
   export function startMissionAmbience() {
     ambienceRequested = true;
-    if (ambience !== undefined || document.hidden) {
+    if (ambience !== undefined || customAudio !== undefined || document.hidden || !document.hasFocus() || !getPreferences().enable_music || !getPreferences().enable_sounds) {
+      return;
+    }
+    if (getPreferences().music_track !== 'builtin') {
+      void customSource().then((src) => {
+        if (src === undefined || !ambienceRequested || customAudio !== undefined || document.hidden) {
+          return;
+        }
+        startCustom(src);
+      });
       return;
     }
     playInContext((audio) => {
       void loadSoundtrack(audio).then((buffer) => {
-        if (!ambienceRequested || ambience !== undefined || document.hidden || !getPreferences().enable_sounds) {
+        if (!ambienceRequested || ambience !== undefined || document.hidden || !document.hasFocus() || !getPreferences().enable_sounds || !getPreferences().enable_music) {
           return;
         }
         const source = audio.createBufferSource();
@@ -116,9 +174,20 @@ export namespace SoundManager {
     ambience?.stop();
     ambience = undefined;
     ambienceGain = undefined;
+    customAudio?.pause();
+    customAudio = undefined;
+  }
+
+  /** The chosen track changed: play the new one straight away. */
+  export function restartMissionAmbience() {
+    stopMissionAmbience();
+    startMissionAmbience();
   }
 
   export function setMissionMusicVolume(volume: number) {
+    if (customAudio !== undefined) {
+      customAudio.volume = Math.max(0, Math.min(1, volume / 100));
+    }
     if (context !== undefined && ambienceGain !== undefined) {
       const now = context.currentTime;
       ambienceGain.gain.cancelScheduledValues(now);
