@@ -140,10 +140,12 @@ function position(anchor: HTMLElement): CSSProperties {
   const width = face?.offsetWidth || 240;
   const height = face?.offsetHeight || 352;
   const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
-  // Hovered cards grow well beyond their natural size when the screen allows it.
-  const scale = Math.max(0.01, Math.min(1.45, (viewportWidth - 24) / width, (slot.bottom - 24) / height));
+  // Hovered cards grow when the screen allows it, and sit above the hand so they never hide the
+  // other cards in it (only on a very short screen may the card come down over the hand).
+  const room = slot.top - 24;
+  const scale = Math.max(0.01, Math.min(1.45, (viewportWidth - 24) / width, Math.max(0.9, room / height), (slot.bottom - 24) / height));
   const left = Math.max(12, Math.min(slot.left + (slot.width - width * scale) / 2, viewportWidth - width * scale - 12));
-  const top = Math.max(12, slot.bottom - height * scale - 16);
+  const top = Math.max(12, slot.top - height * scale - 12);
   return {
     '--lift-x': `${left}px`,
     '--lift-y': `${top}px`,
