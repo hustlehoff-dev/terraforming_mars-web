@@ -100,6 +100,7 @@
             :requestId="playerView.requestId" :deadline="thisPlayer.turnDeadline" :actionsTaken="thisPlayer.actionsTakenThisRound" :noActionLimit="othersPassed" :soloGame="playerView.players.length === 1" @select="openQuickAction" @cardAction="(card) => stageCardAction(card)" @pass="passNow" @endTurn="endTurn" />
         </div>
         <MissionDraftWaiting v-if="cinematic && draftLockedIn" :players="playerView.players" :deadline="game.draftDeadline" />
+        <ConfirmDialog v-if="cinematic" ref="heatConfirm" message="Spend 8 heat to raise the temperature 1 step?" @accept="convertHeatNow" />
         <MissionPinnedCards v-if="cinematic" ref="pinnedCards" :cards="allCardsInHand" :playerId="playerView.id" :playableCards="cardAvailability.projects"
           @preview="previewProject" @change="(names) => pinnedNames = names" />
         <MissionStandardProjects v-if="cinematic && !mapPlacement" :actions="quickActions" @select="openQuickAction" />
@@ -336,6 +337,7 @@ import AppButton from '@/client/components/common/AppButton.vue';
 import MissionTurnButton from '@/client/components/board/MissionTurnButton.vue';
 import MissionStandardProjects from '@/client/components/board/MissionStandardProjects.vue';
 import MissionHudMenus from '@/client/components/board/MissionHudMenus.vue';
+import ConfirmDialog from '@/client/components/common/ConfirmDialog.vue';
 import MissionPinnedCards from '@/client/components/board/MissionPinnedCards.vue';
 import MissionDraftWaiting from '@/client/components/board/MissionDraftWaiting.vue';
 import MissionEffectBadges from '@/client/components/board/MissionEffectBadges.vue';
@@ -344,7 +346,7 @@ import {CardName} from '@/common/cards/CardName';
 import MissionParameters from '@/client/components/board/MissionParameters.vue';
 import MissionPlayersPanel from '@/client/components/board/MissionPlayersPanel.vue';
 import {PlayedCardLogModel} from '@/common/models/PlayedCardLogModel';
-import {actionMenu, cardActionOption, getMissionQuickActions, isResourceRemovalChoice, MissionQuickAction, passOptionIndex, showsCards} from '@/client/components/board/MissionQuickAction';
+import {actionMenu, cardActionOption, getMissionQuickActions, isResourceRemovalChoice, MaxedParameters, MissionQuickAction, passOptionIndex, showsCards} from '@/client/components/board/MissionQuickAction';
 import MissionCardStage from '@/client/components/board/MissionCardStage.vue';
 import {SoundManager} from '@/client/utils/SoundManager';
 import {KeyboardNavigation} from '@/client/components/KeyboardNavigation';
@@ -358,6 +360,8 @@ type PlayerHomeModel = {
   pendingGreenery: {input: SelectSpaceModel; path: number[]; payment: SelectProjectCardToPlayResponse} | undefined;
   /** Played effect cards glowing because their effect just gave something. */
   litEffects: ReadonlySet<CardName>;
+  /** Menu index of the heat conversion waiting for confirmation. */
+  pendingHeat: number | undefined;
   /** Hand cards left on the table (MissionPinnedCards), not shown in the hand. */
   pinnedNames: ReadonlySet<CardName>;
   /** A played card lifted from the action rail, waiting for "Use action". */
@@ -444,6 +448,7 @@ export default defineComponent({
       pendingGreenery: undefined,
       stagedAction: undefined,
       pinnedNames: new Set(),
+      pendingHeat: undefined,
       litEffects: new Set(),
       previewedProject: undefined,
       projectOrigin: undefined,
@@ -537,7 +542,7 @@ export default defineComponent({
       return this.quickAction?.label ?? missionPanels.find((panel) => panel.id === this.missionPanel)?.label;
     },
     quickActions(): MissionQuickAction[] {
-      return this.activeTurnColor === this.thisPlayer.color ? getMissionQuickActions(this.playerView.waitingFor) : [];
+      return this.activeTurnColor === this.thisPlayer.color ? getMissionQuickActions(this.playerView.waitingFor, this.maxedParameters) : [];
     },
     quickInput(): PlayerInputModel | undefined {
       const input = this.playerView.waitingFor;
@@ -644,6 +649,15 @@ export default defineComponent({
     },
     activeTurnName(): string | undefined {
       return this.playerView.players.find((player) => player.color === this.activeTurnColor)?.name;
+    },
+    /** Global parameters at their maximum: actions that only raise them are not offered. */
+    maxedParameters(): MaxedParameters {
+      const max = getGlobalParameterMaximums(this.game.gameOptions.boardName);
+      return {
+        temperature: this.game.temperature >= max.temperature,
+        oceans: this.game.oceans >= max.oceans,
+        venus: this.game.venusScaleLevel >= max.venus,
+      };
     },
     conversions(): Partial<Record<string, MissionQuickAction>> {
       const result: Partial<Record<string, MissionQuickAction>> = {};
@@ -756,6 +770,7 @@ export default defineComponent({
     MissionStandardProjects,
     MissionHudMenus,
     MissionPinnedCards,
+    ConfirmDialog,
     MissionDraftWaiting,
     MissionEffectBadges,
     MissionEffectsBar,
@@ -814,8 +829,9 @@ export default defineComponent({
         return;
       }
       if (action.id === 'heat') {
-        // Converting heat needs no further choice: send it straight away.
-        (this.$refs.waitingFor as InstanceType<typeof WaitingFor> | undefined)?.onsave({type: 'or', index: action.index, response: {type: 'option'}});
+        // Converting heat spends a resource at once: ask first.
+        this.pendingHeat = action.index;
+        (this.$refs.heatConfirm as InstanceType<typeof ConfirmDialog> | undefined)?.show();
         return;
       }
       if (action.card && option?.type === 'projectCard') {
@@ -927,6 +943,12 @@ export default defineComponent({
         next.delete(card);
         this.litEffects = next;
       }, 2600);
+    },
+    convertHeatNow() {
+      if (this.pendingHeat !== undefined) {
+        (this.$refs.waitingFor as InstanceType<typeof WaitingFor> | undefined)?.onsave({type: 'or', index: this.pendingHeat, response: {type: 'option'}});
+        this.pendingHeat = undefined;
+      }
     },
     pinCard(card: CardModel, x: number, y: number) {
       (this.$refs.pinnedCards as InstanceType<typeof MissionPinnedCards> | undefined)?.pin(card.name, x, y);
