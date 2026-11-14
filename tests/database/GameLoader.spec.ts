@@ -127,11 +127,25 @@ describe('GameLoader', () => {
     );
   });
 
-  it('loads values after error pulling game ids', async () => {
+  it('falls back to the database after an error pulling game ids', async () => {
     database.failure = 'getParticipants';
     instance.resetForTesting();
     const game1 = await instance.getGame('gameid');
-    expect(game1).is.undefined;
+    expect(game1?.id).eq('gameid');
+  });
+
+  it('reloads a cached game when the database has a newer save from another server', async () => {
+    await instance.add(game);
+    // This server saved once (save 0, so its next save is 1); another server then saved 1 and 2.
+    game.lastSaveId = 1;
+    const newer = Game.deserialize(game.serialize());
+    newer.generation = game.generation + 3;
+    database.games.set(game.id, [game.serialize(), game.serialize(), newer.serialize()]);
+    const loaded = await instance.getGame(game.id);
+    expect(loaded?.generation).eq(newer.generation);
+
+    // Its own latest save is not newer, so the resident game is kept.
+    expect(await instance.getGame(game.id)).eq(loaded);
   });
 
   it('loads values when no game ids', async () => {

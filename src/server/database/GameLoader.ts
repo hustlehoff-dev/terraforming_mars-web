@@ -179,13 +179,21 @@ export class GameLoader implements IGameLoader {
 
   public async getGame(id: GameId | PlayerId | SpectatorId, forceLoad: boolean = false): Promise<IGame | undefined> {
     const d = await this.cache.getGames();
-    const gameId = isGameId(id) ? id : d.participantIds.get(id);
+    let gameId = isGameId(id) ? id : d.participantIds.get(id);
+    if (gameId === undefined || !d.games.has(gameId)) {
+      // Another server sharing the database may have created the game after this one started.
+      gameId = await this.findInDatabase(id, d);
+    }
     if (gameId === undefined) {
       return undefined;
     }
 
-    // 1. Check the cache as long as forceLoad isn't true.
+    // 1. Check the cache as long as forceLoad isn't true, and the database has nothing newer.
     const cached = d.games.get(gameId);
+    if (forceLoad === false && cached !== undefined && await this.hasNewerSave(cached)) {
+      console.log(`GameLoader: ${gameId} has a newer save in the database, reloading`);
+      forceLoad = true;
+    }
     if (forceLoad === false && cached !== undefined) {
       this.cache.touch(gameId);
       // An idle sweep may have dropped the log to save memory (see Cache.trimIdleLogs).
@@ -218,6 +226,41 @@ export class GameLoader implements IGameLoader {
 
     // Otherwise the game ID isn't valid.
     return undefined;
+  }
+
+  /**
+   * True when the database holds a save this server has not made: another server sharing the
+   * database moved the game on. The resident copy is then stale and must be reloaded, otherwise
+   * leaving and coming back shows an old state and the next action overwrites newer saves.
+   */
+  private async hasNewerSave(game: IGame): Promise<boolean> {
+    try {
+      const saveIds = await Database.getInstance().getSaveIds(game.id);
+      return saveIds.length > 0 && Math.max(...saveIds) > game.lastSaveId;
+    } catch (e) {
+      console.error('GameLoader:hasNewerSave', e);
+      return false;
+    }
+  }
+
+  private async findInDatabase(
+    id: GameId | PlayerId | SpectatorId,
+    d: {games: Map<GameId, IGame | undefined>, participantIds: Map<ParticipantId, GameId>}): Promise<GameId | undefined> {
+    try {
+      const gameId = isGameId(id) ? id : await Database.getInstance().getGameId(id);
+      if (gameId === undefined || (await Database.getInstance().getSaveIds(gameId)).length === 0) {
+        return undefined;
+      }
+      if (!isGameId(id)) {
+        d.participantIds.set(id, gameId);
+      }
+      if (!d.games.has(gameId)) {
+        d.games.set(gameId, undefined);
+      }
+      return gameId;
+    } catch {
+      return undefined;
+    }
   }
 
   /**
