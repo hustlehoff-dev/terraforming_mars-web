@@ -1,12 +1,16 @@
 <template>
-  <div class="wf-component wf-component--select-card" :class="{'deck-deal': playerinput.dealtFromDeck || cardDialog}">
+  <div class="wf-component wf-component--select-card" :class="{'deck-deal': playerinput.dealtFromDeck || cardDialog, 'draft-pick': draftPick}"
+    :aria-busy="draftSubmitting || undefined">
     <div v-if="showtitle === true" class="nofloat wf-component-title">{{ $t(playerinput.title) }}</div>
     <div v-if="playerinput.dealtFromDeck" class="deck-deal__origin" aria-hidden="true"></div>
     <label v-for="(card, index) in getOrderedCards()" :key="card.name" :class="[getCardBoxClass(card), {'cardbox--featured': featuredCards}]"
       :style="playerinput.dealtFromDeck ? {'--deal-delay': Math.min(index, 10) * 65 + 'ms'} : undefined">
       <template v-if="!card.isDisabled && !featuredCards && !nothingToChoose">
-        <input v-if="selectOnlyOneCard" type="radio" v-model="cards" :value="card" :name="selectionGroup" :aria-label="$t(card.name)">
-        <input v-else type="checkbox" v-model="cards" :value="card" :disabled="playerinput.max !== undefined && Array.isArray(cards) && cards.length >= playerinput.max && cards.includes(card) === false">
+        <input v-if="selectOnlyOneCard" type="radio" v-model="cards" :value="card" :name="selectionGroup" :aria-label="$t(card.name)"
+          :disabled="draftSubmitting" @click="submitDraftPick(card)" @change="submitDraftPick(card)">
+        <input v-else type="checkbox" v-model="cards" :value="card" :aria-label="$t(card.name)"
+          :disabled="draftSubmitting || (playerinput.max !== undefined && Array.isArray(cards) && cards.length >= playerinput.max && cards.includes(card) === false)"
+          @change="submitDraftPick()">
       </template>
       <Card :card="card" :actionUsed="isCardActivated(card)" :robotCard="robotCard(card)">
         <template v-if="playerinput.showOwner">
@@ -18,7 +22,7 @@
     </label>
     <div v-if="hasCardWarning()" class="card-warning" v-i18n>{{ warning }}</div>
     <WarningsComponent :warnings="warnings" />
-    <div v-if="showsave === true" class="nofloat">
+    <div v-if="showsave === true && !draftPick" class="nofloat">
       <AppButton v-if="showSelectAll" @click="toggleSelectAll" type="submit" :title="allSelected ? $t('Deselect All') : $t('Select All')" />
       <!-- Optional choice from the project deck: one card offers Buy / Pass; several cards turn Pass into "Buy N" as they are selected. -->
       <!-- Nothing can be taken (e.g. no M€ to buy the drawn cards): one OK, no selection. -->
@@ -31,7 +35,7 @@
       <AppButton v-else-if="optionalDeckChoice" type="submit" @click="saveData" :title="cardsSelected === 0 ? $t('Pass') : buttonLabel" />
       <template v-else>
         <AppButton :disabled="(isOptionalToManyCards && cardsSelected === 0) || (playerinput.dealtFromDeck === true && cardsSelected < playerinput.min)"
-          type="submit" @click="saveData" :title="draftPick ? $t('Lock in') : buttonLabel" />
+          type="submit" @click="saveData" :title="buttonLabel" />
         <AppButton :disabled="isOptionalToManyCards && cardsSelected > 0" v-if="isOptionalToManyCards" @click="saveData" type="submit" :title="$t('Skip this action')" />
       </template>
     </div>
@@ -55,6 +59,7 @@ import {SelectCardModel} from '@/common/models/PlayerInputModel';
 import {sortActiveCards} from '@/client/utils/ActiveCardsSortingOrder';
 import {SelectCardResponse} from '@/common/inputs/InputResponse';
 import {Warning} from '@/common/cards/Warning';
+import {Phase} from '@/common/Phase';
 
 type Owner = {
   name: string;
@@ -64,6 +69,7 @@ type Owner = {
 type WidgetDataModel = {
   // The selected item or items
   cards: CardModel | Array<CardModel>;
+  draftSubmitting: boolean;
   warning: string | Message | undefined;
   warnings: ReadonlyArray<Warning> | undefined;
   owners: Map<CardName, Owner>,
@@ -83,7 +89,7 @@ export default defineComponent({
       required: true,
     },
     onsave: {
-      type: Function as unknown as () => (out: SelectCardResponse) => void,
+      type: Function as unknown as () => (out: SelectCardResponse) => void | Promise<void>,
       required: true,
     },
     showsave: {
@@ -98,6 +104,7 @@ export default defineComponent({
   data(): WidgetDataModel {
     return {
       cards: [],
+      draftSubmitting: false,
       warning: undefined,
       owners: new Map(),
       warnings: undefined,
@@ -166,7 +173,23 @@ export default defineComponent({
       return true;
     },
     saveData() {
-      this.onsave({type: 'card', cards: this.cardNames});
+      return this.onsave({type: 'card', cards: this.cardNames});
+    },
+    async submitDraftPick(card?: CardModel) {
+      if (!this.draftPick || this.draftSubmitting) {
+        return;
+      }
+      if (card !== undefined) {
+        this.cards = card;
+      }
+      if (this.cardsSelected === this.playerinput.min) {
+        this.draftSubmitting = true;
+        try {
+          await this.saveData();
+        } finally {
+          this.draftSubmitting = false;
+        }
+      }
     },
     getCardBoxClass(card: CardModel): string {
       if (this.playerinput.showOwner && this.getOwner(card) !== undefined) {
@@ -201,9 +224,9 @@ export default defineComponent({
     },
   },
   computed: {
-    /** A draft pick: keep exactly N of the dealt cards, the rest goes to the next player. */
     draftPick(): boolean {
-      return this.playerinput.dealtFromDeck === true && this.playerinput.min > 0 && this.playerinput.min === this.playerinput.max;
+      const phase = this.playerView.game.phase;
+      return this.showsave && this.playerView.thisPlayer.needsToDraft === true && (phase === Phase.DRAFTING || phase === Phase.INITIALDRAFTING);
     },
     /** No card can be taken at all (max 0), e.g. drawn cards the player cannot afford. */
     nothingToChoose(): boolean {
@@ -216,7 +239,7 @@ export default defineComponent({
     },
     /** Shown with a gold frame and without a selection box: a single optional card, or cards that are all given. */
     featuredCards(): boolean {
-      return !this.nothingToChoose && (this.allGiven || (this.optionalDeckChoice && this.selectableCards.length === 1));
+      return !this.draftPick && !this.nothingToChoose && (this.allGiven || (this.optionalDeckChoice && this.selectableCards.length === 1));
     },
     optionalDeckChoice(): boolean {
       return this.playerinput.dealtFromDeck === true && this.playerinput.min === 0;
@@ -270,3 +293,22 @@ export default defineComponent({
 });
 
 </script>
+
+<style scoped lang="less">
+.draft-pick input {
+  display: block;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+
+  &:focus-visible + :deep(.card-container) {
+    outline: 2px solid #a8edff;
+    outline-offset: 4px;
+  }
+
+  &:checked + :deep(.card-container)::after {
+    content: none;
+  }
+}
+</style>

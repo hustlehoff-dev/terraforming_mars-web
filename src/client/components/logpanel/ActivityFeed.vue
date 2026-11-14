@@ -78,6 +78,7 @@ import {CardModel} from '@/common/models/CardModel';
 import {CardName} from '@/common/cards/CardName';
 import {Color} from '@/common/Color';
 import {deckLabels, GameActivityKind, GameActivityModel} from '@/common/models/GameActivityModel';
+import {PlayedCardLogModel} from '@/common/models/PlayedCardLogModel';
 import {ViewModel} from '@/common/models/PlayerModel';
 import {isPlayerId, SpaceId} from '@/common/Types';
 
@@ -103,7 +104,11 @@ const labels: Record<GameActivityKind, string> = {
 };
 
 const props = defineProps<{viewModel: ViewModel}>();
-const emit = defineEmits<{spaceClicked: [space: SpaceId], triggers: [triggers: Array<{player: Color, card: CardName, effects: string}>]}>();
+const emit = defineEmits<{
+  spaceClicked: [space: SpaceId];
+  triggers: [triggers: Array<{player: Color, card: CardName, effects: string}>];
+  cardPlays: [cards: Array<PlayedCardLogModel>];
+}>();
 const listId = useId();
 const list = ref<HTMLOListElement>();
 const expanded = ref(false);
@@ -225,8 +230,8 @@ let highlightTimer: number | undefined;
 
 watch(
   [() => props.viewModel.id, () => props.viewModel.runId, () => props.viewModel.game.gameAge, () => props.viewModel.game.step, () => props.viewModel.game.undoCount],
-  ([id, runId], previous) => {
-    if (id !== previous[0] || runId !== previous[1]) {
+  ([id, runId, , , undoCount], previous) => {
+    if (id !== previous[0] || runId !== previous[1] || undoCount !== previous[4]) {
       loaded.value = false;
       events.value = [];
       newKeys.value = new Set();
@@ -274,6 +279,11 @@ async function refresh() {
       }, 2200);
     }
     if (loaded.value) {
+      const previousPlays = new Set(events.value.flatMap(cardPlays).map(({key}) => key));
+      const played = result.toReversed().flatMap(cardPlays).filter(({key}) => !previousPlays.has(key));
+      if (played.length > 0) {
+        emit('cardPlays', played);
+      }
       // New gains from card effects since the last update: shown as badges in the HUD.
       const before = new Map(events.value.map((event) => [event.key, event.triggers?.length ?? 0]));
       const fresh = result.flatMap((event) => (event.triggers ?? []).slice(before.get(event.key) ?? 0));
@@ -318,6 +328,19 @@ async function refresh() {
       console.error('Unable to load game activity', error);
     }
   }
+}
+
+function cardPlays(event: GameActivityModel): Array<PlayedCardLogModel> {
+  const played: Array<PlayedCardLogModel> = [];
+  if (event.kind === 'played' && event.player !== undefined && event.card !== undefined) {
+    played.push({key: event.key, player: event.player, card: event.card});
+  }
+  event.steps?.forEach((step, index) => {
+    if (step.kind === 'event' && step.event === 'played' && step.card !== undefined && step.player !== undefined) {
+      played.push({key: `${event.key}:played:${index}`, player: step.player, card: step.card});
+    }
+  });
+  return played;
 }
 
 function groupLegacyPlacements(history: Array<GameActivityModel>): Array<GameActivityModel> {

@@ -23,30 +23,34 @@
           <template v-else-if="open === 'all'">
             <p v-if="menuOptions === undefined" class="nofloat mission-hud-dialog__hint" v-i18n>Not available now</p>
             <template v-else>
-              <section v-if="turnOptions.length" class="nofloat mission-all__section">
-                <h3 v-i18n>Turn</h3>
+              <details v-if="turnOptions.length" class="mission-all__section">
+                <summary v-i18n>Turn</summary>
                 <div class="mission-all__tiles">
                   <button v-for="item in turnOptions" :key="item.index" type="button" class="mission-all__tile mission-all__tile--turn" @click="respondOption(item.index)">
                     {{ $t(item.title) }}
                   </button>
                 </div>
-              </section>
-              <template v-if="playableCards.length">
-                <h3 class="nofloat mission-all__heading" v-i18n>Play project card</h3>
-                <button v-for="card in playableCards" :key="'play:' + card.name" type="button" class="cardbox mission-hud-dialog__card mission-all__card" @click="open = undefined; emit('playCard', card)">
-                  <Card :card="card" autoTall />
-                  <span class="mission-confirm" aria-hidden="true">{{ $t('Play') }}</span>
-                </button>
-              </template>
-              <template v-if="actionCards?.length">
-                <h3 class="nofloat mission-all__heading" v-i18n>Card actions</h3>
-                <button v-for="card in actionCards" :key="'act:' + card.name" type="button" class="cardbox mission-hud-dialog__card mission-all__card" @click="open = undefined; emit('cardAction', card)">
-                  <Card :card="card" autoTall />
-                  <span class="mission-confirm" aria-hidden="true">{{ $t('Use action') }}</span>
-                </button>
-              </template>
-              <section v-if="projectActions.length" class="nofloat mission-all__section">
-                <h3 v-i18n>Standard Projects</h3>
+              </details>
+              <details v-if="playableCards.length" class="mission-all__section">
+                <summary v-i18n>Play project card</summary>
+                <div class="mission-all__cards">
+                  <button v-for="card in playableCards" :key="card.name" type="button" class="cardbox mission-hud-dialog__card" @click="open = undefined; emit('playCard', card)">
+                    <Card :card="card" autoTall />
+                    <span class="mission-confirm" aria-hidden="true">{{ $t('Play') }}</span>
+                  </button>
+                </div>
+              </details>
+              <details v-if="actionCards?.length" class="mission-all__section">
+                <summary v-i18n>Card actions</summary>
+                <div class="mission-all__cards">
+                  <button v-for="card in actionCards" :key="card.name" type="button" class="cardbox mission-hud-dialog__card" @click="open = undefined; emit('cardAction', card)">
+                    <Card :card="card" autoTall />
+                    <span class="mission-confirm" aria-hidden="true">{{ $t('Use action') }}</span>
+                  </button>
+                </div>
+              </details>
+              <details v-if="projectActions.length" class="mission-all__section">
+                <summary v-i18n>Standard Projects</summary>
                 <div class="mission-all__tiles">
                   <button v-for="action in projectActions" :key="action.id" type="button" class="mission-all__tile" :disabled="action.disabled" @click="chooseProject(action)">
                     <span class="mission-all__effects" aria-hidden="true">
@@ -56,9 +60,9 @@
                     <b v-if="action.cost !== undefined" class="mission-all__cost">{{ action.cost }}</b>
                   </button>
                 </div>
-              </section>
-              <section v-if="resourceActions.length || awardOption || milestoneOption || otherOptions.length" class="nofloat mission-all__section">
-                <h3 v-i18n>Other actions</h3>
+              </details>
+              <details v-if="resourceActions.length || awardOption || milestoneOption || otherOptions.length" class="mission-all__section">
+                <summary v-i18n>Other actions</summary>
                 <div class="mission-all__tiles">
                   <button v-for="action in resourceActions" :key="action.id" type="button" class="mission-all__tile" :disabled="action.disabled" @click="chooseResource(action)">
                     <span class="mission-all__effects" aria-hidden="true">
@@ -70,7 +74,7 @@
                   <button v-if="milestoneOption" type="button" class="mission-all__tile" @click="open = 'milestones'"><span aria-hidden="true">🏅</span>{{ $t('Claim a milestone') }}</button>
                   <button v-for="item in otherOptions" :key="item.index" type="button" class="mission-all__tile" @click="chooseOther(item)">{{ $t(item.title) }}</button>
                 </div>
-              </section>
+              </details>
             </template>
           </template>
 
@@ -619,48 +623,46 @@ function chooseMa(subIndex: number) {
 <style lang="less">
 // "Actions" window: sections of tiles and cards.
 .mission-hud-dialog {
-  // Sections stack: heading on top, centred, then its tiles (the card-window row rule would
-  // otherwise put the heading beside the tiles).
   .mission-all__section {
-    display: grid !important;
-    justify-items: center;
-    gap: 10px;
-    margin-top: 14px;
-    padding-top: 12px;
-    border-top: 1px solid #ffffff14;
+    min-width: 0;
+    border: 1px solid #657884;
+    border-radius: 8px;
+    background: #0d1721d9;
 
-    h3 {
-      margin: 0;
+    > summary {
+      padding: 12px 16px;
+      color: #f6e2b8;
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-align: start;
+      text-transform: uppercase;
+      cursor: pointer;
+
+      &:focus-visible {
+        outline: 2px solid #a8edff;
+        outline-offset: -3px;
+      }
     }
   }
 
-  .mission-all__section:first-child {
-    margin-top: 0;
-    padding-top: 0;
-    border-top: 0;
-  }
-
-  .mission-all__section h3,
-  .mission-all__heading {
-    color: #f6e2b8;
-    font-size: 0.85rem;
-    letter-spacing: 0.12em;
-    text-align: center;
-    text-transform: uppercase;
-  }
-
-  .mission-all__heading {
-    flex-basis: 100%;
-    margin: 14px 0 0;
-    padding-top: 12px;
-    border-top: 1px solid #ffffff14;
-  }
-
-  .mission-all__tiles {
+  .mission-all__tiles,
+  .mission-all__cards {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: 8px;
+    padding: 10px 12px 14px;
+  }
+
+  .mission-all__cards > .cardbox {
+    animation: none;
+  }
+
+  @media (max-width: 800px) {
+    .mission-all__cards > .cardbox {
+      zoom: 0.78;
+    }
   }
 
   .mission-all__tile {

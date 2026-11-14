@@ -5,13 +5,23 @@
         {{ $t('Not your turn to take any actions') }}
       </template>
       <template v-else>
-        {{ $t('Waiting for other players') }}
+        <span v-if="!centerDeckChoice || !draftRepick" role="status">
+          {{ $t('Waiting for other players') }}<template v-if="draftRepick && draftPlayers.length"> · {{ draftPlayers.join(', ') }}</template>
+        </span>
       </template>
-      <template v-if="playersWaitingFor.length > 0">
+      <template v-if="playersWaitingFor.length > 0 && !draftRepick">
         (⌛ <span v-for="color in playersWaitingFor" class="log-player" :class="playerColorClass(color, 'bg')" :key="color">{{ getPlayerName(color) }}</span>)
       </template>
     </template>
-    <Teleport v-if="waitingfor !== undefined && !hideInput" to="body" :disabled="!showDeckDialog">
+    <Teleport v-if="resourceRemovalOptions.length" to="body">
+      <section class="resource-removal-panel" :aria-label="$t(waitingfor?.title)">
+        <h2>{{ $t(waitingfor?.title) }}</h2>
+        <AppButton v-for="(option, index) in resourceRemovalOptions" :key="index"
+          :title="option.title === 'Do not remove resource' ? 'Skip this action' : option.title"
+          @click="onsave({type: 'or', index, response: {type: 'option'}})" />
+      </section>
+    </Teleport>
+    <Teleport v-else-if="waitingfor !== undefined && !hideInput && !draftRepick" to="body" :disabled="!showDeckDialog">
       <component :is="showDeckDialog ? 'dialog' : 'div'" ref="inputContainer" class="wf-root"
         :class="{'deck-choice-dialog': showDeckDialog}" :aria-label="showDeckDialog ? $t(waitingfor.title) : undefined" @cancel.prevent>
         <PlayerInputFactory :players="playerView.players"
@@ -31,8 +41,9 @@
 /* global RequestInit */
 
 import {computed, defineComponent} from 'vue';
-import {isDraftRepick, showsCards} from '@/client/components/board/MissionQuickAction';
+import {isDraftRepick, isResourceRemovalChoice, showsCards} from '@/client/components/board/MissionQuickAction';
 import DialogPeek from '@/client/components/common/DialogPeek.vue';
+import AppButton from '@/client/components/common/AppButton.vue';
 import * as constants from '@/common/constants';
 import raw_settings from '@/genfiles/settings.json';
 import {vueRoot} from '@/client/components/vueRoot';
@@ -82,7 +93,7 @@ const CANNOT_CONTACT_SERVER = 'Unable to reach the server. It may be restarting 
 
 export default defineComponent({
   name: 'WaitingFor',
-  components: {DialogPeek},
+  components: {AppButton, DialogPeek},
   // Card inputs inside the card window lay their cards out like a deal from the deck.
   provide() {
     return {cardDialog: computed(() => this.showDeckDialog)};
@@ -170,7 +181,7 @@ export default defineComponent({
       }
     },
     onsave(out: InputResponse) {
-      this.fetchPlayerInput(
+      return this.fetchPlayerInput(
         paths.PLAYER_INPUT + '?id=' + this.playerView.id,
         {
           method: 'POST',
@@ -187,15 +198,15 @@ export default defineComponent({
       const root = vueRoot(this);
       if (root.isServerSideRequestInProgress) {
         console.warn('Server request in progress');
-        return;
+        return Promise.resolve(false);
       }
 
       root.isServerSideRequestInProgress = true;
-      fetch(url, options)
+      return fetch(url, options)
         .then(async (response) => {
           if (response.ok) {
             this.updatePlayerView(await response.json());
-            return;
+            return true;
           }
 
           const showAlert = vueRoot(this).showAlert;
@@ -210,10 +221,12 @@ export default defineComponent({
             showAlert('Error processing response', 'Unexpected response from server. Please try again.');
             console.error(response.statusText);
           }
+          return false;
         })
         .catch((e) => {
           root.showAlert('Error sending input,', CANNOT_CONTACT_SERVER);
           console.error(e);
+          return false;
         })
         .finally(() => {
           root.isServerSideRequestInProgress = false;
@@ -223,8 +236,9 @@ export default defineComponent({
       const root = vueRoot(this);
       root.playerView = playerView;
       root.screen = 'player-home';
-      if (this.playerView.game.phase === 'end' && window.location.pathname !== paths.THE_END) {
-        window.location = window.location as any as (string & Location);
+      if (playerView?.game.phase === Phase.END && !window.location.search.includes('&noredirect')) {
+        root.screen = 'the-end';
+        window.history.replaceState(playerView, document.title, `${paths.THE_END}?id=${playerView.id}`);
       }
     },
     waitForUpdate() {
@@ -355,7 +369,17 @@ export default defineComponent({
       return input?.type === 'card' && input.min === input.cards.length && (input.max ?? input.cards.length) === input.cards.length;
     },
     showDeckDialog(): boolean {
-      return this.centerDeckChoice && !this.hideInput && showsCards(this.waitingfor) && !isDraftRepick(this.waitingfor);
+      return this.centerDeckChoice && !this.hideInput && showsCards(this.waitingfor) && !this.draftRepick;
+    },
+    resourceRemovalOptions(): ReadonlyArray<PlayerInputModel> {
+      const input = this.waitingfor;
+      return this.centerDeckChoice && input?.type === 'or' && isResourceRemovalChoice(input) ? input.options : [];
+    },
+    draftRepick(): boolean {
+      return isDraftRepick(this.waitingfor);
+    },
+    draftPlayers(): Array<string> {
+      return this.playerView.players.filter((player) => player.needsToDraft === true).map((player) => player.name);
     },
     Phase(): typeof Phase {
       return Phase;
@@ -367,4 +391,35 @@ export default defineComponent({
 });
 
 </script>
+
+<style lang="less">
+.resource-removal-panel {
+  position: fixed;
+  z-index: 130;
+  inset: 50% auto auto 50%;
+  display: grid;
+  gap: 8px;
+  width: min(440px, calc(100vw - 24px));
+  max-height: 75dvh;
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid #8cabb6;
+  border-radius: 10px;
+  background: #101a24;
+  color: #f1f7f9;
+  box-shadow: 0 12px 40px #0009;
+  transform: translate(-50%, -50%);
+
+  h2 {
+    margin: 0 0 6px;
+    font-size: 1.15rem;
+  }
+
+  .btn {
+    min-height: 44px;
+    height: auto;
+    white-space: normal;
+  }
+}
+</style>
 

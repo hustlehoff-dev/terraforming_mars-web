@@ -1,13 +1,9 @@
 <template>
   <div class="mission-draft-wait" role="status" aria-live="polite">
-    <span class="mission-draft-wait__lock" aria-hidden="true">🔒</span>
-    <div>
-      <strong v-i18n>Your pick is locked in</strong>
-      <p>
-        {{ $t('Waiting for') }}
-        <span v-for="player in waitingFor" :key="player.color" class="mission-draft-wait__player" :class="'player_bg_color_' + player.color">{{ player.name }}</span>
-      </p>
-    </div>
+    <p>
+      {{ $t('Waiting for') }}
+      <span v-for="player in waitingFor" :key="player.color" class="mission-draft-wait__player" :class="'player_bg_color_' + player.color">{{ player.name }}</span>
+    </p>
     <span v-if="secondsLeft !== undefined" class="mission-draft-wait__clock" :class="{'mission-draft-wait__clock--warn': secondsLeft <= 5}">{{ secondsLeft }}s</span>
   </div>
 </template>
@@ -17,8 +13,7 @@ import {computed, onBeforeUnmount, ref} from 'vue';
 import {PublicPlayerModel} from '@/common/models/PlayerModel';
 
 /*
- * After a draft pick: the pick is locked in, and this shows who is still choosing and, with a
- * draft time limit, how long they have left.
+ * Shows who is still choosing and, with a draft time limit, how long they have left.
  */
 const props = defineProps<{players: ReadonlyArray<PublicPlayerModel>, deadline?: number}>();
 
@@ -44,27 +39,18 @@ const secondsLeft = computed(() => props.deadline === undefined ? undefined : Ma
   border: 1px solid #e2c27f;
   border-radius: 14px;
   background: linear-gradient(#152330f2, #0b131bf2);
-  box-shadow: 0 0 0 100vmax #03070c66, 0 0 26px #e2c27f44, 0 18px 40px #000c;
+  max-width: calc(100vw - 32px);
   color: #eef6f8;
   transform: translate(-50%, -50%);
-
-  strong {
-    color: #fff3c4;
-    font-size: 1.2rem;
-  }
 
   p {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 6px;
-    margin: 6px 0 0;
+    margin: 0;
     color: #cfe0e6;
   }
-}
-
-.mission-draft-wait__lock {
-  font-size: 2rem;
 }
 
 .mission-draft-wait__player {

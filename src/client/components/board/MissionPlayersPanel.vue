@@ -1,44 +1,51 @@
 <template>
   <section class="mission-players" :aria-label="$t('Players')">
-    <button v-for="player in rows" :key="player.color" type="button" class="mission-players__row"
-      :class="['mission-players__row--' + player.color, {'mission-players__row--active': player.color === activeColor, 'mission-players__row--me': player.color === myColor}]"
-      :title="$t('Show played cards')" @click="emit('open', player.color)">
-      <span class="mission-players__strip" aria-hidden="true"></span>
-      <span class="mission-players__who">
-        <span class="mission-players__corp">{{ player.corporation ? $t(player.corporation) : '—' }}</span>
-        <strong class="mission-players__name">
-          <span class="mission-players__nick">{{ player.name }}</span>
-          <span v-if="player.color === activeColor" class="mission-players__turn">{{ player.color === myColor ? $t('Your turn') : $t('Turn') }}</span>
-        </strong>
-      </span>
-      <span class="mission-players__facts">
-        <span class="mission-players__fact mission-players__fact--tr" :title="$t('Terraform Rating')">
-          <small>TR</small><strong>{{ player.terraformRating }}</strong>
+    <div v-for="player in rows" :key="player.color" class="mission-players__entry">
+      <button type="button" class="mission-players__row"
+        :class="['mission-players__row--' + player.color, {'mission-players__row--active': player.color === activeColor, 'mission-players__row--me': player.color === myColor}]"
+        :title="$t('Show played cards')" @click="emit('open', player.color)">
+        <span class="mission-players__strip" aria-hidden="true"></span>
+        <span class="mission-players__who">
+          <span class="mission-players__corp">{{ player.corporation ? $t(player.corporation) : '—' }}</span>
+          <strong class="mission-players__name">
+            <span class="mission-players__nick">{{ player.name }}</span>
+            <span v-if="player.color === activeColor" class="mission-players__turn">{{ player.color === myColor ? $t('Your turn') : $t('Turn') }}</span>
+          </strong>
         </span>
-        <span class="mission-players__fact" :title="$t('Cards in hand')">
-          <img src="assets/resources/card.png" alt=""><strong>{{ player.cardsInHandNbr }}</strong>
+        <span class="mission-players__facts">
+          <span class="mission-players__fact mission-players__fact--tr" :title="$t('Terraform Rating')">
+            <small>TR</small><strong>{{ player.terraformRating }}</strong>
+          </span>
+          <span class="mission-players__fact" :title="$t('Cards in hand')">
+            <img src="assets/resources/card.png" alt=""><strong>{{ player.cardsInHandNbr }}</strong>
+          </span>
+          <span class="mission-players__fact mission-players__fact--events" :title="$t('Played events (face down)')">
+            <span class="mission-players__event-icon" aria-hidden="true"></span><strong>{{ player.events }}</strong>
+          </span>
         </span>
-        <span class="mission-players__fact mission-players__fact--events" :title="$t('Played events (face down)')">
-          <span class="mission-players__event-icon" aria-hidden="true"></span><strong>{{ player.events }}</strong>
-        </span>
-      </span>
-      <ul class="mission-players__stock" :aria-label="$t('Resources')">
-        <li v-for="resource in RESOURCES" :key="resource.key" :title="$t(resource.label)">
-          <img :src="resource.icon" alt="">
-          <strong>{{ player[resource.key] }}</strong>
-          <small :class="productionClass(player[resource.production])">{{ formatProduction(player[resource.production]) }}</small>
-        </li>
-      </ul>
-    </button>
+        <ul class="mission-players__stock" :aria-label="$t('Resources')">
+          <li v-for="resource in RESOURCES" :key="resource.key" :title="$t(resource.label)">
+            <img :src="resource.icon" alt="">
+            <strong>{{ player[resource.key] }}</strong>
+            <small :class="productionClass(player[resource.production])">{{ formatProduction(player[resource.production]) }}</small>
+          </li>
+        </ul>
+      </button>
+      <div v-if="player.played" :key="player.played.key" class="mission-players__played" role="status">
+        <Card :card="{name: player.played.card}" autoTall />
+      </div>
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import {computed} from 'vue';
+import {computed, onBeforeUnmount, reactive} from 'vue';
+import Card from '@/client/components/card/Card.vue';
 import {getCard} from '@/client/cards/ClientCardManifest';
 import {CardType} from '@/common/cards/CardType';
 import {Color} from '@/common/Color';
 import {PublicPlayerModel} from '@/common/models/PlayerModel';
+import {PlayedCardLogModel} from '@/common/models/PlayedCardLogModel';
 
 /*
  * Every player in the game as a low, wide card in the top-left corner, showing what is public in
@@ -47,6 +54,38 @@ import {PublicPlayerModel} from '@/common/models/PlayerModel';
  */
 const props = defineProps<{players: ReadonlyArray<PublicPlayerModel>, activeColor?: Color, myColor: Color}>();
 const emit = defineEmits<{open: [color: Color]}>();
+const visible = reactive<Partial<Record<Color, PlayedCardLogModel>>>({});
+const queues = new Map<Color, Array<PlayedCardLogModel>>();
+const timers = new Map<Color, number>();
+
+function showNext(player: Color) {
+  const play = queues.get(player)?.shift();
+  if (play === undefined) {
+    delete visible[player];
+    queues.delete(player);
+    timers.delete(player);
+    return;
+  }
+  visible[player] = play;
+  timers.set(player, window.setTimeout(() => showNext(player), 4500));
+}
+
+function show(plays: ReadonlyArray<PlayedCardLogModel>) {
+  for (const play of plays) {
+    if (getCard(play.card) === undefined || !props.players.some(({color}) => color === play.player)) {
+      continue;
+    }
+    const queue = queues.get(play.player) ?? [];
+    queue.push(play);
+    queues.set(play.player, queue);
+    if (!timers.has(play.player)) {
+      showNext(play.player);
+    }
+  }
+}
+
+onBeforeUnmount(() => timers.forEach((timer) => window.clearTimeout(timer)));
+defineExpose({show});
 
 type StockKey = 'megacredits' | 'steel' | 'titanium' | 'plants' | 'energy' | 'heat';
 type ProductionKey = 'megacreditProduction' | 'steelProduction' | 'titaniumProduction' | 'plantProduction' | 'energyProduction' | 'heatProduction';
@@ -61,6 +100,7 @@ const RESOURCES: ReadonlyArray<{key: StockKey, production: ProductionKey, icon: 
 
 const rows = computed(() => props.players.map((player) => ({
   ...player,
+  played: visible[player.color],
   corporation: player.tableau.find((card) => getCard(card.name)?.type === CardType.CORPORATION)?.name,
   events: player.tableau.filter((card) => getCard(card.name)?.type === CardType.EVENT).length,
 })));
@@ -128,6 +168,38 @@ function productionClass(value: number): string {
   &:focus-visible {
     outline: none;
     background: linear-gradient(100deg, #1b3242f0, #0f1c26d9);
+  }
+}
+
+.mission-players__entry {
+  position: relative;
+  width: 100%;
+}
+
+.mission-players__entry:has(.mission-players__played) {
+  z-index: 1;
+}
+
+.mission-players__played {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: calc(100% + 8px);
+  pointer-events: none;
+
+  > :deep(.card-container) {
+    margin: 0;
+    zoom: 0.6;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mission-players__played {
+    animation: played-card-in 170ms ease-out both;
+  }
+
+  @keyframes played-card-in {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: none; }
   }
 }
 

@@ -80,11 +80,12 @@
           atlas
           @toggleTileView="cycleTileView()"
         />
-        <ActivityFeed v-if="cinematic" :viewModel="playerView" @spaceClicked="jumpToLogSpace" @triggers="showEffectBadges" />
+        <ActivityFeed v-if="cinematic" :viewModel="playerView" @spaceClicked="jumpToLogSpace" @triggers="showEffectBadges" @cardPlays="showCardPlays" />
         <MissionEffectBadges v-if="cinematic" ref="effectBadges" :playerName="(color) => playerView.players.find((player) => player.color === color)?.name ?? color"
           @shown="(card, player) => player === thisPlayer.color && lightEffect(card)" />
         <RivalPanel v-if="cinematic" :players="playerView.players" :playerColor="thisPlayer.color" :activeColor="activeTurnColor" :passedColors="game.phase === 'action' ? game.passedPlayers : []" />
-        <MissionPlayersPanel v-if="cinematic" :players="playerView.players" :activeColor="activeTurnColor" :myColor="thisPlayer.color" @open="showPlayerCards" />
+        <MissionPlayersPanel v-if="cinematic" ref="playersPanel" :key="`${playerView.id}:${playerView.runId}:${game.undoCount}`"
+          :players="playerView.players" :activeColor="activeTurnColor" :myColor="thisPlayer.color" @open="showPlayerCards" />
         <!-- Right column: global parameters, then the turn button right under them. -->
         <div v-if="cinematic" class="mission-right-column">
           <MissionParameters :game="game" :solo="playerView.players.length === 1">
@@ -92,7 +93,7 @@
             <button type="button" :class="{lit: hudMenusState.milestones}" @click="hudShow('milestones')"><span aria-hidden="true">🏅</span>{{ $t('Milestones') }}</button>
             <button type="button" :aria-expanded="missionPanel === 'details'" @click="toggleMissionPanel('details')">{{ $t('Game details') }}</button>
             <button type="button" :aria-expanded="missionPanel === 'log'" @click="toggleMissionPanel('log')">{{ $t('Game log') }}</button>
-            <button type="button" class="primary" :aria-expanded="missionPanel === 'actions'" @click="openActions">{{ $t('Actions') }}</button>
+            <button type="button" class="primary" :aria-expanded="missionPanel === 'actions'" @click="openActions">{{ $t(finalGreenery ? 'Final greenery placement' : 'Actions') }}</button>
           </MissionParameters>
           <MissionTurnButton v-if="!mapPlacement" :actions="quickActions" :cardActions="cardActions?.cards ?? []"
             :canPass="passIndex !== -1" :canEndTurn="endTurnIndex !== -1" :active="activeTurnColor === thisPlayer.color && playerView.waitingFor !== undefined"
@@ -102,8 +103,6 @@
         <MissionPinnedCards v-if="cinematic" ref="pinnedCards" :cards="allCardsInHand" :playerId="playerView.id" :playableCards="cardAvailability.projects"
           @preview="previewProject" @change="(names) => pinnedNames = names" />
         <MissionStandardProjects v-if="cinematic && !mapPlacement" :actions="quickActions" @select="openQuickAction" />
-        <button v-if="cinematic && quickInput?.type === 'space' && mapPlacement" type="button"
-          class="mission-quick-cancel" @click="closeMissionPanel" v-i18n>Cancel</button>
         <div class="mission-dock">
           <MissionHudMenus ref="hudMenus" :playerView="playerView" :actions="quickActions" :actionCards="cardActions?.cards" @project="openQuickAction" @respond="respondToMenu" @cardAction="useCardActionNow" @playCard="(card) => previewProject(card)" />
           <MissionPlayerHud
@@ -141,18 +140,25 @@
       </PlayerSetupView>
     </template>
 
+    <SelectSpace v-if="mapPlacementInput" :key="playerView.requestId" :playerView="playerView" :playerinput="mapPlacementInput"
+      :onsave="placeTile" :showsave="true" :showtitle="false" />
+
     <section v-show="!cinematic || missionPanel !== undefined" ref="missionPanelElement" class="mission-panel" :class="{'mission-panel--decision': decisionMode}" tabindex="-1" :aria-label="$t('Game details')" @keydown.esc.stop="closeMissionPanel">
       <header v-if="cinematic" class="mission-panel__nav">
         <strong v-if="missionPanelLabel">{{ $t(missionPanelLabel) }}</strong>
         <button type="button" class="mission-panel__close" :aria-label="$t('Close')" @click="closeMissionPanel">×</button>
       </header>
       <div class="mission-panel__body" ref="missionPanelBody">
+        <div v-if="finalGreenery && missionPanel === 'actions'" class="mission-final-greenery">
+          <AppButton type="submit" :title="finalGreenery.placement.title" @click="chooseFinalGreenery" />
+          <AppButton :title="'Don\'t place a greenery'" @click="skipFinalGreenery" />
+        </div>
         <template v-if="thisPlayer.tableau.length > 0">
           <TopBar v-show="!cinematic || missionPanel === 'details'" :playerView="playerView" />
           <div class="mission-play__controls">
             <section v-if="game.phase !== 'end'" v-show="!cinematic || missionPanel === 'actions'" class="mission-play__actions player_home_block player_home_block--actions nofloat">
               <a name="actions" class="player_home_anchor hotkey-target"></a>
-              <WaitingFor ref="waitingFor" :playerView="playerView" :waitingfor="playerView.waitingFor" :hideInput="quickInput !== undefined"
+              <WaitingFor ref="waitingFor" :playerView="playerView" :waitingfor="playerView.waitingFor" :hideInput="hideWaitingInput"
                 :centerDeckChoice="cinematic" :requestId="playerView.requestId" />
               <template v-if="quickInput && quickAction">
                 <SelectProjectCardToPlay v-if="quickInput.type === 'projectCard' && quickAction.card" :key="quickAction.id"
@@ -325,6 +331,8 @@ import {mapPlacementKey} from '@/client/components/board/MapPlacement';
 import MissionPlayerHud from '@/client/components/board/MissionPlayerHud.vue';
 import {PlayerInputModel, SelectProjectCardToPlayModel, SelectSpaceModel} from '@/common/models/PlayerInputModel';
 import SelectProjectCardToPlay from '@/client/components/SelectProjectCardToPlay.vue';
+import SelectSpace from '@/client/components/SelectSpace.vue';
+import AppButton from '@/client/components/common/AppButton.vue';
 import MissionTurnButton from '@/client/components/board/MissionTurnButton.vue';
 import MissionStandardProjects from '@/client/components/board/MissionStandardProjects.vue';
 import MissionHudMenus from '@/client/components/board/MissionHudMenus.vue';
@@ -335,16 +343,19 @@ import MissionEffectsBar from '@/client/components/board/MissionEffectsBar.vue';
 import {CardName} from '@/common/cards/CardName';
 import MissionParameters from '@/client/components/board/MissionParameters.vue';
 import MissionPlayersPanel from '@/client/components/board/MissionPlayersPanel.vue';
-import {actionMenu, cardActionOption, getMissionQuickActions, MissionQuickAction, passOptionIndex, showsCards} from '@/client/components/board/MissionQuickAction';
+import {PlayedCardLogModel} from '@/common/models/PlayedCardLogModel';
+import {actionMenu, cardActionOption, getMissionQuickActions, isResourceRemovalChoice, MissionQuickAction, passOptionIndex, showsCards} from '@/client/components/board/MissionQuickAction';
 import MissionCardStage from '@/client/components/board/MissionCardStage.vue';
 import {SoundManager} from '@/client/utils/SoundManager';
 import {KeyboardNavigation} from '@/client/components/KeyboardNavigation';
 import {SpaceId} from '@/common/Types';
 import {getCardAvailability} from '@/client/utils/CardAvailability';
-import {InputResponse} from '@/common/inputs/InputResponse';
+import {InputResponse, SelectProjectCardToPlayResponse, SelectSpaceResponse} from '@/common/inputs/InputResponse';
 
 type PlayerHomeModel = {
   quickAction: MissionQuickAction | undefined;
+  choosingFinalGreenery: boolean;
+  pendingGreenery: {input: SelectSpaceModel; path: number[]; payment: SelectProjectCardToPlayResponse} | undefined;
   /** Played effect cards glowing because their effect just gave something. */
   litEffects: ReadonlySet<CardName>;
   /** Hand cards left on the table (MissionPinnedCards), not shown in the hand. */
@@ -394,8 +405,23 @@ export default defineComponent({
     return {missionCards: computed(() => this.cinematic)};
   },
   setup(props) {
-    const mapPlacement = shallowRef<SelectSpaceModel>();
-    provide(mapPlacementKey, {input: mapPlacement});
+    const placementContext = shallowRef<{input: SelectSpaceModel; view: PlayerViewModel}>();
+    const mapPlacement = computed(() => {
+      const placement = placementContext.value;
+      return placement?.view === props.playerView ? placement.input : undefined;
+    });
+    function register(input: SelectSpaceModel) {
+      const placement = {input, view: props.playerView};
+      placementContext.value = placement;
+      return () => {
+        if (placementContext.value === placement) {
+          placementContext.value = undefined;
+        }
+      };
+    }
+    const cancelMapChoice = shallowRef<() => void>();
+    const requestCancel = shallowRef<(() => void)>();
+    provide(mapPlacementKey, {input: mapPlacement, register, cancel: cancelMapChoice, requestCancel});
     provide('missionCompactProjectPayment', computed(() => props.playerView.thisPlayer.tableau.length > 0 && props.playerView.game.phase !== 'end'));
     let previousViewport: string | null = null;
     onMounted(() => {
@@ -408,12 +434,14 @@ export default defineComponent({
         document.querySelector('meta[name="viewport"]')?.setAttribute('content', previousViewport);
       }
     });
-    return {mapPlacement};
+    return {mapPlacement, cancelMapChoice, requestCancel};
   },
   data(): PlayerHomeModel {
     const preferences = getPreferences();
     return {
       quickAction: undefined,
+      choosingFinalGreenery: false,
+      pendingGreenery: undefined,
       stagedAction: undefined,
       pinnedNames: new Set(),
       litEffects: new Set(),
@@ -432,12 +460,24 @@ export default defineComponent({
     };
   },
   watch: {
+    canCancelPlacement: {
+      immediate: true,
+      handler(canCancel: boolean) {
+        this.requestCancel = canCancel ? this.cancelPlacement : undefined;
+      },
+    },
     'playerView.requestId'() {
-      if (this.quickAction) {
+      const wasChoosingFinalGreenery = this.choosingFinalGreenery;
+      this.pendingGreenery = undefined;
+      this.choosingFinalGreenery = false;
+      if (this.quickAction || (this.cinematic && this.missionPanel === 'actions' && actionMenu(this.playerView.waitingFor) !== undefined)) {
         this.closeMissionPanel();
       }
       this.stagedAction = undefined;
       this.closeProjectPreview();
+      if (this.game.phase === Phase.PRODUCTION && !this.playerView.waitingFor && (wasChoosingFinalGreenery || this.missionPanel === 'actions')) {
+        this.closeMissionPanel();
+      }
       this.showFollowUpDecision();
       if (this.missionPanel === 'projects' && this.standardProjectInput === undefined && this.playerView.waitingFor !== undefined) {
         this.showMissionPanel('actions');
@@ -488,6 +528,9 @@ export default defineComponent({
   },
   computed: {
     missionPanelLabel(): string | undefined {
+      if (this.finalGreenery && this.missionPanel === 'actions') {
+        return 'Final greenery placement';
+      }
       if (this.decisionMode) {
         return 'Your decision';
       }
@@ -500,6 +543,30 @@ export default defineComponent({
       const input = this.playerView.waitingFor;
       const action = this.quickAction;
       return action && input?.type === 'or' && (action.id.startsWith('menu:') || this.quickActions.some(({id, index}) => id === action.id && index === action.index)) ? input.options[action.index] : undefined;
+    },
+    canCancelPlacement(): boolean {
+      return this.choosingFinalGreenery || this.pendingGreenery !== undefined || this.cancelMapChoice !== undefined || this.quickInput?.type === 'space';
+    },
+    mapPlacementInput(): SelectSpaceModel | undefined {
+      return (this.choosingFinalGreenery ? this.finalGreenery?.placement : undefined) ?? this.pendingGreenery?.input ?? this.serverPlacement;
+    },
+    finalGreenery(): {placement: SelectSpaceModel; placeIndex: number; skipIndex: number} | undefined {
+      const input = this.playerView.waitingFor;
+      if (!this.cinematic || this.game.phase !== Phase.PRODUCTION || input?.type !== 'or' || input.title !== 'Place any final greenery from plants') {
+        return undefined;
+      }
+      const placeIndex = input.options.findIndex((option) => option.type === 'space');
+      const skipIndex = input.options.findIndex((option) => option.type === 'option' && option.title === 'Don\'t place a greenery');
+      const placement = input.options[placeIndex];
+      return placement?.type === 'space' && skipIndex !== -1 ? {placement, placeIndex, skipIndex} : undefined;
+    },
+    serverPlacement(): SelectSpaceModel | undefined {
+      const input = this.playerView.waitingFor;
+      return this.cinematic && input?.type === 'space' ? input : undefined;
+    },
+    hideWaitingInput(): boolean {
+      return this.quickInput !== undefined || this.serverPlacement !== undefined || this.finalGreenery !== undefined ||
+        (this.cinematic && this.missionPanel !== 'actions' && actionMenu(this.playerView.waitingFor) !== undefined);
     },
     projectOption(): {input: SelectProjectCardToPlayModel; path: number[]} | undefined {
       const name = this.previewedProject?.name;
@@ -701,6 +768,8 @@ export default defineComponent({
     PlayersOverview,
     RivalPanel,
     WaitingFor,
+    SelectSpace,
+    AppButton,
     Sidebar,
     MissionSettings,
     InfoPanel,
@@ -723,13 +792,18 @@ export default defineComponent({
     document.addEventListener('visibilitychange', this.syncMissionAmbience);
     window.addEventListener('focus', this.syncMissionAmbience);
     window.addEventListener('blur', this.syncMissionAmbience);
-    window.addEventListener('pagehide', this.syncMissionAmbience);
+    window.addEventListener('pagehide', SoundManager.pauseMissionAmbience);
+    window.addEventListener('pageshow', this.syncMissionAmbience);
+    if (this.game.phase === Phase.PRODUCTION) {
+      this.showFollowUpDecision();
+    }
   },
   beforeUnmount() {
     document.removeEventListener('visibilitychange', this.syncMissionAmbience);
     window.removeEventListener('focus', this.syncMissionAmbience);
     window.removeEventListener('blur', this.syncMissionAmbience);
-    window.removeEventListener('pagehide', this.syncMissionAmbience);
+    window.removeEventListener('pagehide', SoundManager.pauseMissionAmbience);
+    window.removeEventListener('pageshow', this.syncMissionAmbience);
     SoundManager.stopMissionAmbience();
   },
   methods: {
@@ -800,7 +874,7 @@ export default defineComponent({
       (this.$refs.hudMenus as InstanceType<typeof MissionHudMenus> | undefined)?.showPlayed(color);
     },
     respondToMenu(response: InputResponse) {
-      (this.$refs.waitingFor as InstanceType<typeof WaitingFor> | undefined)?.onsave(response);
+      return (this.$refs.waitingFor as InstanceType<typeof WaitingFor> | undefined)?.onsave(response);
     },
     passNow() {
       if (this.passIndex === -1) {
@@ -814,6 +888,10 @@ export default defineComponent({
      */
     showFollowUpDecision() {
       const input = this.playerView.waitingFor;
+      if (this.cinematic && isResourceRemovalChoice(input)) {
+        this.closeMissionPanel();
+        return;
+      }
       if (!this.cinematic || input === undefined || actionMenu(input) !== undefined || input.type === 'space' || showsCards(input)) {
         return;
       }
@@ -823,8 +901,9 @@ export default defineComponent({
     },
     submitQuickAction(response: InputResponse) {
       if (this.quickAction && this.quickInput) {
-        (this.$refs.waitingFor as InstanceType<typeof WaitingFor> | undefined)?.onsave({type: 'or', index: this.quickAction.index, response});
+        return this.submitProjectChoice(response, [this.quickAction.index], this.quickInput);
       }
+      return undefined;
     },
     previewProject(card: CardModel, origin?: DOMRect) {
       if (this.previewedProject?.name === card.name) {
@@ -837,6 +916,9 @@ export default defineComponent({
     },
     showEffectBadges(triggers: Array<{player: Color, card: CardName, effects: string}>) {
       (this.$refs.effectBadges as InstanceType<typeof MissionEffectBadges> | undefined)?.show(triggers);
+    },
+    showCardPlays(cards: Array<PlayedCardLogModel>) {
+      (this.$refs.playersPanel as InstanceType<typeof MissionPlayersPanel> | undefined)?.show(cards);
     },
     lightEffect(card: CardName) {
       this.litEffects = new Set([...this.litEffects, card]);
@@ -868,10 +950,28 @@ export default defineComponent({
     playPreviewedProject(response: InputResponse) {
       const option = this.projectOption;
       if (option) {
-        const action = option.path.reduceRight<InputResponse>((child, index) => ({type: 'or', index, response: child}), response);
-        (this.$refs.waitingFor as InstanceType<typeof WaitingFor> | undefined)?.onsave(action);
+        this.submitProjectChoice(response, option.path, option.input);
         this.closeProjectPreview();
       }
+    },
+    submitProjectChoice(response: InputResponse, path: number[], input: PlayerInputModel) {
+      if (this.cinematic && response.type === 'projectCard' && response.card === CardName.GREENERY_STANDARD_PROJECT && input.type === 'projectCard' && input.greeneryPlacement) {
+        this.closeMissionPanel();
+        this.pendingGreenery = {input: input.greeneryPlacement, path, payment: response};
+        return;
+      }
+      return this.respondToMenu(path.reduceRight<InputResponse>((child, index) => ({type: 'or', index, response: child}), response));
+    },
+    placeTile(response: SelectSpaceResponse) {
+      if (this.choosingFinalGreenery && this.finalGreenery) {
+        return this.respondToMenu({type: 'or', index: this.finalGreenery.placeIndex, response});
+      }
+      const pending = this.pendingGreenery;
+      if (!pending) {
+        return this.respondToMenu(response);
+      }
+      const project: SelectProjectCardToPlayResponse = {...pending.payment, spaceId: response.spaceId};
+      return this.respondToMenu(pending.path.reduceRight<InputResponse>((child, index) => ({type: 'or', index, response: child}), project));
     },
     openBoardOverview(section: 'milestones' | 'awards') {
       this.showMissionPanel('details');
@@ -880,8 +980,8 @@ export default defineComponent({
       });
     },
     playStandardProject(response: InputResponse) {
-      if (this.standardProjectIndex !== -1) {
-        (this.$refs.waitingFor as InstanceType<typeof WaitingFor> | undefined)?.onsave({type: 'or', index: this.standardProjectIndex, response});
+      if (this.standardProjectIndex !== -1 && this.standardProjectInput) {
+        this.submitProjectChoice(response, [this.standardProjectIndex], this.standardProjectInput);
       }
     },
     showMissionPanel(panel: MissionPanel) {
@@ -910,6 +1010,28 @@ export default defineComponent({
       this.missionPanel = undefined;
       this.missionPanelOpener?.focus({preventScroll: true});
       this.missionPanelOpener = undefined;
+    },
+    cancelPlacement() {
+      this.choosingFinalGreenery = false;
+      this.pendingGreenery = undefined;
+      const input = this.playerView.waitingFor;
+      if (this.cancelMapChoice) {
+        this.cancelMapChoice();
+      }
+      this.closeMissionPanel();
+      if (input !== undefined && actionMenu(input) === undefined) {
+        this.showFollowUpDecision();
+      }
+    },
+    chooseFinalGreenery() {
+      this.closeMissionPanel();
+      this.choosingFinalGreenery = true;
+    },
+    skipFinalGreenery() {
+      if (this.finalGreenery) {
+        return this.respondToMenu({type: 'or', index: this.finalGreenery.skipIndex, response: {type: 'option'}});
+      }
+      return undefined;
     },
     handleViewNavigation(event: KeyboardEvent): boolean {
       if (!this.cinematic || (event.target instanceof HTMLElement && event.target.matches('input, textarea, select, [contenteditable="true"]'))) {
@@ -948,7 +1070,7 @@ export default defineComponent({
       if (this.missionAudioStarted && this.cinematic && this.soundsEnabled && this.musicEnabled && !document.hidden && document.hasFocus()) {
         SoundManager.startMissionAmbience();
       } else {
-        SoundManager.stopMissionAmbience();
+        SoundManager.pauseMissionAmbience();
       }
     },
     toggleMissionAudio() {

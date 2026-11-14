@@ -17,7 +17,8 @@
           :showtitle="false" />
       </div>
     </div>
-    <div v-if="showsave && selectedOption && !showChildSaveButton(selectedOption)">
+    <button v-if="canCancelGreenery && !mapPlacement?.cancel" type="button" @click="cancelGreenery" v-i18n>Cancel</button>
+    <div v-if="showsave && selectedOption && !canCancelGreenery && !showChildSaveButton(selectedOption)">
       <div style="margin: 5px 30px 10px" class="wf-action">
         <AppButton :title="$t(selectedOption.buttonLabel)" type="submit" size="normal" @click="saveData" />
       </div>
@@ -27,13 +28,14 @@
 
 <script lang="ts">
 
-import {defineComponent} from 'vue';
+import {defineComponent, inject} from 'vue';
 import AppButton from '@/client/components/common/AppButton.vue';
 import {isHTMLElement} from '@/client/utils/vueUtils';
 import {PlayerViewModel} from '@/common/models/PlayerModel';
 import {OrOptionsModel, PlayerInputModel} from '@/common/models/PlayerInputModel';
 import {getPreferences} from '@/client/utils/PreferencesManager';
 import {InputResponse, OrOptionsResponse} from '@/common/inputs/InputResponse';
+import {isGreeneryChoice, mapPlacementKey} from '@/client/components/board/MapPlacement';
 
 let unique = 0;
 
@@ -43,6 +45,7 @@ function isDisplayed(option: PlayerInputModel): boolean {
 
 export default defineComponent({
   name: 'OrOptions',
+  setup: () => ({mapPlacement: inject(mapPlacementKey, undefined)}),
   props: {
     playerView: {
       type: Object as () => PlayerViewModel,
@@ -72,13 +75,13 @@ export default defineComponent({
     // Special case: If the first recommended displayed option is SelectProjectCardToPlay, and none of them are enabled, skip it.
     let selectedIdx = initialIdx;
     if (displayedOptions.length > 1 &&
-      displayedOptions[initialIdx].type === 'projectCard' &&
+      displayedOptions[initialIdx]?.type === 'projectCard' &&
       !displayedOptions[initialIdx].cards.some((card) => card.isDisabled !== true)) {
       selectedIdx = initialIdx + 1;
     }
     return {
       radioElementName: 'selectOption' + unique++,
-      selectedOption: displayedOptions[selectedIdx],
+      selectedOption: this.defaultOption(displayedOptions[selectedIdx]),
     };
   },
   computed: {
@@ -89,14 +92,28 @@ export default defineComponent({
       return this.displayedOptions.map((option) => this.playerinput.options.indexOf(option));
     },
     selectedIdx(): number {
+      if (this.selectedOption === undefined) {
+        return -1;
+      }
       return this.displayedOptions.indexOf(this.selectedOption);
+    },
+    canCancelGreenery(): boolean {
+      return this.showsave && this.displayedOptions.length > 1 && isGreeneryChoice(this.selectedOption);
     },
   },
   watch: {
     displayedOptions(newOptions: Array<PlayerInputModel>) {
       // Learner mode can hide the selected option.
-      if (!newOptions.includes(this.selectedOption)) {
-        this.selectedOption = newOptions[0];
+      if (this.selectedOption !== undefined && !newOptions.includes(this.selectedOption)) {
+        this.selectedOption = this.defaultOption(newOptions[0]);
+      }
+    },
+    canCancelGreenery(active: boolean) {
+      const cancel = this.mapPlacement?.cancel;
+      if (active && cancel) {
+        cancel.value = this.cancelGreenery;
+      } else if (cancel?.value === this.cancelGreenery) {
+        cancel.value = undefined;
       }
     },
     selectedOption() {
@@ -115,7 +132,19 @@ export default defineComponent({
       });
     },
   },
+  beforeUnmount() {
+    const cancel = this.mapPlacement?.cancel;
+    if (cancel?.value === this.cancelGreenery) {
+      cancel.value = undefined;
+    }
+  },
   methods: {
+    defaultOption(option: PlayerInputModel | undefined): PlayerInputModel | undefined {
+      return this.showsave && this.displayedOptions.length > 1 && isGreeneryChoice(option) ? undefined : option;
+    },
+    cancelGreenery() {
+      this.selectedOption = undefined;
+    },
     getSelectedOptionTop(): number | undefined {
       const element = this.getSelectedOptionLabelElement();
       return element?.getBoundingClientRect().top;
@@ -133,7 +162,7 @@ export default defineComponent({
     playerFactorySaved(displayedIdx: number) {
       const idx = this.originalIndices[displayedIdx];
       return (out: InputResponse) => {
-        this.onsave({
+        return this.onsave({
           type: 'or',
           index: idx,
           response: out,

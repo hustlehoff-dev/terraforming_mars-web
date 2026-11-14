@@ -31,6 +31,16 @@ export function actionMenu(input: PlayerInputModel | undefined): Extract<PlayerI
   return input?.type === 'or' && !input.optional && ACTION_MENU_TITLES.has(titleOf(input)) ? input : undefined;
 }
 
+/** Resource removal menus list each legal amount, resource and target as one option. */
+export function isResourceRemovalChoice(input: PlayerInputModel | undefined): boolean {
+  return input?.type === 'or' && input.options.every((option) => option.type === 'option') &&
+    input.options.some((option) => titleOf(option) === 'Do not remove resource') &&
+    input.options.some((option) => {
+      const title = titleOf(option);
+      return title === 'Remove ${0} ${1} from ${2}' || title === 'Remove resources from the neutral opponent';
+    });
+}
+
 /** The optional "change your draft pick" input the game offers after a pick (shown as locked in instead). */
 export function isDraftRepick(input: PlayerInputModel | undefined): boolean {
   return input?.type === 'card' && titleOf(input).startsWith('You can change your selection');
