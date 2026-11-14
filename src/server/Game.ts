@@ -113,6 +113,7 @@ export class Game implements IGame, Logger {
 
   // Game-level data
   public lastSaveId: number = 0;
+  public saveConflict: boolean | undefined = undefined;
   private clonedGamedId: string | undefined;
   public rng: SeededRandom;
   public spectatorId: SpectatorId;

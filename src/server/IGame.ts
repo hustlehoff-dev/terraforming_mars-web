@@ -48,6 +48,11 @@ export interface IGame extends Logger {
   readonly gameOptions: Readonly<GameOptions>;
   // Game-level data
   lastSaveId: number;
+  /**
+   * Set when a save was refused because the database already holds a newer save of this game
+   * (another server instance moved it on). This copy is stale and must not be used further.
+   */
+  saveConflict?: boolean;
   readonly rng: SeededRandom;
   readonly spectatorId: SpectatorId;
   deferredActions: DeferredActionsQueue;

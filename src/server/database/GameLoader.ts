@@ -321,9 +321,16 @@ export class GameLoader implements IGameLoader {
     const previous = this.pendingSaves.get(game.id) ?? Promise.resolve();
     const chain = previous.then(() => save).catch(() => {});
     this.pendingSaves.set(game.id, chain);
-    void chain.then(() => {
+    void chain.then(async () => {
       if (this.pendingSaves.get(game.id) === chain) {
         this.pendingSaves.delete(game.id);
+      }
+      // A stale copy whose save was refused: drop it, the next request loads the newer save.
+      if (game.saveConflict) {
+        const d = await this.cache.getGames();
+        if (d.games.get(game.id) === game) {
+          d.games.set(game.id, undefined);
+        }
       }
     });
     return save;

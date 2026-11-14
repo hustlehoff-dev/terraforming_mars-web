@@ -395,6 +395,21 @@ export class PostgreSQL implements IDatabase {
 
       // Holding onto a value avoids certain race conditions where saveGame is called twice in a row.
       const thisSaveId = game.lastSaveId;
+
+      // Several server instances can share this database. Saves of one game are serialized, and a
+      // copy that fell behind (another instance saved a newer state meanwhile) is not written over
+      // it. Undo deliberately rewrites older saves, so games with undo keep the old behavior.
+      await this.client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [game.id]);
+      if (!game.gameOptions.undoOption) {
+        const latest = await this.client.query('SELECT MAX(save_id) AS max FROM games WHERE game_id = $1', [game.id]);
+        const max = latest.rows[0]?.max;
+        if (max !== null && max !== undefined && Number(max) > thisSaveId) {
+          await this.client.query('ROLLBACK');
+          game.saveConflict = true;
+          console.warn(`PostgreSQL:saveGame: ${game.id} save ${thisSaveId} is older than ${max} in the database; not saved`);
+          return;
+        }
+      }
       // xmax = 0 is described at https://stackoverflow.com/questions/39058213/postgresql-upsert-differentiate-inserted-and-updated-rows-using-system-columns-x
       //
       // When compressOnWrite is true, the game state is written to game_compressed; when it's

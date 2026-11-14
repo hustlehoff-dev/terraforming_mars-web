@@ -106,6 +106,10 @@ export class PlayerInput extends Handler {
         // Answer only once the new state is in the database: with several server instances
         // the page's next request may reach another one, which must not see an older game.
         await ctx.gameLoader.waitForSaves?.(player.game.id);
+        if (player.game.saveConflict) {
+          // Another instance saved a newer state first: this move was made on an old copy.
+          throw new AppError(INVALID_REQUEST_ID, 'The game moved on in the meantime. The page will refresh.');
+        }
         responses.writeJson(res, ctx, Server.getPlayerModel(player));
       }
     } catch (e) {

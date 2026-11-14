@@ -212,11 +212,12 @@ export default defineComponent({
           const showAlert = vueRoot(this).showAlert;
           if (response.status === statusCode.badRequest) {
             const resp = await response.json() as AppErrorResponse;
-            let cb = () => {};
             if (resp.id === INVALID_RUN_ID || resp.id === INVALID_REQUEST_ID) {
-              cb = () => setTimeout(() => window.location.reload(), 100);
+              // The page or the game copy was out of date: load the current state quietly.
+              window.location.reload();
+              return false;
             }
-            showAlert('Error with input', resp.message, cb);
+            showAlert('Error with input', resp.message);
           } else {
             showAlert('Error processing response', 'Unexpected response from server. Please try again.');
             console.error(response.statusText);
