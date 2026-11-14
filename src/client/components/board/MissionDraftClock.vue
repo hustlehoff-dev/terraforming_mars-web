@@ -1,18 +1,19 @@
 <template>
   <div v-if="secondsLeft !== undefined" class="nofloat mission-draft-clock" :class="{'mission-draft-clock--warn': secondsLeft <= 10}" role="timer" aria-live="polite">
-    <span v-i18n>Time to pick a card</span>
+    <span>{{ $t(label ?? 'Time to pick a card') }}</span>
     <b>{{ secondsLeft }}s</b>
   </div>
 </template>
 
 <script setup lang="ts">
-import {computed, onBeforeUnmount, ref} from 'vue';
+import {computed, onBeforeUnmount, onMounted, ref, watch} from 'vue';
+import {SoundManager} from '@/client/utils/SoundManager';
 
 /*
  * Draft time limit, shown to a player who has not picked yet: another player already picked,
  * and when this reaches zero the game keeps the first card for this player.
  */
-const props = defineProps<{deadline?: number}>();
+const props = defineProps<{deadline?: number, label?: string}>();
 
 const now = ref(Date.now());
 const timer = window.setInterval(() => {
@@ -20,6 +21,16 @@ const timer = window.setInterval(() => {
 }, 250);
 onBeforeUnmount(() => window.clearInterval(timer));
 const secondsLeft = computed(() => props.deadline === undefined ? undefined : Math.max(0, Math.ceil((props.deadline - now.value) / 1000)));
+
+onMounted(() => {
+  SoundManager.clockStarted();
+  navigator.vibrate?.([120, 80, 120]);
+});
+watch(secondsLeft, (left, before) => {
+  if (left !== undefined && left !== before && left > 0 && left <= 5) {
+    SoundManager.clockTick();
+  }
+});
 </script>
 
 <style lang="less">

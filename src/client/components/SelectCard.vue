@@ -2,7 +2,8 @@
   <div class="wf-component wf-component--select-card" :class="{'deck-deal': playerinput.dealtFromDeck || cardDialog, 'draft-pick': draftPick}"
     :aria-busy="draftSubmitting || undefined">
     <div v-if="showtitle === true" class="nofloat wf-component-title">{{ $t(playerinput.title) }}</div>
-    <MissionDraftClock v-if="draftPick && playerView.game.draftDeadline !== undefined" :deadline="playerView.game.draftDeadline" />
+    <MissionDraftClock v-if="(draftPick || buyingCards) && playerView.game.draftDeadline !== undefined" :deadline="playerView.game.draftDeadline"
+      :label="draftPick ? 'Time to pick a card' : 'Time to buy cards'" />
     <div v-if="playerinput.dealtFromDeck" class="deck-deal__origin" aria-hidden="true"></div>
     <label v-for="(card, index) in getOrderedCards()" :key="card.name" :class="[getCardBoxClass(card), {'cardbox--featured': featuredCards}]"
       :style="playerinput.dealtFromDeck ? {'--deal-delay': Math.min(index, 10) * 65 + 'ms'} : undefined">
@@ -227,6 +228,10 @@ export default defineComponent({
     },
   },
   computed: {
+    /** Buying the drafted or dealt cards in the research phase (may have a time limit). */
+    buyingCards(): boolean {
+      return this.playerinput.dealtFromDeck === true && this.playerView.game.phase === Phase.RESEARCH;
+    },
     draftPick(): boolean {
       const phase = this.playerView.game.phase;
       return this.showsave && this.playerView.thisPlayer.needsToDraft === true && (phase === Phase.DRAFTING || phase === Phase.INITIALDRAFTING);

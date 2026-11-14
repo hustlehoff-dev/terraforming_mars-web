@@ -177,6 +177,7 @@ export class ApiCreateGame extends Handler {
         showTimers: gameReq.showTimers,
         turnTimeLimit: Math.max(0, Math.min(3600, Math.round(Number(gameReq.turnTimeLimit ?? 0) || 0))),
         draftTimeLimit: Math.max(0, Math.min(600, Math.round(Number(gameReq.draftTimeLimit ?? 0) || 0))),
+        buyTimeLimit: Math.max(0, Math.min(600, Math.round(Number(gameReq.buyTimeLimit ?? 0) || 0))),
         shuffleMapOption: gameReq.shuffleMapOption,
         solarPhaseOption: gameReq.solarPhaseOption,
         soloTR: gameReq.soloTR,

@@ -548,6 +548,9 @@ export class Player implements IPlayer {
     }
   }
 
+  /** This generation's buy cards choice, answered with no cards when the buying clock runs out. */
+  public buyCardsInput: PlayerInput | undefined = undefined;
+
   public addResourceTo(card: ICard, options: number | {qty?: number, log: boolean, logZero?: boolean, from?: From} = 1): void {
     const count = typeof(options) === 'number' ? options : (options.qty ?? 1);
 
@@ -680,6 +683,7 @@ export class Player implements IPlayer {
       // It's because all players is drafting at the same time. Once again, the server isn't ideal
       // when it comes to handling multiple players at once.
       const action = new ChooseCards(this, cards, {paying: true, keepMax: selectable, dealtFromDeck: true}).execute();
+      this.buyCardsInput = action;
 
       // ChooseCards.execute returns an action with an andThen set. That means
       // this has to wrap it around and do clever things.

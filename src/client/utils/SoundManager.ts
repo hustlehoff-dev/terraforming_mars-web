@@ -229,6 +229,20 @@ export namespace SoundManager {
     });
   }
 
+  /** Somebody else has chosen: this player's clock starts. */
+  export function clockStarted() {
+    playInContext((audio) => {
+      tone(audio, 880, 880, 0, 0.14, 0.22);
+      tone(audio, 880, 880, 0.18, 0.14, 0.22);
+      tone(audio, 1175, 1175, 0.36, 0.22, 0.22);
+    });
+  }
+
+  /** One of the last seconds on the clock. */
+  export function clockTick() {
+    playInContext((audio) => tone(audio, 1046, 1046, 0, 0.06, 0.16));
+  }
+
   export function newLog() {
     playInContext((audio) => tone(audio, 196, 196, 0.02, 0.05, 0.10));
   }

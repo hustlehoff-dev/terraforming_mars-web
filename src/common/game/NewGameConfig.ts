@@ -47,6 +47,7 @@ export type NewGameConfig = {
   turnTimeLimit?: number;
   /** Seconds to pick a draft card once another player has picked; 0 or absent means no limit. */
   draftTimeLimit?: number;
+  buyTimeLimit?: number;
   fastModeOption: boolean;
   showOtherPlayersVP: boolean;
 

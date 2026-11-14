@@ -485,6 +485,7 @@ export class Server {
       showTimers: options.showTimers,
       turnTimeLimit: options.turnTimeLimit ?? 0,
       draftTimeLimit: options.draftTimeLimit ?? 0,
+      buyTimeLimit: options.buyTimeLimit ?? 0,
       shuffleMapOption: options.shuffleMapOption,
       solarPhaseOption: options.solarPhaseOption,
       soloTR: options.soloTR,

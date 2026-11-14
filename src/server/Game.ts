@@ -75,7 +75,7 @@ import {UnderworldData} from './underworld/UnderworldData';
 import {UnderworldExpansion} from './underworld/UnderworldExpansion';
 import {SendDelegateToArea} from './deferredActions/SendDelegateToArea';
 import {BuildColony} from './deferredActions/BuildColony';
-import {newInitialDraft, newPreludeDraft, newCEOsDraft, newStandardDraft} from './Draft';
+import {CLOCK_GRACE_MS, newInitialDraft, newPreludeDraft, newCEOsDraft, newStandardDraft} from './Draft';
 import {partition, sum, toID, toName} from '../common/utils/utils';
 import {OrOptions} from './inputs/OrOptions';
 import {SelectResource} from './inputs/SelectResource';
@@ -1127,7 +1127,11 @@ export class Game implements IGame, Logger {
   public playerIsFinishedWithResearchPhase(player: IPlayer): void {
     this.deferredActions.runAllFor(player, () => {
       this.researchedPlayers.add(player.id);
+      if (this.researchedPlayers.size < this.players.length) {
+        this.startBuyClock();
+      }
       if (this.researchedPlayers.size === this.players.length) {
+        this.clearBuyClock();
         this.researchedPlayers.clear();
         this.phase = Phase.ACTION;
         this.passedPlayers.clear();
@@ -1136,6 +1140,49 @@ export class Game implements IGame, Logger {
         this.startActionsForPlayer(this.first);
       }
     });
+  }
+
+  /**
+   * With a buying time limit: once the first player has bought cards (generation 2 on), the others
+   * have that many seconds. When time is up, those still choosing buy nothing.
+   */
+  private startBuyClock(): void {
+    const limit = this.gameOptions.buyTimeLimit ?? 0;
+    if (limit <= 0 || this.generation <= 1 || this.phase !== Phase.RESEARCH || this.draftDeadline !== undefined) {
+      return;
+    }
+    const generation = this.generation;
+    this.draftDeadline = Date.now() + limit * 1000;
+    const expire = () => {
+      this.draftTimeout = undefined;
+      this.draftDeadline = undefined;
+      if (this.generation !== generation || this.phase !== Phase.RESEARCH) {
+        return;
+      }
+      for (const late of this.players.filter((p) => !this.researchedPlayers.has(p.id))) {
+        if (late.buyCardsInput === undefined || late.getWaitingFor() !== late.buyCardsInput) {
+          continue;
+        }
+        try {
+          this.log('${0} ran out of time and bought no cards', (b) => b.player(late));
+          late.process({type: 'card', cards: []});
+        } catch (e) {
+          console.warn('Automatic card buying after the time limit failed', e);
+        }
+      }
+      this.save();
+    };
+    this.draftExpire = expire;
+    this.draftTimeout = setTimeout(expire, limit * 1000 + CLOCK_GRACE_MS);
+    this.draftTimeout.unref?.();
+  }
+
+  private clearBuyClock(): void {
+    if (this.draftTimeout !== undefined) {
+      clearTimeout(this.draftTimeout);
+    }
+    this.draftTimeout = undefined;
+    this.draftDeadline = undefined;
   }
 
   public getPlayerBefore(player: IPlayer): IPlayer {

@@ -20,6 +20,8 @@ export type GameOptions = {
   turnTimeLimit: number;
   /** Seconds the other players have to pick once one player has picked a draft card; 0 means no limit. */
   draftTimeLimit: number;
+  /** Seconds the other players have to buy cards once one player has bought; 0 means no limit. */
+  buyTimeLimit: number;
   fastModeOption: boolean;
   showOtherPlayersVP: boolean;
 
@@ -144,6 +146,7 @@ export const DEFAULT_GAME_OPTIONS: GameOptions = {
   showTimers: true,
   turnTimeLimit: 0,
   draftTimeLimit: 0,
+  buyTimeLimit: 0,
   shuffleMapOption: false,
   solarPhaseOption: false,
   soloTR: false,

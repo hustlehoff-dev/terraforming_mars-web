@@ -50,6 +50,7 @@ export function defaultCreateGameModel(): CreateGameModel {
     showTimers: true,
     turnTimeLimit: 0,
     draftTimeLimit: 0,
+    buyTimeLimit: 0,
     fastModeOption: false,
     removeNegativeGlobalEventsOption: false,
     includeFanMA: false,

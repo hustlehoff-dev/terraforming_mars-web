@@ -240,6 +240,17 @@
               </select>
             </label>
 
+            <label for="buy-time-limit" class="create-game-turn-limit">
+              <span v-i18n>Card buying time limit</span>
+              <select id="buy-time-limit" v-model.number="buyTimeLimit" :title="$t('Time left for the others once one player has bought cards; then they buy nothing')">
+                <option :value="0" v-i18n>Off</option>
+                <option :value="30">30 s</option>
+                <option :value="45">45 s</option>
+                <option :value="60">1 min</option>
+                <option :value="90">1.5 min</option>
+              </select>
+            </label>
+
             <input type="checkbox" v-model="escapeVelocityMode" id="escapevelocity-checkbox">
             <label for="escapevelocity-checkbox">
               <div class="create-game-expansion-icon expansion-icon-escape-velocity"></div>
@@ -766,6 +777,7 @@ export default defineComponent({
         showTimers: this.showTimers,
         turnTimeLimit: this.turnTimeLimit,
         draftTimeLimit: this.draftTimeLimit,
+        buyTimeLimit: this.buyTimeLimit,
         fastModeOption: this.fastModeOption,
         removeNegativeGlobalEventsOption: this.removeNegativeGlobalEventsOption,
         includeFanMA: this.includeFanMA,

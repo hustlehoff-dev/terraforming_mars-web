@@ -10,6 +10,9 @@ import {IPreludeCard} from './cards/prelude/IPreludeCard';
 import {ICeoCard} from './cards/ceos/ICeoCard';
 import {LogHelper} from './LogHelper';
 
+/** Extra time after a draft or buying clock reaches zero before the game picks for late players. */
+export const CLOCK_GRACE_MS = 1500;
+
 export type DraftType = 'none' | 'initial' | 'prelude' | 'ceos' | 'standard';
 
 /*
@@ -207,7 +210,8 @@ export abstract class Draft {
       this.game.save();
     };
     this.game.draftExpire = expire;
-    this.game.draftTimeout = setTimeout(expire, limit * 1000);
+    // The clock shown ends at the deadline; the extra moment covers the time other pages need to see it.
+    this.game.draftTimeout = setTimeout(expire, limit * 1000 + CLOCK_GRACE_MS);
     this.game.draftTimeout.unref?.();
   }
 

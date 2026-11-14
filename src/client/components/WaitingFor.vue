@@ -71,6 +71,8 @@ let animationFrame = 0;
 
 // How often to refresh other players' status during simultaneous phases.
 const OTHER_PLAYERS_INTERVAL = 3000;
+// The same while a time limit may start, so the clock shows at once.
+const FAST_PLAYERS_INTERVAL = 1000;
 // Phases where every player makes a choice at the same time.
 const SIMULTANEOUS_PHASES: ReadonlyArray<Phase> = [Phase.INITIALDRAFTING, Phase.DRAFTING, Phase.RESEARCH];
 
@@ -324,6 +326,14 @@ export default defineComponent({
      * While this player makes a simultaneous choice (e.g. drafting), keep the other
      * players' status current without redrawing the choice in progress.
      */
+    /** A draft or buying clock may start any moment: another player choosing starts it. */
+    clockPossible(): boolean {
+      const game = this.playerView.game;
+      const options = game.gameOptions;
+      return game.draftDeadline === undefined && (
+        (game.phase === Phase.DRAFTING && (options.draftTimeLimit ?? 0) > 0) ||
+        (game.phase === Phase.RESEARCH && game.generation > 1 && (options.buyTimeLimit ?? 0) > 0));
+    },
     watchOtherPlayers() {
       const playerView = this.playerView;
       window.clearTimeout(otherPlayersTimer);
@@ -337,7 +347,8 @@ export default defineComponent({
             // The draft clock starts when another player picks: show it to this player too.
             playerView.game.draftDeadline = latest.game.draftDeadline;
             // Time ran out and the game picked for this player: show the new state.
-            if (playerView.thisPlayer?.needsToDraft === true && latest.thisPlayer?.needsToDraft === false) {
+            if ((playerView.thisPlayer?.needsToDraft === true && latest.thisPlayer?.needsToDraft === false) ||
+              (this.waitingfor !== undefined && latest.waitingFor === undefined)) {
               await vueRoot(this).updatePlayer();
               return;
             }
@@ -355,7 +366,7 @@ export default defineComponent({
         if (otherPlayersTimer === timer) {
           this.watchOtherPlayers();
         }
-      }, OTHER_PLAYERS_INTERVAL);
+      }, this.clockPossible() ? FAST_PLAYERS_INTERVAL : OTHER_PLAYERS_INTERVAL);
       otherPlayersTimer = timer;
     },
     notify() {

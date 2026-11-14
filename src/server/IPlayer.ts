@@ -121,6 +121,8 @@ export interface IPlayer {
   draftedCards: Array<IProjectCard>;
   /** true when this player is drafting, false when player is not, undefined when there is no draft phase. */
   needsToDraft?: boolean;
+  /** This generation's buy cards choice, answered with no cards when the buying clock runs out. */
+  buyCardsInput: PlayerInput | undefined;
 
   timer: Timer;
   /** When the current action turn runs out (epoch ms), if the game has a turn time limit. */
