@@ -41,6 +41,11 @@ export interface IGameLoader {
    * Do not call IDatabase.saveGame directly in a running system.
    */
   saveGame(game: IGame): Promise<void>;
+  /**
+   * Resolves once every save started for this game has reached the database. Hosts that run
+   * several server instances need it before answering, so the next request sees the new state.
+   */
+  waitForSaves?(gameId: IGame['id']): Promise<void>;
   completeGame(game: IGame): Promise<void>;
   maintenance(): Promise<void>;
 }

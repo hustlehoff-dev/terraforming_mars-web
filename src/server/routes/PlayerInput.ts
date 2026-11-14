@@ -103,6 +103,9 @@ export class PlayerInput extends Handler {
         await this.performUndo(req, res, ctx, player);
       } else {
         player.process(entity);
+        // Answer only once the new state is in the database: with several server instances
+        // the page's next request may reach another one, which must not see an older game.
+        await ctx.gameLoader.waitForSaves?.(player.game.id);
         responses.writeJson(res, ctx, Server.getPlayerModel(player));
       }
     } catch (e) {

@@ -317,7 +317,22 @@ export class GameLoader implements IGameLoader {
     if (this.purgedGames.includes(game.id)) {
       throw new Error('This game no longer exists');
     }
-    return Database.getInstance().saveGame(game);
+    const save = Database.getInstance().saveGame(game);
+    const previous = this.pendingSaves.get(game.id) ?? Promise.resolve();
+    const chain = previous.then(() => save).catch(() => {});
+    this.pendingSaves.set(game.id, chain);
+    void chain.then(() => {
+      if (this.pendingSaves.get(game.id) === chain) {
+        this.pendingSaves.delete(game.id);
+      }
+    });
+    return save;
+  }
+
+  private readonly pendingSaves = new Map<IGame['id'], Promise<void>>();
+
+  public async waitForSaves(gameId: IGame['id']): Promise<void> {
+    await this.pendingSaves.get(gameId);
   }
 
   public async maintenance() {
