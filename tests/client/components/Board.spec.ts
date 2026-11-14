@@ -123,4 +123,14 @@ describe('Board', () => {
     wrapper.unmount();
     orbitDock.remove();
   });
+
+  it('marks the main board for the 3D scene so terrain is drawn by the scene instead of tile art', () => {
+    const wrapper = shallowMount(Board, {
+      ...globalConfig,
+      props: {spaces, cinematicTerrain: true, expansions: DEFAULT_EXPANSIONS, tileView: 'show', venusScaleLevel: 0, boardName: BoardName.THARSIS},
+    });
+
+    expect(wrapper.find('#main_board').classes()).to.include('board--scene');
+    expect(wrapper.find('.mars-biomes').exists()).to.be.false;
+  });
 });

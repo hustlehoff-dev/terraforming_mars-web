@@ -20,18 +20,38 @@
     transform-origin: center;
   }
 
-  .mars-surface__raster {
+
+
+  .mars-camera {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    aspect-ratio: 1;
-    border-radius: 50%;
-    background:
-      radial-gradient(ellipse at 59% 23%, #ffbf6a35, transparent 48%),
-      linear-gradient(158deg, transparent 43%, #160d1940 63%, #020a1ee0),
-      url(./assets/board/mars-without-venus.png) 54% 56% / 139% 135% no-repeat #9d4a2a;
-    box-shadow: inset 0 6px 15px #ffdcab8f, inset -8px -12px 22px #273f684f, 0 -4px 16px #f6ae7166, -5px 8px 19px #3c89c96b;
-    transform: translate(-50%, -50%);
+    z-index: 7;
+    bottom: calc(var(--dock-height) + 25px);
+    right: clamp(14px, 3vw, 42px);
+    display: flex;
+    gap: 3px;
+    padding: 3px;
+    border: 1px solid #acdbe259;
+    border-radius: 5px;
+    background: #08121bd9;
+
+    button {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border: 1px solid transparent;
+      border-radius: 3px;
+      background: transparent;
+      color: #def6ff;
+      font: inherit;
+      font-size: 1rem;
+      cursor: pointer;
+
+      &:hover,
+      &:focus-visible {
+        border-color: #92ddf0;
+        background: #18313d;
+      }
+    }
   }
 
   .mars-surface__board {
@@ -73,25 +93,39 @@
     margin: 0;
     transform: none;
     zoom: 1;
-    pointer-events: auto;
+    pointer-events: none;
+
+    #main_board > .board-space {
+      pointer-events: auto;
+    }
   }
 
   .atlas-stage:not(.atlas-stage--tracks) .board-cont.atlas-board {
+    transform: perspective(1350px) rotateX(34deg) scale(1.42, 1.19);
+    transform-origin: var(--atlas-center-x) var(--atlas-center-y);
+
     &::before {
       display: none;
     }
 
     #main_board {
       > .board-space:not(.atlas-sector--legal, .atlas-sector--inspected, .board-space--available, :focus-visible)::after {
-        color: var(--atlas-owner-color, #f7bb685e);
+        color: #ffe3bbc9;
       }
 
-      each(@players, {
-        @owner: ~'player_@{value}';
-        > .atlas-owner--@{value} {
-          --atlas-owner-color: saturate(lighten(@@owner, 20%), 15%);
-        }
-      });
+      > .atlas-sector--inspected::after,
+      > .board-space:focus-visible::after {
+        background: #c8f7ff;
+        filter: drop-shadow(0 0 3px #7bdefc);
+      }
+
+      .board-space-type-ocean {
+        background: #25809e26;
+      }
+
+      :is(.board-space-tile--city, .board-space-tile--greenery, .board-space-tile--ocean) {
+        background: transparent;
+      }
 
       .board-caption {
         paint-order: stroke;
@@ -291,12 +325,12 @@
 
       &.board-space-c01 {
         top: 52%;
-        right: 15%;
+        right: 12%;
       }
 
       &.board-space-c02 {
         top: 25%;
-        left: 17%;
+        left: 10%;
         background-image: linear-gradient(145deg, #401a1130, #0b0f22ac), url(./assets/colonies-planets/deimos.jpg);
       }
 
@@ -317,6 +351,15 @@
 @media (max-width: 760px) {
   #player-home.mission-cinematic {
     .mars-surface { inset: max(145px, var(--rival-map-top, 0px)) 0 calc(var(--dock-height) + var(--orbit-height) + 52px); }
+
+    .mars-camera {
+      inset: auto 9px calc(var(--dock-height) + var(--orbit-height) + 57px) auto;
+
+      button {
+        width: 27px;
+        height: 27px;
+      }
+    }
 
     .atlas-inspector {
       inset: auto 9px calc(var(--dock-height) + var(--orbit-height) + 22px);
@@ -397,5 +440,264 @@
     &:hover {
       transform: none;
     }
+  }
+}
+
+// The 3D Mars scene: a full-bleed canvas behind the HUD. The safe area is the part of the stage the
+// default camera frames the board into; MarsSurface reads it from these custom properties.
+#player-home.mission-cinematic .atlas-stage:has(.mars-surface--scene) {
+  background: #020309;
+
+  .mars-surface.mars-surface--scene {
+    --scene-safe-top: clamp(74px, 9dvh, 100px);
+    --scene-safe-right: clamp(12px, 2vw, 32px);
+    --scene-safe-bottom: calc(var(--dock-height) + 18px);
+    --scene-safe-left: clamp(12px, 2vw, 32px);
+    inset: 0 !important;
+    z-index: 1;
+    overflow: hidden;
+    cursor: grab;
+    pointer-events: auto;
+    touch-action: none;
+    user-select: none;
+  }
+
+  .mars-surface--dragging,
+  .mars-surface--dragging #main_board > .board-space {
+    cursor: grabbing !important;
+  }
+
+  .mars-surface__canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .mars-surface__safe {
+    position: absolute;
+    inset: var(--scene-safe-top) var(--scene-safe-right) var(--scene-safe-bottom) var(--scene-safe-left);
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .mars-surface__overlay,
+  .mars-surface__overlay .atlas-stage__map {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .mars-surface__overlay .board-cont.atlas-board {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    height: auto;
+    margin: 0;
+    transform: none;
+
+    &::before,
+    .board-legend {
+      display: none;
+    }
+  }
+
+  #main_board.board--scene {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    height: auto;
+    margin: 0;
+
+    > .board-space {
+      position: absolute;
+      top: 0;
+      left: 0;
+      margin: 0 !important;
+      background: none !important;
+      clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+      transform-origin: 0 0;
+      pointer-events: auto;
+      cursor: pointer;
+      outline: none;
+
+      // The grid and its highlights are drawn on the surface by the scene.
+      &::after {
+        display: none;
+      }
+    }
+
+    // Oceans, greenery and cities are terrain and buildings in the scene; other tiles keep their art.
+    :is(.board-space-tile--city, .board-space-tile--greenery, .board-space-tile--ocean, .board-space-type-ocean) {
+      background: none !important;
+    }
+
+    .board-space-type-land-noctis {
+      opacity: 0.35;
+    }
+
+    .board-space-bonus {
+      opacity: 1;
+      background-color: #151719;
+      box-shadow: 0 0 0 1px #f9e6bc, 0 1px 4px 2px #06090d;
+      filter: saturate(1.2);
+    }
+  }
+
+  .atlas-orbit {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    width: auto;
+    max-height: none;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    transform: none;
+    pointer-events: none;
+  }
+
+  .atlas-orbit__title {
+    position: absolute;
+    clip-path: inset(50%);
+  }
+
+  .board-outer-spaces--dock {
+    position: absolute;
+    inset: 0;
+    display: block;
+
+    > .board-space {
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: grid;
+      width: 72px;
+      height: 72px;
+      min-width: 0;
+      margin: 0 !important;
+      padding: 0;
+      place-items: end center;
+      border: 1px solid #e8eef466;
+      border-radius: 50%;
+      background: radial-gradient(circle, transparent 58%, #9fd8ff14 70%, transparent 72%);
+      box-shadow: none;
+      pointer-events: auto;
+      transition: border-color 140ms ease, box-shadow 140ms ease;
+
+      &:hover,
+      &:focus-visible,
+      &.atlas-sector--inspected {
+        transform: none;
+        border-color: var(--mission-gold);
+        box-shadow: 0 0 0 2px #f1be8040, 0 0 18px #f1be8033;
+      }
+
+      &.atlas-sector--legal {
+        border-color: var(--atlas-ice);
+        box-shadow: 0 0 0 2px #a2eeff66, 0 0 22px #62d8f866;
+      }
+
+      &::after {
+        display: none;
+      }
+
+      > [data-test='tile'] {
+        top: 50%;
+        width: 40%;
+        height: 45%;
+        transform: translate(-50%, -50%);
+      }
+
+      > .board-space-text {
+        position: absolute;
+        top: calc(100% + 4px);
+        width: max-content;
+        max-width: 140px;
+        margin: 0;
+        padding: 2px 7px;
+        border-radius: 3px;
+        background: #060b12c4;
+        color: #f3eee7;
+        font-size: 0.6rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        line-height: 1.2;
+        text-align: center;
+        text-transform: uppercase;
+      }
+    }
+  }
+}
+
+.atlas-stage {
+  each(@players, {
+    @owner: ~'player_@{value}';
+    .atlas-owner--@{value} {
+      --atlas-owner-color: saturate(lighten(@@owner, 20%), 15%);
+    }
+
+    .atlas-co-owner--@{value} {
+      --atlas-co-owner-color: saturate(lighten(@@owner, 20%), 15%);
+    }
+  });
+}
+
+#player-home.mission-cinematic .atlas-stage {
+  .board-space-bonuses {
+    opacity: 1;
+  }
+
+  .atlas-owned > .board-cube--owner {
+    display: none;
+  }
+}
+
+body:not(.preferences_map_owner_square) #player-home.mission-cinematic .atlas-stage {
+  #main_board > .board-space.atlas-owned::after {
+    z-index: 6;
+    display: block;
+    background: linear-gradient(120deg, var(--atlas-owner-color, #fff) 50%, var(--atlas-co-owner-color, var(--atlas-owner-color, #fff)) 50%);
+    clip-path: polygon(evenodd, 50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%, 50% 0%, 50% 7%, 7% 29%, 7% 71%, 50% 93%, 93% 71%, 93% 29%, 50% 7%);
+  }
+
+  .board-outer-spaces--dock > .board-space.atlas-owned {
+    border: 3px solid var(--atlas-owner-color, #fff);
+  }
+}
+
+.preferences_map_owner_square #player-home.mission-cinematic .atlas-stage .atlas-owned > .board-cube--owner {
+  position: absolute;
+  z-index: 7;
+  top: 50%;
+  left: 50%;
+  display: block;
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  border: 1px solid #fff;
+  border-radius: 2px;
+  background: linear-gradient(120deg, var(--atlas-owner-color, #fff) 50%, var(--atlas-co-owner-color, var(--atlas-owner-color, #fff)) 50%);
+  box-shadow: 0 0 0 2px #070b11, 0 0 5px #000;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+@media (min-width: 1100px) {
+  #player-home.mission-cinematic .atlas-stage:has(.mars-surface--scene) .mars-surface.mars-surface--scene {
+    --scene-safe-left: clamp(150px, 15vw, 290px);
+    --scene-safe-right: clamp(130px, 11vw, 190px);
+  }
+}
+
+@media (max-width: 760px) {
+  #player-home.mission-cinematic .atlas-stage:has(.mars-surface--scene) .mars-surface.mars-surface--scene {
+    --scene-safe-top: max(204px, var(--rival-map-top, 0px));
+    --scene-safe-bottom: calc(var(--dock-height) + 64px);
+    --scene-safe-left: 8px;
+    --scene-safe-right: 8px;
   }
 }

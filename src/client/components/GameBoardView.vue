@@ -1,7 +1,7 @@
 <!-- Common widgets between player and spectator views -->
 <template>
   <a name="board" class="player_home_anchor hotkey-target"></a>
-  <AtlasBoard v-if="atlas" ref="atlasBoard" :game="game" :tileView="tileView" :orbitLayout="detailsTarget !== undefined" @toggleTileView="$emit('toggleTileView')" />
+  <AtlasBoard v-if="atlas" ref="atlasBoard" :game="game" :players="players" :tileView="tileView" :orbitLayout="detailsTarget !== undefined" @toggleTileView="$emit('toggleTileView')" />
   <Board
     v-else
     :spaces="game.spaces"

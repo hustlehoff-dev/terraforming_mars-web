@@ -22,7 +22,7 @@
           :space="station"
           :text="orbitalName(station)"
           :tileView="tileView"
-          :class="atlasSpaceClasses(station.id)"
+          :class="[atlasSpaceClasses(station.id), ownershipClasses(station)]"
           :tabindex="atlas ? 0 : undefined"
           :role="atlas ? 'button' : undefined"
           :aria-label="atlas ? $t(orbitalName(station)) : undefined"
@@ -86,7 +86,7 @@
     <div
       id="main_board"
       class="board"
-      :class="{'board--large': isLargeBoard}"
+      :class="{'board--large': isLargeBoard, 'board--scene': cinematicTerrain}"
       @pointerover="inspectFromEvent"
       @pointerout="leaveSector"
       @focusin="inspectFromEvent"
@@ -99,7 +99,7 @@
         :space="curSpace"
         :aresExtension="expansions.ares"
         :tileView="tileView"
-        :class="[atlasSpaceClasses(curSpace.id), atlas && tileView === 'show' && curSpace.tileType !== undefined && curSpace.color ? 'atlas-owner--' + curSpace.color : undefined]"
+        :class="[atlasSpaceClasses(curSpace.id), ownershipClasses(curSpace)]"
         :tabindex="atlas ? (atlasTabStop === curSpace.id ? 0 : -1) : undefined"
         :role="atlas ? 'button' : undefined"
         :aria-label="atlas ? $t('Sector') + ' ' + (curSpace.a9 ?? curSpace.id) : undefined"
@@ -419,6 +419,7 @@ export default defineComponent({
   emits: ['toggleTileView', 'inspectSpace', 'leaveSpace'],
   props: {
     atlas: Boolean,
+    cinematicTerrain: Boolean,
     inspectedSpace: String as () => SpaceId | undefined,
     sectorDescriptionId: String,
     orbitDock: Object as () => HTMLElement | undefined,
@@ -468,6 +469,16 @@ export default defineComponent({
     BoardSpace,
   },
   methods: {
+    ownershipClasses(space: SpaceModel): string[] {
+      if (!this.atlas || this.tileView !== 'show' || space.color === undefined || space.color === 'bronze' || space.color === 'neutral') {
+        return [];
+      }
+      const classes = ['atlas-owned', `atlas-owner--${space.color}`];
+      if (space.coOwner !== undefined && space.coOwner !== space.color) {
+        classes.push(`atlas-co-owner--${space.coOwner}`);
+      }
+      return classes;
+    },
     orbitalName(space: SpaceModel): string {
       return orbitalNames[space.id] ?? space.a9 ?? space.id;
     },

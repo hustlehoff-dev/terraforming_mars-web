@@ -5,6 +5,7 @@ import {SpaceType} from '../boards/SpaceType';
 import {SpaceId} from '../Types';
 import {UndergroundResourceToken} from '../underworld/UndergroundResourceToken';
 import {SpaceCube} from '../boards/SpaceCube';
+import {CardName} from '../cards/CardName';
 
 export type SpaceHighlight = undefined | 'noctis' | 'volcanic';
 
@@ -15,6 +16,10 @@ export type SpaceModel = {
   bonus: Array<SpaceBonus>;
   color?: Color;
   tileType?: TileType;
+  tileCard?: CardName;
+  boardVictoryPoints?: number;
+  adjacentGreenery?: number;
+  adjacentOceans?: number;
   cube?: SpaceCube;
   highlight?: SpaceHighlight;
   rotated?: true; // Absent or true

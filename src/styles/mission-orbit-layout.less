@@ -158,14 +158,15 @@
       }
     }
 
+    // Left of the status rail (same right offset and width as .mission-status__metrics), never under it.
     .atlas-inspector {
       top: 13px;
-      right: calc(clamp(14px, 2.5vw, 36px) + 88px);
+      right: calc(clamp(16px, 2.4vw, 44px) + 112px + 12px);
       width: auto;
     }
 
     .atlas-inspector__readout {
-      max-width: 200px;
+      max-width: 220px;
     }
 
     .mission-play__map:has(.rival-panel) {

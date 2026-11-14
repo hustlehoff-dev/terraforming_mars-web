@@ -388,7 +388,7 @@
   position: fixed;
   z-index: 30;
   width: max-content;
-  max-width: min(240px, calc(100vw - 16px));
+  max-width: min(290px, calc(100vw - 16px));
   padding: 9px 11px;
   border: 1px solid #526674;
   border-radius: 5px;
@@ -424,6 +424,22 @@
 .atlas-tooltip__terrain {
   font-weight: 700;
   text-transform: capitalize;
+}
+
+.atlas-tooltip__facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 10px;
+  margin: 5px 0;
+
+  dt { color: #b9cbd5; }
+  dd { margin: 0; }
+}
+
+.atlas-tooltip .atlas-tooltip__effect {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid #465d6b;
 }
 
 .atlas-inspector__caption {

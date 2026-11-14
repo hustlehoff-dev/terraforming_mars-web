@@ -11,7 +11,7 @@
       <div class="board-space-coords">{{ space.a9 ?? 'n/a' }}</div>
     </template>
     <template v-if="tileView === 'show'">
-      <div :class="playerColorCss" v-if="space.color !== undefined"></div>
+      <div :class="[playerColorCss, 'board-cube--owner']" v-if="space.color !== undefined"></div>
       <template v-if="space.gagarin !== undefined">
         <div v-if="space.gagarin === 0" class="gagarin"></div>
         <div v-else class="gagarin visited"></div>
