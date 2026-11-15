@@ -1,6 +1,9 @@
 <template>
   <div id="game-end" class="game_end_cont">
-    <h1><HomeLink>{{ constants.APP_NAME }} - Game finished!</HomeLink></h1>
+    <header class="end-hero">
+      <HomeLink>{{ constants.APP_NAME }}</HomeLink>
+      <h1 v-i18n>Game finished!</h1>
+    </header>
     <div class="game_end">
       <div v-if="isSoloGame">
         <div v-if="game.isSoloModeWin">
@@ -48,103 +51,27 @@
           </a>
         </div>
       </div>
-      <div v-if="!isSoloGame || game.isSoloModeWin" class="game-end-winner-announcement">
-        <span v-for="p in winners" :key="p.color"><span :class="'log-player ' + getEndGamePlayerRowColorClass(p.color)">{{ p.name }}</span></span> <span v-i18n>won!</span>
-      </div>
+      <section v-if="!isSoloGame || game.isSoloModeWin" class="end-summary">
+        <p class="end-summary__winner">
+          <span aria-hidden="true">🏆</span>
+          <span v-for="(p, index) in winners" :key="p.color"><template v-if="index > 0"> + </template><b :class="'player_bg_color_' + p.color">{{ p.name }}</b></span>
+          <span v-i18n>won!</span>
+          <small>{{ $t('after') }} {{ game.generation }} {{ $t('generations') }}</small>
+        </p>
+        <div class="end-summary__scores">
+          <GameEndScore v-for="(p, index) in playersInPlace" :key="p.color" :player="p" :spaces="game.spaces" :rank="rankOf(p, index)" :winner="winners.includes(p)" />
+        </div>
+        <p class="end-summary__hint" v-i18n>Click a row to see what its points are for; click a card to see it.</p>
+      </section>
+      <MissionCardZoom :playerView="participant" />
       <div class="game_end_victory_points">
-        <h2><span v-i18n>Victory point breakdown after</span> {{ game.generation }} <span v-i18n>generations</span></h2>
-        <table class="table game_end_table">
-          <thead>
-            <tr v-i18n>
-              <th><div class="card-delegate"></div></th>
-              <th><div class="tr"></div></th>
-              <th><div class="m-and-a tooltip tooltip-top" :data-tooltip="$t('Milestones points')">M</div></th>
-              <th><div class="m-and-a tooltip tooltip-top" :data-tooltip="$t('Awards points')">A</div></th>
-              <th><div class="table-forest-tile"></div></th>
-              <th><div class="table-city-tile"></div></th>
-              <th v-if="game.moon !== undefined"><div class="table-moon-road-tile"></div></th>
-              <th v-if="game.moon !== undefined"><div class="table-moon-habitat-tile"></div></th>
-              <th v-if="game.moon !== undefined"><div class="table-moon-mine-tile"></div></th>
-              <th v-if="game.pathfinders !== undefined"><div class="table-planetary-track"></div></th>
-              <th><div class="vp">VP</div></th>
-              <th v-if="game.gameOptions.escapeVelocity" class="clock-icon tooltip tooltip-top" :data-tooltip="$t('Escape Velocity penalty')">&#x23F3;</th>
-              <th class="game-end-total"><div class="game-end-total-column">Total</div></th>
-              <th><div class="mc-icon"></div></th>
-              <th v-if="game.gameOptions.showTimers" class="clock-icon">&#x1F551;</th>
-              <th><div class="table-red-arrow tooltip tooltip-top" :data-tooltip="$t('Actions taken this game')"></div></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="p in playersInPlace" :key="p.color" :class="getEndGamePlayerRowColorClass(p.color)">
-              <td>
-                <a :href="'player?id='+p.id+'&noredirect'">{{ p.name }}</a>
-                <div class="column-corporation">
-                  <div v-for="(corporationName, index) in getCorporationName(p)" :key="index" v-i18n>{{ corporationName }}</div>
-                </div>
-              </td>
-              <td>{{ p.victoryPointsBreakdown.terraformRating }}</td>
-              <td>{{ p.victoryPointsBreakdown.milestones }}</td>
-              <td>{{ p.victoryPointsBreakdown.awards }}</td>
-              <td>{{ p.victoryPointsBreakdown.greenery }}</td>
-              <td>{{ p.victoryPointsBreakdown.city }}</td>
-              <td v-if="game.moon !== undefined">{{ p.victoryPointsBreakdown.moonRoads }}</td>
-              <td v-if="game.moon !== undefined">{{ p.victoryPointsBreakdown.moonHabitats }}</td>
-              <td v-if="game.moon !== undefined">{{ p.victoryPointsBreakdown.moonMines }}</td>
-              <td v-if="game.pathfinders !== undefined"> {{ p.victoryPointsBreakdown.planetaryTracks }}</td>
-              <td>{{ p.victoryPointsBreakdown.victoryPoints }}</td>
-              <td v-if="game.gameOptions.escapeVelocity">{{ p.victoryPointsBreakdown.escapeVelocity }}</td>
-              <td class="game-end-total">{{ p.victoryPointsBreakdown.total }}</td>
-              <td class="game-end-mc">
-                <div>{{ p.megacredits }}</div>
-              </td>
-              <td v-if="game.gameOptions.showTimers"><div class="game-end-timer">{{ getTimer(p) }}</div></td>
-              <td><div class="game-end-timer">{{ p.actionsTakenThisGame }}</div></td>
-            </tr>
-          </tbody>
-        </table>
-        <br>
-        <h2 v-i18n>Victory points details</h2>
+        <h2 v-i18n>Victory points by generation</h2>
         <VictoryPointChart
           :datasets="vpDataset"
           :generation="game.generation"
           :animation="true"
           :id="'victory-point-chart'"
         />
-        <div class="game-end-flexrow">
-          <div v-for="p in playersInPlace" :key="p.color" class="game-end-column">
-            <div class="game-end-winner-scorebreak-player-title">
-              <div :class="'game-end-player ' + getEndGamePlayerRowColorClass(p.color)"><a :href="'player?id='+p.id+'&noredirect'">{{ p.name }}</a></div>
-            </div>
-            <div v-for="v in p.victoryPointsBreakdown.detailsCards" :key="v.cardName">
-              <div class="game-end-column-row">
-                <div class="game-end-column-vp">{{ v.victoryPoint }}</div>
-                <div class="game-end-column-text" v-i18n>{{ v.cardName }}</div>
-              </div>
-            </div>
-            <div class="game-end-column-row">
-              <div class="game-end-column-vp">&nbsp;</div>
-              <div class="game-end-column-text">&nbsp;</div>
-            </div>
-            <div v-for="(v, i) in p.victoryPointsBreakdown.detailsMilestones" :key="i">
-              <div class="game-end-column-row">
-                <div class="game-end-column-vp">{{ v.victoryPoint }}</div>
-                <div class="game-end-column-text">{{ translateMilestoneDetails(v) }}</div>
-              </div>
-            </div>
-            <div v-for="(v, i) in p.victoryPointsBreakdown.detailsAwards" :key="i">
-              <div class="game-end-column-row">
-                <div class="game-end-column-vp">{{ v.victoryPoint }}</div>
-                <div class="game-end-column-text">{{ translateAwardDetails(v) }}</div>
-              </div>
-            </div>
-            <div v-for="v in p.victoryPointsBreakdown.detailsPlanetaryTracks" :key="v.tag">
-              <div class="game-end-column-row">
-                <div class="game-end-column-vp">{{ v.points }}</div>
-                <div class="game-end-column-text" v-i18n>Most tags on the {{ v.tag }} track</div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
       <div class="game_end_victory_points">
         <h2 v-i18n>Global Parameter Contributions</h2>
@@ -232,6 +159,8 @@ import LogPanel from '@/client/components/logpanel/LogPanel.vue';
 import AppButton from '@/client/components/common/AppButton.vue';
 import HomeLink from '@/client/components/common/HomeLink.vue';
 import VictoryPointChart, {DataSet} from '@/client/components/gameend/VictoryPointChart.vue';
+import GameEndScore from '@/client/components/gameend/GameEndScore.vue';
+import MissionCardZoom from '@/client/components/board/MissionCardZoom.vue';
 import {playerColorClass} from '@/common/utils/utils';
 import {Timer} from '@/common/Timer';
 import {Color} from '@/common/Color';
@@ -370,6 +299,8 @@ export default defineComponent({
     PlanetaryTracks,
     DeltaProjectBoard,
     VictoryPointChart,
+    GameEndScore,
+    MissionCardZoom,
   },
   mounted() {
     setDocumentTitle('🏁 | ' + this.game.name);
@@ -378,6 +309,15 @@ export default defineComponent({
     }
   },
   methods: {
+    /** Place of a player: players with the same total and M€ share it. */
+    rankOf(player: PublicPlayerModel, index: number): number {
+      const players = this.playersInPlace;
+      let rank = index;
+      while (rank > 0 && players[rank - 1].victoryPointsBreakdown.total === player.victoryPointsBreakdown.total && players[rank - 1].megacredits === player.megacredits) {
+        rank--;
+      }
+      return rank + 1;
+    },
     cycleTileView(): void {
       this.tileView = nextTileView(this.tileView);
     },
@@ -433,3 +373,64 @@ export default defineComponent({
 });
 
 </script>
+
+<style lang="less">
+#game-end {
+  .end-hero {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin: 8px 0 16px;
+
+    h1 {
+      margin: 0;
+      color: #fff;
+      font-size: 2rem;
+    }
+  }
+
+  .end-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 0 0 24px;
+  }
+
+  .end-summary__winner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    color: #fff3c4;
+    font-size: 1.6rem;
+    font-weight: 900;
+
+    b {
+      padding: 2px 12px;
+      border-radius: 10px;
+      color: #fff;
+      text-shadow: 0 1px 2px #000;
+    }
+
+    small {
+      color: #9fb6bf;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+  }
+
+  .end-summary__scores {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  }
+
+  .end-summary__hint {
+    margin: 0;
+    color: #9fb6bf;
+    font-size: 0.85rem;
+  }
+}
+</style>
+
