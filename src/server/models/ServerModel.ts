@@ -257,7 +257,10 @@ export class Server {
       megacreditProduction: player.production.megacredits,
       name: player.name,
       needsToDraft: player.needsToDraft,
-      needsToResearch: !game.hasResearched(player),
+      // The first research (corporation, preludes, cards) is done once the corporation is picked.
+      needsToResearch: game.phase === Phase.RESEARCH && game.generation === 1 && player.dealtCorporationCards.length > 0 ?
+        player.pickedCorporationCard === undefined :
+        !game.hasResearched(player),
       noTagsCount: player.tags.numberOfCardsWithNoTags(),
       plants: player.plants,
       plantProduction: player.production.plants,

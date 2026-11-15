@@ -143,15 +143,15 @@ const rows = computed((): Array<Row> => {
   flex-direction: column;
   gap: 10px;
   padding: 16px;
-  border: 1px solid #ffffff22;
+  border: 1px solid #ead9c6;
   border-radius: 16px;
-  background: linear-gradient(160deg, #13212bf2, #0a1218f2);
-  box-shadow: 0 10px 28px #0009;
-  color: #e9f2f5;
+  background: #fffaf4;
+  box-shadow: 0 4px 14px #0000001a;
+  color: #2d1d14;
 
   &--winner {
-    border-color: #e2c27f;
-    box-shadow: 0 0 0 1px #e2c27f, 0 0 30px #e2c27f44, 0 10px 28px #0009;
+    border-color: #f2a531;
+    box-shadow: 0 0 0 1px #f2a531, 0 6px 20px #f2a53133;
   }
 }
 
@@ -168,13 +168,13 @@ const rows = computed((): Array<Row> => {
   flex: none;
   place-items: center;
   border-radius: 50%;
-  background: #ffffff14;
+  background: #f1e6da;
   font-size: 1.2rem;
   font-weight: 900;
 
   .end-score--winner & {
-    background: #e2c27f;
-    color: #1b1200;
+    background: #f2a531;
+    color: #fff;
   }
 }
 
@@ -187,7 +187,7 @@ const rows = computed((): Array<Row> => {
 
   small {
     overflow: hidden;
-    color: #9fb6bf;
+    color: #7d6656;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -213,14 +213,14 @@ const rows = computed((): Array<Row> => {
   }
 
   small {
-    color: #9fb6bf;
+    color: #7d6656;
     font-weight: 700;
   }
 }
 
 .end-score__crown {
   margin: 0;
-  color: #fff3c4;
+  color: #c27a12;
   font-weight: 800;
 }
 
@@ -241,7 +241,7 @@ const rows = computed((): Array<Row> => {
   gap: 10px;
   padding: 8px 10px;
   border-radius: 10px;
-  background: #ffffff0a;
+  background: #f6ece1;
 }
 
 .end-score__details > summary {
@@ -253,12 +253,12 @@ const rows = computed((): Array<Row> => {
   }
 
   &:hover {
-    background: #ffffff16;
+    background: #efe0cf;
   }
 }
 
 .end-score__details[open] > summary {
-  background: #ffffff16;
+  background: #efe0cf;
 }
 
 .end-score__label {
@@ -267,7 +267,7 @@ const rows = computed((): Array<Row> => {
 
 .end-score__why {
   overflow: hidden;
-  color: #9fb6bf;
+  color: #7d6656;
   font-size: 0.85rem;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -275,7 +275,7 @@ const rows = computed((): Array<Row> => {
 
 .end-score__vp {
   min-width: 2.5rem;
-  color: #fff;
+  color: #2d1d14;
   font-size: 1.15rem;
   font-weight: 900;
   text-align: right;
@@ -295,22 +295,22 @@ const rows = computed((): Array<Row> => {
   align-items: center;
   gap: 8px;
   padding: 4px 10px;
-  border: 1px solid #ffffff22;
+  border: 1px solid #ead9c6;
   border-radius: 999px;
-  background: #0b141c;
-  color: #dbe7eb;
+  background: #fff;
+  color: #2d1d14;
   font: inherit;
   font-size: 0.85rem;
 
   b {
-    color: #b4ffeb;
+    color: #c2561d;
   }
 
   &--card {
     cursor: pointer;
 
     &:hover {
-      border-color: #b4ffeb;
+      border-color: #e8743b;
     }
   }
 }
@@ -319,7 +319,7 @@ const rows = computed((): Array<Row> => {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  color: #9fb6bf;
+  color: #7d6656;
   font-size: 0.85rem;
 }
 

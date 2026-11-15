@@ -18,7 +18,7 @@
       <span aria-hidden="true">♪</span>
     </button>
     <MissionSettings v-if="cinematic" />
-    <Sidebar v-else
+    <Sidebar v-else-if="!setupMode"
       :actingPlayer="isPlayerActing(playerView)"
       :playerColor="thisPlayer.color"
       :generation="game.generation"
@@ -37,7 +37,7 @@
       :otherDeckSizes="game.otherDeckSizes" />
 
 
-    <header class="mission-status">
+    <header v-if="!setupMode" class="mission-status">
       <div>
         <p class="mission-status__generation">
           <span class="mission-status__generation-label" v-i18n>Generation</span>
@@ -142,15 +142,13 @@
       @close="closeProjectPreview" @play="playPreviewedProject" />
 
     <template v-if="thisPlayer.tableau.length === 0">
-      <PlayerSetupView :playerView="playerView" :tileView="tileView" @toggleTileView="cycleTileView()">
-        <TopBar :playerView="playerView" />
-      </PlayerSetupView>
+      <PlayerSetupView :playerView="playerView" :tileView="tileView" @toggleTileView="cycleTileView()" />
     </template>
 
     <SelectSpace v-if="mapPlacementInput" :key="playerView.requestId" :playerView="playerView" :playerinput="mapPlacementInput"
       :onsave="placeTile" :showsave="true" :showtitle="false" />
 
-    <section v-show="!cinematic || missionPanel !== undefined" ref="missionPanelElement" class="mission-panel" :class="{'mission-panel--decision': decisionMode}" tabindex="-1" :aria-label="$t('Game details')" @keydown.esc.stop="closeMissionPanel">
+    <section v-show="!setupMode && (!cinematic || missionPanel !== undefined)" ref="missionPanelElement" class="mission-panel" :class="{'mission-panel--decision': decisionMode}" tabindex="-1" :aria-label="$t('Game details')" @keydown.esc.stop="closeMissionPanel">
       <header v-if="cinematic" class="mission-panel__nav">
         <strong v-if="missionPanelLabel">{{ $t(missionPanelLabel) }}</strong>
         <button type="button" class="mission-panel__close" :aria-label="$t('Close')" @click="closeMissionPanel">×</button>
@@ -618,6 +616,10 @@ export default defineComponent({
         return undefined;
       }
       return this.playerView.players.find((player) => player.isActive && (phase !== Phase.ACTION || !passedPlayers.includes(player.color)))?.color;
+    },
+    /** Before the first generation: the setup page alone, without the game screen around it. */
+    setupMode(): boolean {
+      return this.thisPlayer.tableau.length === 0 && this.game.phase !== 'end';
     },
     cinematic(): boolean {
       return this.thisPlayer.tableau.length > 0 && this.game.phase !== 'end';
