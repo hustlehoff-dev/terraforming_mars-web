@@ -17,10 +17,6 @@ export type DecisionChoice = {
   targetColor?: Color;
   secondary?: boolean;
   description?: string;
-  details?: string;
-  owner?: string;
-  price?: number;
-  disabled?: boolean;
 };
 
 export function milestoneAwardChoice(name: AwardName | MilestoneName, kind?: 'awards' | 'milestones'): DecisionChoice {
@@ -28,7 +24,7 @@ export function milestoneAwardChoice(name: AwardName | MilestoneName, kind?: 'aw
   const milestone = kind !== 'awards' ? getMilestone(name as MilestoneName) : undefined;
   return {
     title: name,
-    icon: `assets/ma/${name.toLowerCase().replace(/[^a-z0-9]/g, '')}.png`,
+    icon: `assets/ma/${name.toLowerCase().replaceAll(' ', '-').replaceAll('.', '')}.png`,
     description: (award ?? milestone)?.description,
   };
 }

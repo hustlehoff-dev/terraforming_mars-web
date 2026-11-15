@@ -3,23 +3,31 @@
     <Teleport to="body">
       <!-- Same window as the card reveal and deck choice. -->
       <dialog v-if="open" ref="dialog" class="wf-root deck-choice-dialog mission-hud-dialog"
-        :class="{'mission-hud-dialog--ma': maKind, 'mission-hud-dialog--choices': maKind || open === 'all'}" :aria-label="dialogTitle"
+        :class="{'mission-hud-dialog--list': maKind, 'mission-hud-dialog--choices': open === 'all'}" :aria-label="dialogTitle"
         @cancel.prevent="open = undefined" @click.self="open = undefined">
-        <DecisionHeading class="mission-hud-dialog__heading" :title="titles[open]" :literal-title="dialogTitle" closable @close="open = undefined" />
-        <div v-if="maKind" class="mission-hud-dialog__scroll mission-hud-dialog__scroll--ma">
-          <ol v-if="maSlots.length" class="mission-ma__slots" :aria-label="$t('Cost')">
-            <li v-for="(slot, index) in maSlots" :key="index" :class="{'mission-ma__slot--next': slot.next}">
-              <span>#{{ index + 1 }}</span>
-              <strong v-if="slot.price !== undefined">{{ slot.price }} M€</strong>
-              <small v-else>{{ $t(maKind === 'awards' ? 'Funded' : 'Claimed') }}</small>
-            </li>
-          </ol>
-          <p v-if="!maSub" class="mission-hud-dialog__hint" v-i18n>Not available now</p>
-          <DecisionTiles :choices="maItems" :busy="requestInProgress" @choose="chooseMa" />
-        </div>
-        <div v-else class="wf-component deck-deal mission-hud-dialog__scroll">
+        <div v-if="maKind" class="wf-component-title mission-hud-dialog__title">{{ dialogTitle }}</div>
+        <DecisionHeading v-else class="mission-hud-dialog__heading" :title="titles[open]" :literal-title="dialogTitle" closable @close="open = undefined" />
+        <div class="wf-component deck-deal mission-hud-dialog__scroll">
 
-          <template v-if="open === 'played'">
+          <template v-if="maKind">
+            <p v-if="maPrices.length" class="mission-hud-dialog__hint mission-hud-dialog__costs">
+              {{ $t('Cost') }} <strong>{{ maPrices.map((price) => price + ' M€').join(' → ') }}</strong>
+            </p>
+            <div v-for="(item, index) in maItems" :key="item.title" class="mission-hud-dialog__ma" :class="{'mission-hud-dialog__ma--taken': item.owner}">
+              <img :src="item.icon" alt="" @error="($event.target as HTMLImageElement).style.visibility = 'hidden'">
+              <div class="mission-hud-dialog__ma-text">
+                <strong>{{ $t(item.title) }}</strong>
+                <small>{{ $t(item.description) }}</small>
+                <small v-if="item.scores" class="mission-hud-dialog__scores">{{ item.scores }}</small>
+                <small v-if="item.specialPrice !== undefined" class="mission-hud-dialog__costs">{{ item.specialPrice }} M€</small>
+              </div>
+              <span v-if="item.owner" class="mission-hud-dialog__owner">{{ item.owner }}</span>
+              <AppButton v-else-if="item.index >= 0" type="submit" :title="maKind === 'awards' ? 'Fund' : 'Claim'" @click="chooseMa(index)" />
+            </div>
+            <p v-if="!maSub" class="mission-hud-dialog__hint" v-i18n>Not available now</p>
+          </template>
+
+          <template v-else-if="open === 'played'">
             <!-- Filter by tag; the number is how many of that tag the player has. -->
             <div v-if="playedTags.length" class="nofloat mission-tags" role="group" :aria-label="$t('Filter by tag')">
               <button type="button" class="mission-tags__tag" :class="{'mission-tags__tag--on': tagFilter === undefined}" :aria-pressed="tagFilter === undefined"
@@ -130,6 +138,7 @@
         <!-- Fixed under the list: never scrolls away, never covers the cards. -->
         <footer class="mission-hud-dialog__footer">
           <AppButton v-if="open === 'sell'" type="submit" :disabled="picked.size === 0" :title="sellLabel" @click="sell" />
+          <AppButton v-if="maKind" type="submit" title="Close" @click="open = undefined" />
           <DialogPeek />
         </footer>
       </dialog>
@@ -157,7 +166,6 @@ import {PlayerViewModel} from '@/common/models/PlayerModel';
 import {InputResponse} from '@/common/inputs/InputResponse';
 import {translateText} from '@/client/directives/i18n';
 import DecisionHeading from './DecisionHeading.vue';
-import DecisionTiles from './DecisionTiles.vue';
 import {milestoneAwardChoice} from './DecisionChoice';
 import {actionMenu, MissionQuickAction} from './MissionQuickAction';
 
@@ -253,17 +261,17 @@ const maEntries = computed(() => {
   const {game} = props.playerView;
   return maKind.value === 'awards' ? game.awards : game.milestones;
 });
-const maSlots = computed(() => {
+const maPrices = computed(() => {
   if (!maKind.value || props.playerView.players.length < 2 || !maEntries.value.length) {
     return [];
   }
   const awards = maKind.value === 'awards';
   const used = maEntries.value.filter((entry) => entry.color !== undefined || entry.playerName !== undefined).length;
   const costs = props.playerView.milestoneAwardCosts;
-  return Array.from({length: awards ? MAX_AWARDS : MAX_MILESTONES}, (_, index) => {
-    const price = awards ? costs?.awards[index - used] ?? AWARD_COSTS[index] : costs?.milestone ?? MILESTONE_COST;
-    return {price: index < used ? undefined : price, next: index === used};
-  });
+  if (awards) {
+    return used < MAX_AWARDS ? costs?.awards ?? AWARD_COSTS.slice(used) : [];
+  }
+  return used < MAX_MILESTONES ? [costs?.milestone ?? MILESTONE_COST] : [];
 });
 
 const maItems = computed(() => {
@@ -272,22 +280,18 @@ const maItems = computed(() => {
     return [];
   }
   const sub = maSub.value;
-  const nextPrice = maSlots.value.find((slot) => slot.next)?.price;
+  const nextPrice = maPrices.value[0];
   const costs = props.playerView.milestoneAwardCosts;
   const playerNames = new Map(props.playerView.players.map((player) => [player.color, player.name]));
-  const ownerLabel = translateText(kind === 'awards' ? 'Funded by' : 'Claimed by');
   return maEntries.value.map((entry) => {
     const index = sub?.option.options.findIndex((option) => titleOf(option) === entry.name) ?? -1;
     const owner = entry.playerName ?? (entry.color === undefined ? undefined : playerNames.get(entry.color) ?? entry.color);
-    const price = kind === 'milestones' && nextPrice !== undefined ?
-      costs?.milestoneOverrides[entry.name as MilestoneName] ?? nextPrice : nextPrice;
+    const price = kind === 'milestones' ? costs?.milestoneOverrides[entry.name as MilestoneName] : undefined;
     return {
       ...milestoneAwardChoice(entry.name, kind),
-      owner: owner !== undefined ? `${ownerLabel} ${owner}` : undefined,
-      targetColor: entry.color,
-      details: entry.scores.map((score) => `${playerNames.get(score.color) ?? score.color}: ${score.score}`).join(' · '),
-      price: owner !== undefined ? undefined : price,
-      disabled: owner !== undefined || index < 0,
+      owner,
+      scores: entry.scores.map((score) => `${playerNames.get(score.color) ?? score.color}: ${score.score}`).join(' · '),
+      specialPrice: owner === undefined && nextPrice !== undefined && price !== nextPrice ? price : undefined,
       index,
     };
   });
@@ -392,7 +396,7 @@ function chooseOther(item: {index: number, title: string, type: string}) {
 function chooseMa(index: number) {
   const sub = maSub.value;
   const item = maItems.value[index];
-  if (sub && item && !item.disabled && !requestInProgress.value) {
+  if (sub && item && item.owner === undefined && item.index >= 0 && !requestInProgress.value) {
     open.value = undefined;
     emit('respond', {type: 'or', index: sub.index, response: {type: 'or', index: item.index, response: {type: 'option'}}});
   }
@@ -510,6 +514,12 @@ function chooseMa(index: number) {
     margin-bottom: 12px;
   }
 
+  .mission-hud-dialog__title {
+    flex: none;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+
   // Only the list scrolls, without a visible scrollbar; edges fade out.
   .mission-hud-dialog__scroll {
     flex: 1 1 auto;
@@ -551,63 +561,61 @@ function chooseMa(index: number) {
     box-shadow: 0 24px 64px #000b;
   }
 
-  &.mission-hud-dialog--ma.deck-choice-dialog {
-    width: min(740px, calc(100vw - 24px));
-    max-width: calc(100vw - 24px);
+  &.mission-hud-dialog--list.deck-choice-dialog {
+    width: min(620px, 92vw);
+    max-width: min(620px, 92vw);
+  }
 
-    .mission-hud-dialog__heading {
-      width: 100%;
-      max-width: 680px;
-      margin-inline: auto;
+  .mission-hud-dialog__ma {
+    display: flex;
+    flex-basis: min(560px, 100%) !important;
+    min-width: 0;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid #5f7d8a;
+    border-radius: 6px;
+    background: #142430;
+    text-align: left;
+
+    img {
+      width: 46px;
+      height: 46px;
+      flex: none;
+      object-fit: contain;
+    }
+
+    &--taken {
+      opacity: 0.7;
     }
   }
 
-  .mission-hud-dialog__scroll--ma {
-    padding: 2px;
-    mask-image: none;
-    scrollbar-width: thin;
-    scrollbar-color: #74909b transparent;
-
-    &::-webkit-scrollbar {
-      display: block;
-      width: 6px;
-    }
-  }
-
-  .mission-ma__slots {
+  .mission-hud-dialog__ma-text {
     display: grid;
-    max-width: 680px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    margin: 0 auto 12px;
-    padding: 0;
-    list-style: none;
+    min-width: 0;
+    flex: 1;
+    gap: 2px;
+    overflow-wrap: anywhere;
 
-    li {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: baseline;
-      gap: 4px 8px;
-      margin: 0;
-      padding: 8px;
-      border: 1px solid #49616d;
-      border-radius: 8px;
-      background: #142630;
-      color: #c8d8e0;
-      font-size: 0.9rem;
+    small {
+      color: #b9c8ce;
     }
+  }
 
-    strong {
-      color: #ffe3a4;
-      font-size: 1.1rem;
-      font-variant-numeric: tabular-nums;
-      white-space: nowrap;
-    }
+  .mission-hud-dialog__scores,
+  .mission-hud-dialog__costs strong,
+  .mission-hud-dialog__ma-text .mission-hud-dialog__costs {
+    color: #f6e2b8;
+  }
 
-    .mission-ma__slot--next {
-      border-color: #e2c27f;
-      background: #25313a;
-    }
+  .mission-hud-dialog__owner {
+    max-width: 35%;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: #3a2614;
+    color: #ffd9a1;
+    font-weight: 700;
+    overflow-wrap: anywhere;
   }
 
   .wf-component-title {
