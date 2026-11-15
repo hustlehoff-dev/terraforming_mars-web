@@ -100,7 +100,7 @@
             :canPass="passIndex !== -1" :canEndTurn="endTurnIndex !== -1" :active="activeTurnColor === thisPlayer.color && playerView.waitingFor !== undefined"
             :requestId="playerView.requestId" :deadline="thisPlayer.turnDeadline" :actionsTaken="thisPlayer.actionsTakenThisRound" :noActionLimit="othersPassed" :soloGame="playerView.players.length === 1" @select="openQuickAction" @cardAction="(card) => stageCardAction(card)" @pass="passNow" @endTurn="endTurn" />
         </div>
-        <MissionCardZoom v-if="cinematic" />
+        <MissionCardZoom v-if="cinematic" :playerView="playerView" />
         <MissionPauseOverlay v-if="cinematic" :paused="game.paused" :players="playerView.players" :busy="pausing" @resume="setPaused(false)" />
         <MissionDraftWaiting v-if="cinematic && draftLockedIn" :players="playerView.players" :deadline="game.draftDeadline" />
         <ConfirmDialog v-if="cinematic" ref="heatConfirm" message="Spend 8 heat to raise the temperature 1 step?" @accept="convertHeatNow" />
