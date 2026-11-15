@@ -5,7 +5,6 @@
   <dialog v-if="colonies.length" ref="dialog" class="mission-colonies" :aria-label="$t('Colonies')" @click.self="closeWindow">
     <header>
       <h2 v-i18n>Colonies</h2>
-      <button type="button" class="mission-colonies__close" :aria-label="$t('Close')" @click="closeWindow">×</button>
     </header>
     <!-- Trade fleets still free this generation, per player. -->
     <ul v-if="players.length" class="mission-colonies__fleets" :aria-label="$t('Trade fleets')">
@@ -23,6 +22,9 @@
         <Colony :colony="colony" :active="colony.isActive" />
       </div>
     </div>
+    <footer class="mission-window-footer">
+      <button type="button" class="mission-close" @click="closeWindow" v-i18n>Close</button>
+    </footer>
   </dialog>
 </template>
 

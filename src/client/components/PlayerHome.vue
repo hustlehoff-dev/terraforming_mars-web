@@ -153,7 +153,6 @@
     <section v-show="!setupMode && (!cinematic || missionPanel !== undefined)" ref="missionPanelElement" class="mission-panel" :class="{'mission-panel--decision': decisionMode}" tabindex="-1" :aria-label="$t('Game details')" @keydown.esc.stop="closeMissionPanel">
       <header v-if="cinematic && !decisionMode" class="mission-panel__nav">
         <strong v-if="missionPanelLabel">{{ $t(missionPanelLabel) }}</strong>
-        <button type="button" class="mission-panel__close" :aria-label="$t('Close')" @click="closeMissionPanel">×</button>
       </header>
       <div class="mission-panel__body" ref="missionPanelBody">
         <DecisionHeading v-if="decisionMode && missionPanelLabel" class="mission-panel__decision-heading"
@@ -294,6 +293,9 @@
           <PurgeWarning :expectedPurgeTimeMs="game.expectedPurgeTimeMs" />
         </div>
       </div>
+      <footer v-if="cinematic" class="mission-window-footer">
+        <button type="button" class="mission-close" @click="closeMissionPanel" v-i18n>Close</button>
+      </footer>
     </section>
     <KeyboardShortcuts v-show="keyboardShortcutOpened" @close="keyboardShortcutOpened = false" />
   </div>

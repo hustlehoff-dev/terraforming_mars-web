@@ -8,7 +8,6 @@
     <div class="mission-settings__panel">
       <header>
         <h2 id="mission-settings-title" v-i18n>Player Settings</h2>
-        <button type="button" class="mission-settings__close" :aria-label="$t('Close')" autofocus @click="close">×</button>
       </header>
       <div class="mission-settings__body">
         <PreferenceFields :preferencesManager="PreferencesManager.INSTANCE" mission />
@@ -31,6 +30,9 @@
         <a href="help" target="_blank" rel="noopener" v-i18n>Player aid</a>
         <button type="button" @click="bugDialog?.show()" v-i18n>Report a bug</button>
       </footer>
+      <div class="mission-window-footer">
+        <button type="button" class="mission-close" autofocus @click="close" v-i18n>Close</button>
+      </div>
     </div>
     <BugReportDialog ref="bugDialog" />
     <ConfirmDialog ref="surrenderConfirm" message="Surrender? You are placed last and the game ends for everyone." @accept="endGame('surrender')" />

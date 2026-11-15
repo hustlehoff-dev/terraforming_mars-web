@@ -22,7 +22,6 @@
       <header>
         <h2>{{ $t('Effects') }} · {{ effectCards.length }}</h2>
         <span v-if="usableCards.length" class="mission-effects-window__count">{{ $t('Actions available') }}: {{ usableCards.length }}</span>
-        <button type="button" class="mission-effects-window__close" :aria-label="$t('Close')" @click="closeWindow">×</button>
       </header>
       <div class="mission-effects-window__cards">
         <div v-for="card in windowCards" :key="card.name" class="mission-effects-window__card"
@@ -31,6 +30,9 @@
           <button v-if="usable?.has(card.name)" type="button" class="mission-effects-window__use" @click="useAction(card)">{{ $t('Use action') }}</button>
         </div>
       </div>
+      <footer class="mission-window-footer">
+        <button type="button" class="mission-close" @click="closeWindow" v-i18n>Close</button>
+      </footer>
     </dialog>
   </div>
 </template>

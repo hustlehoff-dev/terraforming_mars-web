@@ -19,7 +19,9 @@ export class CorrosiveRainDeferredAction extends DeferredAction {
   public execute() {
     const floaterCards = this.player.getCardsWithResources(CardResource.FLOATER).filter((card) => card.resourceCount >= 2);
 
+    // Says where the choice comes from: the global event of this generation.
     const selectAction = new OrOptions();
+    selectAction.title = 'Global event Corrosive Rain: remove 2 floaters from a card, or lose up to 10 M€';
     const payMC = new SelectOption('Lose up to 10 M€', 'Lose M€').andThen(() => {
       this.player.stock.deduct(Resource.MEGACREDITS, 10, {log: true, from: {globalEvent: GlobalEventName.CORROSIVE_RAIN}});
       return undefined;

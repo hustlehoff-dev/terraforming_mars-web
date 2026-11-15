@@ -138,7 +138,7 @@
         <!-- Fixed under the list: never scrolls away, never covers the cards. -->
         <footer class="mission-hud-dialog__footer">
           <AppButton v-if="open === 'sell'" type="submit" :disabled="picked.size === 0" :title="sellLabel" @click="sell" />
-          <AppButton v-if="maKind" type="submit" title="Close" @click="open = undefined" />
+          <button type="button" class="mission-close" @click="open = undefined" v-i18n>Close</button>
           <DialogPeek />
         </footer>
       </dialog>
