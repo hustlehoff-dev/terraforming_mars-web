@@ -230,7 +230,7 @@ const entries = computed(() => mergeDeckRuns(events.value).map((event) => {
     }
     if (step.deck) {
       const recipient = step.deck.player ? players.value.get(step.deck.player)?.name : undefined;
-      return [recipient, translateText(deckLabels[step.deck.kind]), step.deck.cards.map(translateText).join(', ')].filter(Boolean).join(' ');
+      return [recipient, translateText(deckLabels[step.deck.kind])].filter(Boolean).join(' ') + ': ' + step.deck.cards.map(translateText).join(', ');
     }
     const recipient = step.player ? players.value.get(step.player)?.name ?? step.player : undefined;
     const count = step.count === 1 ? translateText('Drew a card') : translateTextWithParams('Drew ${0} cards', [String(step.count ?? 0)]);

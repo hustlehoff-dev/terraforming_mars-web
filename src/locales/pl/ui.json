@@ -502,6 +502,7 @@
   "time ran out": "skończył się czas",
   "${0} card(s), discarded ${1}": "${0} kart(y), odrzuca ${1}",
   "${0} card(s)": "${0} kart(y)",
+  "Card details": "Szczegóły karty",
   "Bought": "Kupione",
   "You drew a card": "Dobrałeś kartę",
   "You drew ${0} cards": "Dobrałeś ${0} karty",

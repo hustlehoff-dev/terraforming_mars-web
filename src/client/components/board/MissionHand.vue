@@ -4,6 +4,7 @@
     name="mission-draw"
     tag="div"
     class="mission-hand"
+    :class="{'mission-hand--dragging': drag?.moved, 'mission-hand--drop-play': drag?.armed}"
     role="group"
     :aria-label="$t('Cards In Hand')"
     :style="{'--hand-overlap': overlap + 'px'}"
@@ -47,13 +48,21 @@ import {CardName} from '@/common/cards/CardName';
 import {SoundManager} from '@/client/utils/SoundManager';
 
 const props = defineProps<{cards: ReadonlyArray<CardModel>, playableCards?: ReadonlySet<CardName>, inspected?: CardName}>();
-const emit = defineEmits<{preview: [card: CardModel, origin: DOMRect], play: [card: CardModel, origin: DOMRect], pin: [card: CardModel, x: number, y: number]}>();
+const emit = defineEmits<{preview: [card: CardModel, origin: DOMRect], play: [card: CardModel, origin: DOMRect]}>();
 // Recent pointer positions, to tell a throw (fast upward release) from a calm drop.
-let trail: Array<{x: number, y: number, t: number}> = [];
-const THROW_SPEED = 0.9; // px per ms upwards
+// Dragging a playable card out of the zone around the hand and letting go plays it; let go
+// inside the zone, the card goes back to the hand.
+const ZONE_MARGIN = 70;
 
-// Dragging a playable card up out of the hand and letting go over the board plays it.
-const PLAY_LIFT = 90;
+/** True when the pointer is outside the zone around the hand (where a card is put back). */
+function outsideHandZone(x: number, y: number): boolean {
+  const root = instance?.proxy?.$el;
+  if (!(root instanceof HTMLElement)) {
+    return false;
+  }
+  const zone = root.getBoundingClientRect();
+  return x < zone.left - ZONE_MARGIN || x > zone.right + ZONE_MARGIN || y < zone.top - ZONE_MARGIN || y > zone.bottom + ZONE_MARGIN;
+}
 type Drag = {name: CardName, card: CardModel, pointerId: number, startX: number, startY: number, x: number, y: number, moved: boolean, armed: boolean, origin: DOMRect};
 const drag = shallowRef<Drag>();
 let suppressClick = false;
@@ -62,7 +71,8 @@ const dragStyle = computed<CSSProperties>(() => {
   if (d === undefined) {
     return {};
   }
-  const scale = d.armed ? 0.62 : 0.5;
+  // The card grows as it leaves the hand, more once letting go would play it.
+  const scale = d.armed ? 0.85 : 0.62;
   return {
     '--drag-x': `${d.x - 120 * scale}px`,
     '--drag-y': `${d.y - 176 * scale}px`,
@@ -78,7 +88,6 @@ function startDrag(card: CardModel, event: PointerEvent) {
   suppressClick = false;
   event.currentTarget.setPointerCapture(event.pointerId);
   drag.value = {name: card.name, card, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY, moved: false, armed: false, origin: event.currentTarget.getBoundingClientRect()};
-  trail = [{x: event.clientX, y: event.clientY, t: performance.now()}];
 }
 
 function moveDrag(event: PointerEvent) {
@@ -90,9 +99,7 @@ function moveDrag(event: PointerEvent) {
   if (moved && !d.moved) {
     raised.value = undefined;
   }
-  const now = performance.now();
-  trail = [...trail.filter((point) => now - point.t < 120), {x: event.clientX, y: event.clientY, t: now}];
-  const armed = moved && d.origin.top - event.clientY > PLAY_LIFT && (props.playableCards?.has(d.name) ?? false);
+  const armed = moved && outsideHandZone(event.clientX, event.clientY) && (props.playableCards?.has(d.name) ?? false);
   drag.value = {...d, x: event.clientX, y: event.clientY, moved, armed};
 }
 
@@ -106,16 +113,11 @@ function endDrag(event: PointerEvent) {
     return;
   }
   suppressClick = true;
-  const first = trail[0];
-  const elapsed = first ? Math.max(1, performance.now() - first.t) : 1;
-  const upwardSpeed = first ? (first.y - event.clientY) / elapsed : 0;
-  if (d.armed && upwardSpeed > THROW_SPEED) {
+  if (d.armed) {
     SoundManager.mission('card');
     emit('play', d.card, new DOMRect(event.clientX - 60, event.clientY - 88, 120, 176));
-  } else if (d.origin.top - event.clientY > 40) {
-    // Calmly put down above the hand: the card stays there.
-    emit('pin', d.card, event.clientX, event.clientY);
   }
+  // Otherwise the card goes back to the hand.
 }
 
 function cancelDrag() {
@@ -299,5 +301,18 @@ onBeforeUnmount(() => {
 
 .mission-hand__slot + .mission-hand__slot {
   margin-left: calc(-1 * var(--hand-overlap, 0px));
+}
+
+// While a card is dragged: the zone around the hand where letting go puts it back.
+.mission-hand--dragging {
+  outline: 2px dashed #e2c27f99;
+  outline-offset: 70px;
+  border-radius: 18px;
+  transition: outline-color 120ms ease;
+}
+
+// Out of the zone with a playable card: letting go plays it.
+.mission-hand--drop-play {
+  outline-color: #3cf59a66;
 }
 </style>

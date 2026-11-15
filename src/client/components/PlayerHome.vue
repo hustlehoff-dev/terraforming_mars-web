@@ -104,8 +104,6 @@
         <MissionPauseOverlay v-if="cinematic" :paused="game.paused" :players="playerView.players" :busy="pausing" @resume="setPaused(false)" />
         <MissionDraftWaiting v-if="cinematic && draftLockedIn" :players="playerView.players" :deadline="game.draftDeadline" />
         <ConfirmDialog v-if="cinematic" ref="heatConfirm" message="Spend 8 heat to raise the temperature 1 step?" @accept="convertHeatNow" />
-        <MissionPinnedCards v-if="cinematic" ref="pinnedCards" :cards="allCardsInHand" :playerId="playerView.id" :playableCards="cardAvailability.projects"
-          @preview="previewProject" @change="(names) => pinnedNames = names" />
         <MissionStandardProjects v-if="cinematic && !mapPlacement" :actions="quickActions" @select="openQuickAction" />
         <div class="mission-dock">
           <MissionHudMenus ref="hudMenus" :playerView="playerView" :actions="quickActions" :actionCards="cardActions?.cards" @project="openQuickAction" @respond="respondToMenu" @cardAction="useCardActionNow" @playCard="(card) => previewProject(card)" />
@@ -115,7 +113,7 @@
             :playableCards="cardAvailability.projects"
             :actionCards="cardAvailability.actions"
             :conversions="conversions" @convert="openQuickAction"
-            :inspected="previewedProject?.name" @preview="previewProject" @play="dropProject" @pin="pinCard">
+            :inspected="previewedProject?.name" @preview="previewProject" @play="dropProject">
             <template #afterStocks>
               <button type="button" class="mission-dock__played" @click="showPlayerCards(thisPlayer.color)">
                 <img src="assets/resources/card.png" alt=""><span>{{ $t('Played Cards') }}</span>
@@ -341,7 +339,6 @@ import MissionTurnButton from '@/client/components/board/MissionTurnButton.vue';
 import MissionStandardProjects from '@/client/components/board/MissionStandardProjects.vue';
 import MissionHudMenus from '@/client/components/board/MissionHudMenus.vue';
 import ConfirmDialog from '@/client/components/common/ConfirmDialog.vue';
-import MissionPinnedCards from '@/client/components/board/MissionPinnedCards.vue';
 import MissionDraftWaiting from '@/client/components/board/MissionDraftWaiting.vue';
 import {paths} from '@/common/app/paths';
 import {vueRoot} from '@/client/components/vueRoot';
@@ -371,8 +368,6 @@ type PlayerHomeModel = {
   litEffects: ReadonlySet<CardName>;
   /** Menu index of the heat conversion waiting for confirmation. */
   pendingHeat: number | undefined;
-  /** Hand cards left on the table (MissionPinnedCards), not shown in the hand. */
-  pinnedNames: ReadonlySet<CardName>;
   /** A played card lifted from the action rail, waiting for "Use action". */
   stagedAction: CardModel | undefined;
   previewedProject: CardModel | undefined;
@@ -456,7 +451,6 @@ export default defineComponent({
       choosingFinalGreenery: false,
       pendingGreenery: undefined,
       stagedAction: undefined,
-      pinnedNames: new Set(),
       pendingHeat: undefined,
       litEffects: new Set(),
       pausing: false,
@@ -631,7 +625,7 @@ export default defineComponent({
       return getPreferences().music_volume;
     },
     handCards(): ReadonlyArray<CardModel> {
-      return this.allCardsInHand.filter((card) => !this.pinnedNames.has(card.name));
+      return this.allCardsInHand;
     },
     cardActions(): {index: number, cards: ReadonlyArray<CardModel>} | undefined {
       const option = this.activeTurnColor === this.thisPlayer.color ? cardActionOption(this.playerView.waitingFor) : undefined;
@@ -780,7 +774,6 @@ export default defineComponent({
     MissionTurnButton,
     MissionStandardProjects,
     MissionHudMenus,
-    MissionPinnedCards,
     ConfirmDialog,
     MissionDraftWaiting,
     MissionPauseOverlay,
@@ -973,9 +966,6 @@ export default defineComponent({
         (this.$refs.waitingFor as InstanceType<typeof WaitingFor> | undefined)?.onsave({type: 'or', index: this.pendingHeat, response: {type: 'option'}});
         this.pendingHeat = undefined;
       }
-    },
-    pinCard(card: CardModel, x: number, y: number) {
-      (this.$refs.pinnedCards as InstanceType<typeof MissionPinnedCards> | undefined)?.pin(card.name, x, y);
     },
     dropProject(card: CardModel) {
       // A thrown card opens in the centre straight away (no flight from the pointer).

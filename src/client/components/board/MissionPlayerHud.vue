@@ -29,7 +29,7 @@
       </li>
     </ul>
     <slot name="afterStocks"></slot>
-    <MissionHand :cards="cards" :playableCards="playableCards" :inspected="inspected" @preview="(card, origin) => emit('preview', card, origin)" @play="(card, origin) => emit('play', card, origin)" @pin="(card, x, y) => emit('pin', card, x, y)" />
+    <MissionHand :cards="cards" :playableCards="playableCards" :inspected="inspected" @preview="(card, origin) => emit('preview', card, origin)" @play="(card, origin) => emit('play', card, origin)" />
   </div>
 </template>
 
@@ -55,7 +55,7 @@ const props = defineProps<{
   conversions?: Partial<Record<string, MissionQuickAction>>;
   inspected?: CardName;
 }>();
-const emit = defineEmits<{preview: [card: CardModel, origin: DOMRect], play: [card: CardModel, origin: DOMRect], convert: [action: MissionQuickAction], pin: [card: CardModel, x: number, y: number]}>();
+const emit = defineEmits<{preview: [card: CardModel, origin: DOMRect], play: [card: CardModel, origin: DOMRect], convert: [action: MissionQuickAction]}>();
 const corporations = computed(() => getCardsByType(props.player.tableau, [CardType.CORPORATION]));
 
 function productionFor(resource: typeof ALL_RESOURCES[number]): number {

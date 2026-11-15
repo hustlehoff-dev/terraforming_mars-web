@@ -34,12 +34,14 @@
             <li v-for="blocker in blockers" :key="blocker.text">{{ translateTextWithParams(blocker.text, blocker.params) }}</li>
           </ul>
         </div>
+        <button type="button" class="mission-stage__details" @click="zoomCard(card)" v-i18n>Card details</button>
       </div>
     </div>
   </Teleport>
 </template>
 
 <script setup lang="ts">
+import {zoomCard} from '@/client/components/board/cardZoom';
 import {computed, CSSProperties, nextTick, onBeforeUnmount, onMounted, ref} from 'vue';
 import Card from '@/client/components/card/Card.vue';
 import SelectProjectCardToPlay from '@/client/components/SelectProjectCardToPlay.vue';
@@ -135,3 +137,21 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', fit);
 });
 </script>
+
+<style lang="less">
+.mission-stage__details {
+  margin-top: 10px;
+  padding: 6px 14px;
+  border: 1px solid #6f8c98;
+  border-radius: 8px;
+  background: #0b141ce6;
+  color: #cfe0e6;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  &:hover {
+    border-color: #b4ffeb;
+  }
+}
+</style>
