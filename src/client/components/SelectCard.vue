@@ -1,11 +1,20 @@
 <template>
   <div class="wf-component wf-component--select-card"
-    :class="{'deck-deal': playerinput.dealtFromDeck || cardDialog || draftLocked, 'draft-pick': draftPick, 'draft-pick--locked': draftLocked}"
+    :class="{'deck-deal': playerinput.dealtFromDeck || cardDialog || draftLocked, 'draft-pick': draftPick, 'draft-pick--locked': draftLocked, 'buy-cards': buyingWindow}"
     :aria-busy="draftSubmitting || undefined">
     <div v-if="showtitle === true" class="nofloat wf-component-title">{{ $t(draftLocked ? 'Draft' : playerinput.title) }}</div>
     <MissionDraftClock v-if="(draftPick || buyingCards) && playerView.game.draftDeadline !== undefined" :deadline="playerView.game.draftDeadline"
       :label="draftPick ? 'Time to pick a card' : 'Time to buy cards'" />
-    <div v-if="playerinput.dealtFromDeck" class="deck-deal__origin" aria-hidden="true"></div>
+    <!-- Buying cards: what you have, what a card costs, what the chosen ones cost. -->
+    <div v-if="buyingWindow" class="nofloat buy-cards__summary" :class="{'buy-cards__summary--short': buyCost > megacredits}" role="status">
+      <span class="buy-cards__hint" v-i18n>Click the cards you want to buy.</span>
+      <span class="buy-cards__facts">
+        <span>{{ $t('You have') }} <b>{{ megacredits }} M€</b></span>
+        <span>{{ $t('Card') }} <b>{{ cardCost }} M€</b></span>
+        <span>{{ $t('Chosen') }} <b>{{ cardsSelected }}</b> → <b>{{ buyCost }} M€</b></span>
+      </span>
+    </div>
+    <div v-if="playerinput.dealtFromDeck && !buyingWindow" class="deck-deal__origin" aria-hidden="true"></div>
     <component :is="draftLocked ? 'div' : 'label'" v-for="(card, index) in getOrderedCards()" :key="card.name"
       :class="[getCardBoxClass(card), {'cardbox--featured': featuredCards, 'draft-pick__card--selected': lockedPicks.has(card.name)}]"
       :style="playerinput.dealtFromDeck ? {'--deal-delay': Math.min(index, 10) * 65 + 'ms'} : undefined">
@@ -38,6 +47,7 @@
         <AppButton type="submit" @click="onsave({type: 'card', cards: [selectableCards[0].name]})" :title="$t(playerinput.buttonLabel)" />
         <AppButton type="submit" @click="onsave({type: 'card', cards: []})" :title="$t('Pass')" />
       </template>
+      <AppButton v-else-if="buyingWindow" type="submit" @click="saveData" :disabled="buyCost > megacredits" :title="buyButtonLabel" />
       <AppButton v-else-if="optionalDeckChoice" type="submit" @click="saveData" :title="cardsSelected === 0 ? $t('Pass') : buttonLabel" />
       <template v-else>
         <AppButton :disabled="(isOptionalToManyCards && cardsSelected === 0) || (playerinput.dealtFromDeck === true && cardsSelected < playerinput.min)"
@@ -66,6 +76,7 @@ import {sortActiveCards} from '@/client/utils/ActiveCardsSortingOrder';
 import {SelectCardResponse} from '@/common/inputs/InputResponse';
 import {Warning} from '@/common/cards/Warning';
 import {Phase} from '@/common/Phase';
+import {translateText, translateTextWithParams} from '@/client/directives/i18n';
 import MissionDraftClock from '@/client/components/board/MissionDraftClock.vue';
 import {isDraftRepick} from '@/client/components/board/MissionQuickAction';
 import {recallChoice, rememberChoice} from '@/client/utils/choiceMemory';
@@ -256,6 +267,26 @@ export default defineComponent({
     buyingCards(): boolean {
       return this.playerinput.dealtFromDeck === true && this.playerView.game.phase === Phase.RESEARCH;
     },
+    /** The window to buy cards in the research phase (not the first choice of the game, which has its own summary). */
+    buyingWindow(): boolean {
+      return this.buyingCards && this.showsave === true && this.playerView.game.generation > 1;
+    },
+    cardCost(): number {
+      return this.playerView.thisPlayer?.cardCost ?? 3;
+    },
+    megacredits(): number {
+      return this.playerView.thisPlayer?.megacredits ?? 0;
+    },
+    buyCost(): number {
+      return this.cardsSelected * this.cardCost;
+    },
+    /** "Buy no cards" or "Buy 2 card(s) for 6 M€": never "Pass", which reads like passing the turn. */
+    buyButtonLabel(): string {
+      if (this.cardsSelected === 0) {
+        return translateText('Buy no cards');
+      }
+      return translateTextWithParams('Buy ${0} card(s) for ${1} M€', [String(this.cardsSelected), String(this.buyCost)]);
+    },
     draftPick(): boolean {
       const phase = this.playerView.game.phase;
       return this.showsave && this.playerView.thisPlayer.needsToDraft === true && (phase === Phase.DRAFTING || phase === Phase.INITIALDRAFTING);
@@ -381,5 +412,71 @@ export default defineComponent({
   color: #ffe5ab;
   font-size: 0.8rem;
   font-weight: 800;
+}
+
+// Buying cards: a summary line over the cards, a check mark on the chosen ones, bigger cards.
+.buy-cards__summary {
+  display: flex;
+  flex-basis: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: -4px 0 12px;
+}
+
+.buy-cards__hint {
+  color: #cfe0e6;
+  font-size: 0.9rem;
+}
+
+.buy-cards__facts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 18px;
+  padding: 6px 16px;
+  border: 1px solid #e2c27f66;
+  border-radius: 10px;
+  background: #0b131bd9;
+  color: #cfe0e6;
+  font-size: 0.95rem;
+
+  b {
+    color: #fff3c4;
+  }
+
+  .buy-cards__summary--short & {
+    border-color: #ff7a5c;
+
+    b:last-child {
+      color: #ffb4a3;
+    }
+  }
+}
+
+.buy-cards > .cardbox {
+  position: relative;
+  cursor: pointer;
+
+  :deep(.card-container) {
+    zoom: 1.15;
+  }
+
+  &:has(input:checked)::after {
+    content: '✓';
+    position: absolute;
+    z-index: 5;
+    top: -10px;
+    right: -10px;
+    display: grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    border-radius: 50%;
+    background: #e2c27f;
+    color: #1b1200;
+    font-weight: 900;
+    box-shadow: 0 2px 8px #000a;
+  }
 }
 </style>
