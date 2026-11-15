@@ -8,10 +8,6 @@
       @click="toggleFeed"
       v-i18n>Activity feed</button>
     <div class="activity-feed__body" :class="{'activity-feed__body--expanded': expanded}">
-      <div class="activity-feed__header">
-        <h2 v-i18n>Activity feed</h2>
-        <button v-if="scrolled" type="button" @click="showLatest" v-i18n>Latest activity</button>
-      </div>
       <ol :id="listId" ref="list" class="activity-feed__list" tabindex="0" @scroll.passive="updateScroll">
         <li v-for="entry in shownEntries" :key="entry.key">
           <component
@@ -29,7 +25,7 @@
             <span v-if="entry.player" class="activity-feed__marker" :class="'player_bg_color_' + entry.player" aria-hidden="true"></span>
             <span class="activity-feed__line">
               <strong v-if="entry.actor">{{ entry.actor + ' ' }}</strong>
-              <span v-if="entry.kind === 'action' && entry.card" class="activity-feed__action-tag"><span aria-hidden="true">➜</span>{{ $t('Card action') }}</span>
+              <span v-if="isCardAction(entry)" class="activity-feed__action-tag"><span aria-hidden="true">➜</span>{{ $t('Card action') }}</span>
               <span v-else class="activity-feed__verb">{{ entry.action + ' ' }}</span>
               <b v-if="entry.subjectText">{{ entry.subjectText }}</b>
               <span v-for="(step, index) in entry.stepLines" :key="index" class="activity-feed__reveal" v-html="'→ ' + renderIcons(step)"></span>
@@ -46,10 +42,15 @@
         </li>
       </ol>
       <p v-if="loaded && entries.length === 0" class="activity-feed__empty" v-i18n>No activity yet</p>
+      <!-- Under the list, next to the latest entry: the title and the way back to the latest. -->
+      <div class="activity-feed__header">
+        <h2 v-i18n>Activity feed</h2>
+        <button v-if="scrolled" type="button" @click="showLatest" v-i18n>Latest activity</button>
+      </div>
     </div>
     <div v-if="previewEntry?.groups.length" ref="preview" class="activity-feed__preview activity-feed__preview--deck" :style="previewStyle" aria-hidden="true">
-      <div v-if="previewCards.length" class="activity-feed__group activity-feed__group--source" :class="{'activity-feed__group--action': previewEntry.kind === 'action'}">
-        <p>{{ $t(previewEntry.kind === 'action' ? 'Card action' : 'Card') }}</p>
+      <div v-if="previewCards.length" class="activity-feed__group activity-feed__group--source" :class="{'activity-feed__group--action': isCardAction(previewEntry)}">
+        <p>{{ $t(isCardAction(previewEntry) ? 'Card action' : 'Card') }}</p>
         <div class="activity-feed__group-cards">
           <Card v-for="card in previewCards" :key="card.name" :card="card" />
         </div>
@@ -89,6 +90,7 @@ import {computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, useId, 
 import Card from '@/client/components/card/Card.vue';
 import ActivityCardReveal from './ActivityCardReveal.vue';
 import {getCard} from '@/client/cards/ClientCardManifest';
+import {CardType} from '@/common/cards/CardType';
 import {translateText, translateTextWithParams} from '@/client/directives/i18n';
 import {renderIcons} from '@/client/markdown/markdown';
 import {zoomCard} from '@/client/components/board/cardZoom';
@@ -280,6 +282,15 @@ const previewCards = computed<Array<CardModel>>(() => {
   return cards.slice(0, 4);
 });
 const previewEntry = computed(() => entries.value.find((entry) => entry.key === previewKey.value));
+/** The action of a played card (blue card, corporation...), not a standard action like converting heat. */
+function isCardAction(entry: GameActivityModel): boolean {
+  if (entry.kind !== 'action' || entry.card === undefined) {
+    return false;
+  }
+  const type = getCard(entry.card)?.type;
+  return type !== undefined && type !== CardType.STANDARD_ACTION && type !== CardType.STANDARD_PROJECT;
+}
+
 /** The entries as shown: the oldest at the top, the latest at the bottom. */
 const shownEntries = computed(() => entries.value.toReversed());
 
