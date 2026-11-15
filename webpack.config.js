@@ -12,6 +12,11 @@ const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
 
 const zlib = require('zlib');
+const fs = require('fs');
+
+// Identifies this build of the client. The server answers it on api/build (from
+// build/build-id.txt), and an open page whose build differs reloads itself (see buildCheck.ts).
+const BUILD_ID = Date.now().toString(36);
 
 const plugins = [
   new ForkTsCheckerWebpackPlugin({
@@ -28,6 +33,7 @@ const plugins = [
     __VUE_OPTIONS_API__: true,
     __VUE_PROD_DEVTOOLS__: false,
     __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
+    __CLIENT_BUILD__: JSON.stringify(BUILD_ID),
   }),
   {
     apply: (compiler) => {
@@ -36,6 +42,8 @@ const plugins = [
       });
 
       compiler.hooks.done.tap('BuildEndPlugin', () => {
+        fs.mkdirSync('build', {recursive: true});
+        fs.writeFileSync(path.join('build', 'build-id.txt'), BUILD_ID);
         // Pushes the log to the very end of the execution queue
         process.nextTick(() => {
           console.log('✅ Webpack Build Finished!');

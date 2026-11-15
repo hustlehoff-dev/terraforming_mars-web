@@ -5,6 +5,7 @@ import {getPreferences} from '@/client/utils/PreferencesManager';
 
 import i18nPlugin from '@/client/plugins/i18n.plugin';
 import {startOauth} from '@/client/oauth';
+import {startBuildCheck} from '@/client/utils/buildCheck';
 const PlayerInputFactory = defineAsyncComponent(() => import(/* webpackChunkName: "player-input" */ '@/client/components/PlayerInputFactory.vue'));
 
 declare global {
@@ -48,6 +49,7 @@ async function bootstrap() {
   }
 
   app.mount('#app');
+  startBuildCheck();
 
   window.onload = startOauth;
 }
