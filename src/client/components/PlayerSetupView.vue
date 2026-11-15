@@ -270,7 +270,7 @@ export default defineComponent({
         return 'Choosing';
       }
       if (this.isDraftingPhase) {
-        return player.color === this.thisPlayer.color ? 'Picked · waiting' : 'Selected';
+        return 'Selected';
       }
       return 'Ready';
     },
