@@ -16,6 +16,7 @@ describe('i18n', () => {
   afterEach(reset);
 
   it('returns English text unchanged when lang is en', () => {
+    PreferencesManager.INSTANCE.set('lang', 'en');
     setTranslationsForTest({'Goal': 'Ziel'});
     expect(translateText('Goal')).eq('Goal');
   });

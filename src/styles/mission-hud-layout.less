@@ -600,9 +600,13 @@ body #player-home.mission-cinematic .activity-feed {
     line-height: 1.45;
   }
 
+  .activity-feed__entry:has(> .activity-feed__marker) {
+    padding-left: 17px;
+  }
+
   .activity-feed__marker {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: auto;
   }
 
   .activity-feed__units .markdown-resource,

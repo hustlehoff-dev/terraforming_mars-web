@@ -12,6 +12,11 @@ import {Resource} from '@/common/Resource';
 import {CardResource} from '@/common/CardResource';
 
 describe('LogMessageComponent', () => {
+  // The game defaults to Polish; these tests read the English texts unless they set a language.
+  beforeEach(() => {
+    PreferencesManager.INSTANCE.set('lang', 'en');
+  });
+
   it('mounts without errors', () => {
     const wrapper = shallowMount(LogMessageComponent, {
       ...globalConfig,

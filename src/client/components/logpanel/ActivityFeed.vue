@@ -717,12 +717,21 @@ button.activity-feed__entry {
   }
 }
 
+// The player's colour as a stripe along the whole left edge of the row.
+.activity-feed__entry:has(> .activity-feed__marker) {
+  position: relative;
+  overflow: hidden;
+  padding-left: 14px;
+}
+
 .activity-feed__marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
   width: 6px;
-  height: 6px;
-  flex: 0 0 6px;
-  border: 1px solid #ffffff59;
-  border-radius: 1px;
+  border: 0;
+  border-radius: 0;
 }
 
 .activity-feed__line {

@@ -17,7 +17,8 @@ describe('PreferencesManager', () => {
   it('default values', () => {
     const values = instance.values();
     expect(values.hide_active_cards).eq(false);
-    expect(values.lang).eq('en');
+    // The game defaults to Polish.
+    expect(values.lang).eq('pl');
     expect(values.enable_sounds).eq(true);
     expect(values.animated_title).eq(true);
   });
