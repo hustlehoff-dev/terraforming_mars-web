@@ -416,7 +416,10 @@ export default defineComponent({
   mixins: [HomeMixin],
   // Every card shown during the game (hand, windows, choices) wears the same skin.
   provide() {
-    return {missionCards: computed(() => this.cinematic)};
+    return {
+      missionCards: computed(() => this.cinematic),
+      closeMissionPanel: this.closeMissionPanel,
+    };
   },
   setup(props) {
     const placementContext = shallowRef<{input: SelectSpaceModel; view: PlayerViewModel}>();
