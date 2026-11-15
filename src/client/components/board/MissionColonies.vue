@@ -67,22 +67,48 @@ function closeWindow() {
   cursor: pointer;
 }
 
+// In the right column it looks like the buttons next to it (Awards, Milestones...).
+.mission-params__buttons .mission-colonies-trigger {
+  display: flex;
+  min-width: 0;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 5px;
+  border: 1px solid #6f8c98;
+  border-radius: 6px;
+  background: linear-gradient(#1b2e3d, #0d1720);
+  color: #eef6f8;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.15;
+  text-align: center;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+
+  &:hover,
+  &:focus-visible {
+    outline: none;
+    border-color: #b4ffeb;
+    background: #1f3c48;
+  }
+}
+
 .mission-colonies {
   width: min(1320px, calc(100vw - 32px));
   max-width: none;
-  max-height: min(90dvh, 1000px);
+  max-height: 92dvh;
   padding: 0;
-  overflow: hidden;
+  // The window fits its tiles; only a screen too short for them scrolls the whole window.
+  overflow-y: auto;
   border: 1px solid #e2c27f99;
   border-radius: 14px;
   background: linear-gradient(#152330f5, #0b131bf5);
   box-shadow: 0 24px 60px #000d;
   color: #eef6f8;
-
-  &[open] {
-    display: flex;
-    flex-direction: column;
-  }
 
   &::backdrop {
     background: #03070cb3;
@@ -90,11 +116,15 @@ function closeWindow() {
   }
 
   header {
+    position: sticky;
+    z-index: 2;
+    top: 0;
     display: flex;
     align-items: center;
     gap: 14px;
     padding: 12px 18px;
     border-bottom: 1px solid #ffffff1f;
+    background: #152330;
 
     h2 {
       margin: 0;
@@ -162,10 +192,8 @@ function closeWindow() {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 14px;
-  overflow-y: auto;
-  padding: 18px;
-  scrollbar-width: thin;
+  gap: 16px;
+  padding: 22px 18px 26px;
 }
 
 .mission-colonies__tile {
@@ -173,7 +201,7 @@ function closeWindow() {
     margin: 0;
     border-radius: 10px;
     box-shadow: 0 0 0 1px #6f8c98, 0 10px 24px #000a;
-    zoom: 0.72;
+    zoom: 0.85;
   }
 
   &--inactive {
