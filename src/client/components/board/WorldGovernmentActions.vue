@@ -4,15 +4,13 @@
       <h2>{{ $t('World Government Terraforming') }}</h2>
       <button v-if="closeMissionPanel" type="button" :aria-label="$t('Close')" @click="closeMissionPanel">×</button>
     </header>
-    <div class="world-government__actions">
-      <button v-for="(action, index) in actions" :key="index" type="button" :disabled="busy"
-        @click="emit('choose', index)">
-        <img v-if="action.icon" :src="action.icon" alt="">
-        <strong v-if="action.change">{{ action.change }}</strong>
-        <span v-else-if="action.onMap" class="world-government__arrow" aria-hidden="true">›</span>
-        <span>{{ $t(action.title) }}</span>
-      </button>
-    </div>
+    <button v-for="(action, index) in actions" :key="index" class="world-government__action"
+      type="button" :disabled="busy" @click="emit('choose', index)">
+      <img v-if="action.icon" :src="action.icon" alt="">
+      <strong v-if="action.change">{{ action.change }}</strong>
+      <span v-else-if="action.onMap" class="world-government__arrow" aria-hidden="true">›</span>
+      <span>{{ $t(action.title) }}</span>
+    </button>
   </div>
 </template>
 
@@ -44,15 +42,20 @@ const actions = computed(() => props.options.map((option) => ({
 
 <style scoped lang="less">
 .world-government {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  justify-items: stretch;
+  gap: clamp(8px, 1.5vw, 14px);
   max-width: 680px;
   margin-inline: auto;
 
   button {
+    margin: 0;
     border: 1px solid #49616d;
     border-radius: 9px;
     background: #142630;
     color: #eef4f6;
-    font: inherit;
+    font-family: inherit;
     cursor: pointer;
 
     &:hover:not(:disabled) {
@@ -73,11 +76,11 @@ const actions = computed(() => props.options.map((option) => ({
 }
 
 .world-government__header {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 14px;
 
   h2 {
     margin: 0;
@@ -98,25 +101,19 @@ const actions = computed(() => props.options.map((option) => ({
   }
 }
 
-.world-government__actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(8px, 1.5vw, 14px);
-
-  button {
-    display: flex;
-    min-height: clamp(128px, 23dvh, 176px);
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    padding: clamp(8px, 2vw, 16px);
-    font-size: clamp(0.9rem, 2.6vw, 1.12rem);
-    font-weight: 700;
-    line-height: 1.2;
-    overflow-wrap: anywhere;
-    text-align: center;
-  }
+.world-government__action {
+  display: flex;
+  min-height: clamp(128px, 23dvh, 176px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: clamp(8px, 2vw, 16px);
+  font-size: clamp(0.9rem, 2.6vw, 1.12rem);
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  text-align: center;
 
   img {
     width: clamp(44px, 10vw, 68px);
