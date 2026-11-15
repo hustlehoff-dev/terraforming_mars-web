@@ -331,8 +331,8 @@ export default defineComponent({
       const game = this.playerView.game;
       const options = game.gameOptions;
       return game.draftDeadline === undefined && (
-        (game.phase === Phase.DRAFTING && (options.draftTimeLimit ?? 0) > 0) ||
-        (game.phase === Phase.RESEARCH && game.generation > 1 && (options.buyTimeLimit ?? 0) > 0));
+        (game.phase === Phase.DRAFTING && (options?.draftTimeLimit ?? 0) > 0) ||
+        (game.phase === Phase.RESEARCH && game.generation > 1 && (options?.buyTimeLimit ?? 0) > 0));
     },
     watchOtherPlayers() {
       const playerView = this.playerView;

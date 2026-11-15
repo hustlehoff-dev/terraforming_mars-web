@@ -227,7 +227,8 @@ export default defineComponent({
     },
     showArt(): boolean {
       // The classic skin is the original card, so it never gets the illustrated frame.
-      return this.art && this.isProjectCard && this.cardSkin !== 'classic';
+      // The printed skin looks like the board game card everywhere in the game, with its illustration.
+      return (this.art || (this.missionCards && this.cardSkin === 'printed')) && this.isProjectCard && this.cardSkin !== 'classic';
     },
     isStandardProject() : boolean {
       return this.cardType === CardType.STANDARD_PROJECT || this.cardType === CardType.STANDARD_ACTION;

@@ -1,7 +1,7 @@
 import {flushPromises, shallowMount} from '@vue/test-utils';
 import {expect} from 'chai';
 import {vi} from 'vitest';
-import Card from '@/client/components/card/Card.vue';
+import {closeCardZoom, zoomedCard} from '@/client/components/board/cardZoom';
 import ActivityFeed from '@/client/components/logpanel/ActivityFeed.vue';
 import {CardName} from '@/common/cards/CardName';
 import {GameActivityModel} from '@/common/models/GameActivityModel';
@@ -33,8 +33,10 @@ describe('ActivityFeed', () => {
       expect(wrapper.get('.activity-feed__entry--new').text()).contains('played ' + CardName.FISH);
       expect(wrapper.findAll('.activity-feed__entry')).has.length(3);
 
+      // A click shows the played card up close in the middle of the screen.
       await wrapper.get('.activity-feed__entry--new').trigger('click');
-      expect(wrapper.getComponent(Card).props('card').name).eq(CardName.FISH);
+      expect(zoomedCard.value?.name).eq(CardName.FISH);
+      closeCardZoom();
 
       await wrapper.setProps({viewModel: {...model, game: {...model.game, gameAge: 2}}});
       await flushPromises();

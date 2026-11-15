@@ -1,6 +1,6 @@
 <template>
-  <div class="card-art" :class="'card-art--' + theme.name" :style="style" aria-hidden="true">
-    <span v-if="theme.planet" class="card-art__planet" :style="planetStyle"></span>
+  <div class="card-art" :class="'card-art--' + (picture ? 'picture' : theme.name)" :style="style" aria-hidden="true">
+    <span v-if="theme.planet && !picture" class="card-art__planet" :style="planetStyle"></span>
     <span class="card-art__shade"></span>
   </div>
 </template>
@@ -9,6 +9,8 @@
 import {computed, CSSProperties} from 'vue';
 import {Tag} from '@/common/cards/Tag';
 import {CardName} from '@/common/cards/CardName';
+// @ts-ignore - list of cards with a generated picture (tools/card-art/generate.py)
+import cardArtJson from '@/client/cards/cardArt.json';
 
 /*
  * Illustration window for a card. The game has no per-card artwork, so each card gets a scene chosen
@@ -49,6 +51,10 @@ function hash(text: string): number {
   return h >>> 0;
 }
 
+const pictures = new Set<string>(cardArtJson as Array<string>);
+/** The card's own illustration, when one has been generated for it. */
+const picture = computed(() => pictures.has(props.name) ? `assets/cards/${props.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.jpg` : undefined);
+
 const seed = computed(() => hash(props.name));
 const theme = computed<Theme>(() => {
   for (const tag of props.tags) {
@@ -61,6 +67,9 @@ const theme = computed<Theme>(() => {
 });
 
 const style = computed<CSSProperties>(() => {
+  if (picture.value !== undefined) {
+    return {backgroundImage: `url(${picture.value})`, backgroundSize: 'cover', backgroundPosition: 'center'};
+  }
   const {image, quadrant} = theme.value;
   const s = seed.value;
   const jitterX = (s % 37) / 36;

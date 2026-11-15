@@ -52,7 +52,7 @@ const defaults: Preferences = {
   magnify_cards: true,
   show_alerts: true,
   lang: 'en',
-  card_skin: 'classic',
+  card_skin: 'printed',
   music_track: 'builtin',
   music_url: '',
 

@@ -4,7 +4,7 @@
     <dialog v-if="card" ref="dialog" class="mission-card-zoom" :aria-label="$t(card.name)"
       @cancel.prevent="closeCardZoom()" @click="closeCardZoom()">
       <div class="mission-card-zoom__card">
-        <Card :key="card.name" :card="card" autoTall />
+        <Card :key="card.name" :card="card" art autoTall />
       </div>
       <p class="mission-card-zoom__hint" v-i18n>Click anywhere to close</p>
     </dialog>
