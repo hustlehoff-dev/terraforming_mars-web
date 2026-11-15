@@ -364,6 +364,11 @@ export class GameLogs {
         const {kind, player, card, subject, space} = activity;
         current = {...activity, key: [index, message.timestamp, kind, player, card ?? subject, space].join(':')};
         history.push(current);
+        // E.g. a raise as World Government: say it gives no TR and no bonuses.
+        const ownNote = noteMessages.get(message.message);
+        if (ownNote !== undefined) {
+          addStep(current, {kind: 'note', text: ownNote});
+        }
         continue;
       }
       if (current?.player === undefined) {
