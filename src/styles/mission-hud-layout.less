@@ -418,7 +418,7 @@ body #player-home.mission-cinematic .mission-right-column {
   top: 60px;
   right: var(--hud-right, 24px);
   display: flex;
-  width: 300px;
+  width: var(--hud-column-width, 300px);
   flex-direction: column;
   gap: 14px;
   pointer-events: none;
@@ -452,7 +452,7 @@ body #player-home.mission-cinematic {
   }
 
   .atlas-stage:has(.mars-surface--scene) .mars-surface.mars-surface--scene {
-    --scene-safe-right: 330px;
+    --scene-safe-right: calc(var(--hud-column-width, 300px) + 30px);
   }
 
   // Top right: one toolbar row (map tools, sound, settings) the width of the panel, panel right below.
@@ -515,6 +515,101 @@ body #player-home.mission-cinematic {
 @media (max-width: 760px) {
   body #player-home.mission-cinematic .atlas-stage:has(.mars-surface--scene) .mars-surface.mars-surface--scene {
     --scene-safe-right: 8px;
+  }
+}
+
+@media (min-width: 761px) {
+  body #player-home.mission-cinematic .mission-play {
+    --hud-column-width: 252px;
+
+    .mission-players {
+      width: min(370px, 32vw);
+      gap: 4px;
+    }
+
+    .mission-players__row {
+      padding-block: 3px;
+    }
+
+    .mission-players__row--active {
+      padding-block: 5px;
+    }
+
+    .activity-feed {
+      width: clamp(220px, 23vw, 350px);
+    }
+
+    .mission-right-column {
+      gap: 10px;
+    }
+
+    .mission-params {
+      box-sizing: border-box;
+      width: 100%;
+      gap: 5px;
+      padding: 8px 10px 10px;
+    }
+
+    .mission-params__bar {
+      margin-top: 5px;
+    }
+
+    .mission-params__bonuses {
+      height: 36px;
+    }
+
+    .mission-params__bonus {
+      height: 25px;
+    }
+
+    .mission-params__buttons button {
+      min-height: 28px;
+    }
+
+    .mission-turn__caption {
+      padding: 4px 8px;
+      font-size: 0.8rem;
+    }
+
+    .mission-turn__button {
+      width: 86px;
+      height: 86px;
+      font-size: 2.5rem;
+    }
+  }
+}
+
+@media (min-width: 1151px) {
+  body #player-home.mission-cinematic .mission-dock {
+    .mission-player-hud {
+      gap: 8px;
+    }
+
+    .mission-dock__played {
+      width: 76px;
+      gap: 5px;
+
+      img {
+        width: 28px;
+        height: 38px;
+      }
+    }
+
+    .mission-dock__count {
+      width: 34px;
+      height: 34px;
+    }
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1150px) {
+  body #player-home.mission-cinematic .mission-dock .mission-effects {
+    height: 58px;
+    padding: 4px 6px;
+
+    .mission-effects__card {
+      height: 25px;
+    }
   }
 }
 

@@ -84,16 +84,17 @@ function formatProduction(value: number): string {
   gap: inherit;
 }
 
-// Larger hand, corporation card and resource readouts (bundled here, independent of the cached stylesheet).
+// Desktop dock: the controls and hand share one baseline.
 @media (min-width: 761px) {
   body #player-home.mission-cinematic {
-    --mission-card-scale: 0.6;
+    --mission-card-scale: 0.49;
+    --dock-height: 222px;
 
     // One row: corporation, resources, played cards, card actions, then the hand taking the rest.
     .mission-player-hud {
       display: flex;
       align-items: flex-end;
-      gap: 12px;
+      gap: 8px;
 
       > * {
         flex: none;
@@ -117,28 +118,32 @@ function formatProduction(value: number): string {
         overflow: auto hidden !important;
       }
     }
-    --dock-height: 262px;
-
     .mission-player-hud__stocks {
-      gap: 8px 14px;
-      padding: 10px 12px;
+      gap: 6px 8px;
+      padding: 8px 9px;
 
       li {
-        gap: 6px;
-        font-size: 1.45rem;
+        gap: 4px;
+        font-size: 1.22rem;
         line-height: 1.05;
       }
 
       .mission-player-hud__production {
-        font-size: 0.95rem;
+        font-size: 0.8rem;
       }
 
       .resource_icon {
-        width: 38px;
-        height: 38px;
-        flex: 0 0 38px;
+        width: 30px;
+        height: 30px;
+        flex: 0 0 30px;
       }
     }
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1150px) {
+  body #player-home.mission-cinematic {
+    --dock-height: 237px;
   }
 }
 
@@ -181,7 +186,7 @@ body #player-home.mission-cinematic {
     gap: 6px;
 
     > .mission-hand {
-      --hand-scale: 0.42;
+      --hand-scale: 0.37;
 
       grid-column: 1;
       grid-row: 1;
