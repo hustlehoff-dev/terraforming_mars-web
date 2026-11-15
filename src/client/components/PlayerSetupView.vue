@@ -53,6 +53,17 @@
       </div>
     </template>
 
+    <!-- Who plays, in turn order, and who is still choosing. -->
+    <ol v-if="playerView.players.length > 1" class="setup-players" :aria-label="$t('Players')">
+      <li v-for="(player, index) in playerView.players" :key="player.color" class="setup-players__player"
+        :class="['player_bg_color_' + player.color, {'setup-players__player--me': player.color === thisPlayer.color}]">
+        <span class="setup-players__order">{{ index + 1 }}</span>
+        <strong>{{ player.name }}</strong>
+        <small v-if="player.color === thisPlayer.color" v-i18n>(you)</small>
+        <span class="setup-players__state">{{ $t(player.needsToResearch === false ? 'Ready' : 'Choosing') }}</span>
+      </li>
+    </ol>
+
     <a name="actions" class="player_home_anchor hotkey-target"></a>
     <DynamicTitle v-if="!choosingCorporation && playerView.pickedCorporationCard.length === 0" title="Select initial cards:" :color="thisPlayer.color" />
     <WaitingFor v-if="game.phase !== 'end'" :playerView="playerView" :waitingfor="playerView.waitingFor" :requestId="playerView.requestId" />
@@ -175,3 +186,48 @@ export default defineComponent({
   },
 });
 </script>
+
+<style lang="less">
+.setup-players {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.setup-players__player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 1rem;
+  text-shadow: 0 1px 2px #000;
+  box-shadow: inset 0 0 0 1px #ffffff33, 0 3px 8px #0008;
+
+  &--me {
+    box-shadow: 0 0 0 2px #e2c27f, 0 3px 10px #000a;
+  }
+}
+
+.setup-players__order {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 50%;
+  background: #0007;
+  font-weight: 800;
+}
+
+.setup-players__state {
+  padding: 1px 8px;
+  border-radius: 8px;
+  background: #0008;
+  font-size: 0.8rem;
+}
+</style>
+
