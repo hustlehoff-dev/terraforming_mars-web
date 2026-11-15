@@ -413,7 +413,8 @@ async function refresh() {
     if (loaded.value && isPlayerId(props.viewModel.id)) {
       const previous = new Map(events.value.map((event) => [event.key, event]));
       for (const event of result.toReversed()) {
-        if (!event.deck) {
+        // Buying cards: the cards were in the buying window already, nothing to show again.
+        if (!event.deck || event.kind === 'bought') {
           continue;
         }
         const start = previous.get(event.key)?.deck?.length ?? 0;

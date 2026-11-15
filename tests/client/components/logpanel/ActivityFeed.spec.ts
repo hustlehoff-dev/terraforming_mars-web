@@ -78,6 +78,24 @@ describe('ActivityFeed', () => {
     }
   });
 
+  it('opens no card window after buying cards: they were in the buying window', async () => {
+    let history: Array<GameActivityModel> = [];
+    vi.stubGlobal('fetch', async () => ({ok: true, json: async () => history}));
+    const model = fakeViewModel();
+    const wrapper = shallowMount(ActivityFeed, {...globalConfig, props: {viewModel: model}});
+    try {
+      await flushPromises();
+      history = [{key: 'buy', kind: 'bought', player: 'blue', subject: '1 card(s)', buying: {bought: 1, discarded: 1},
+        deck: [{kind: 'bought', cards: [CardName.FISH]}, {kind: 'discarded', cards: [CardName.BIRDS]}]}];
+      await wrapper.setProps({viewModel: {...model, game: {...model.game, gameAge: 1}}});
+      await flushPromises();
+      expect(wrapper.findComponent({name: 'ActivityCardReveal'}).exists()).is.false;
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('updates the Comet row when a legacy server sends the ocean as a separate entry', async () => {
     let history: Array<GameActivityModel> = [{key: 'play', kind: 'played', card: CardName.COMET, player: 'blue', effects: '+3:r:heat:'}];
     vi.stubGlobal('fetch', async () => ({ok: true, json: async () => history}));

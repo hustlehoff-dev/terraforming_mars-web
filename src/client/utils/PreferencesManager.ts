@@ -1,7 +1,8 @@
 import {reactive} from 'vue';
 import {safeLocalStorage} from '@/client/utils/SafeLocalStorage';
 
-// classic: the original Terraforming Mars web cards, 1:1. printed and arena: illustrated mission frames.
+// classic: the original Terraforming Mars web cards, 1:1. printed and arena (illustrated mission
+// frames) are no longer offered: any stored choice reads as classic.
 export const CARD_SKINS = ['classic', 'printed', 'arena'] as const;
 export type CardSkin = typeof CARD_SKINS[number];
 export const MUSIC_TRACKS = ['builtin', 'url', 'file'] as const;
@@ -40,9 +41,14 @@ export type Preferences = {
   /** Game music: the built-in track, a link to an audio file, or the player's own file. */
   music_track: MusicTrack,
   music_url: string,
+  /** Size of the cards in the hand, in percent of the normal size. */
+  hand_card_size: number,
 }
 
 export type Preference = keyof Preferences;
+
+const PREFERENCES_VERSION_KEY = 'preferences_version';
+const PREFERENCES_VERSION = '2';
 
 const defaults: Preferences = {
   learner_mode: true,
@@ -51,10 +57,11 @@ const defaults: Preferences = {
   music_volume: 65,
   magnify_cards: true,
   show_alerts: true,
-  lang: 'en',
-  card_skin: 'printed',
+  lang: 'pl',
+  card_skin: 'classic',
   music_track: 'builtin',
   music_url: '',
+  hand_card_size: 100,
 
   hide_hand: false,
   hide_awards_and_milestones: false,
@@ -71,7 +78,7 @@ const defaults: Preferences = {
   hide_animated_sidebar: false,
 
   symbol_overlay: false,
-  map_owner_square: false,
+  map_owner_square: true,
   map_owner_ring: false,
   animated_title: true,
 
@@ -98,13 +105,24 @@ export class PreferencesManager {
         this._set(key, value);
       }
     }
+    // Settings version 2: the square owner marker and classic cards for everyone.
+    if (safeLocalStorage.getItem(PREFERENCES_VERSION_KEY) !== PREFERENCES_VERSION) {
+      this.set('map_owner_square', true);
+      this.set('map_owner_ring', false);
+      this.set('card_skin', 'classic');
+      safeLocalStorage.setItem(PREFERENCES_VERSION_KEY, PREFERENCES_VERSION);
+    }
   }
 
   private _set(key: Preference, val: string | boolean | number) {
     if (key === 'lang') {
       this._values.lang = String(val);
     } else if (key === 'card_skin') {
-      this._values.card_skin = (CARD_SKINS as ReadonlyArray<string>).includes(String(val)) ? val as CardSkin : defaults.card_skin;
+      // Only the classic cards are offered.
+      this._values.card_skin = 'classic';
+    } else if (key === 'hand_card_size') {
+      const size = Number(val);
+      this._values.hand_card_size = Number.isFinite(size) ? Math.min(150, Math.max(70, Math.round(size))) : defaults.hand_card_size;
     } else if (key === 'music_track') {
       this._values.music_track = (MUSIC_TRACKS as ReadonlyArray<string>).includes(String(val)) ? val as MusicTrack : defaults.music_track;
     } else if (key === 'music_url') {

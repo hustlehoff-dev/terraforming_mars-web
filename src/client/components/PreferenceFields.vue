@@ -1,6 +1,6 @@
 <template>
   <div class="preference-fields">
-    <details v-for="group in groups" :key="group.title" class="preference-fields__group" :open="group.title === 'Audio' || !mission">
+    <details v-for="group in shownGroups" :key="group.title" class="preference-fields__group" :open="group.title === 'Audio' || !mission">
       <summary>{{ $t(group.title) }}</summary>
       <div v-if="group.title === 'Audio' && mission" class="preference-fields__volume">
         <label>
@@ -29,23 +29,21 @@
         <span :title="field.hint ? $t(field.hint) : undefined">{{ $t(field.label) }}</span>
         <input type="checkbox" :checked="prefs[field.key]" :data-test="field.key" @change="setToggle(field.key, $event)">
       </label>
+      <template v-if="group.title === 'Display' && mission">
+        <label class="preference-fields__language">
+          <span>{{ $t('Tile ownership') }}</span>
+          <select :value="prefs.map_owner_square ? 'square' : prefs.map_owner_ring ? 'ring' : 'border'" @change="setOwnerMarker">
+            <option value="square">{{ $t('Square marker') }}</option>
+            <option value="border">{{ $t('Colored border') }}</option>
+            <option value="ring">{{ $t('Colored border and inner ring') }}</option>
+          </select>
+        </label>
+        <label class="preference-fields__volume">
+          <span>{{ $t('Size of the cards in hand') }} <span class="preference-fields__value">{{ prefs.hand_card_size }}%</span></span>
+          <input type="range" min="70" max="150" step="5" :value="prefs.hand_card_size" @input="setHandSize">
+        </label>
+      </template>
     </details>
-    <label v-if="mission" class="preference-fields__language">
-      <span>{{ $t('Tile ownership') }}</span>
-      <select :value="prefs.map_owner_square ? 'square' : prefs.map_owner_ring ? 'ring' : 'border'" @change="setOwnerMarker">
-        <option value="border">{{ $t('Colored border') }}</option>
-        <option value="ring">{{ $t('Colored border and inner ring') }}</option>
-        <option value="square">{{ $t('Square marker') }}</option>
-      </select>
-    </label>
-    <label v-if="mission" class="preference-fields__language">
-      <span>{{ $t('Card style') }}</span>
-      <select :value="prefs.card_skin" data-test="card_skin" @change="setCardSkin">
-        <option value="classic">{{ $t('Classic Terraforming Mars') }}</option>
-        <option value="printed">{{ $t('Printed card') }}</option>
-        <option value="arena">{{ $t('Dark arena') }}</option>
-      </select>
-    </label>
     <label v-if="mission" class="preference-fields__language">
       <span>{{ $t('Language') }}</span>
       <select :value="prefs.lang" @change="setLanguage">
@@ -70,6 +68,22 @@ const props = defineProps<{preferencesManager: PreferencesManager; mission?: boo
 const prefs = computed(() => props.preferencesManager.values());
 
 const soundToggle: Toggle = {key: 'enable_sounds', label: 'Enable sounds'};
+// The game menu (mission): only what works on the game screen.
+const missionGroups: Array<{title: string; fields: Toggle[]}> = [
+  {title: 'Audio', fields: [soundToggle, {key: 'enable_music', label: 'Music'}]},
+  {title: 'Display', fields: [
+    {key: 'hide_awards_and_milestones', label: 'Hide awards and milestones'},
+    {key: 'hide_discount_on_cards', label: 'Hide discount on cards'},
+    {key: 'remove_background', label: 'Remove background image'},
+    {key: 'symbol_overlay', label: 'Symbol Overlay', hint: 'Add symbols on top of player colors.'},
+  ]},
+  {title: 'Gameplay', fields: [
+    {key: 'show_alerts', label: 'Show in-game alerts'},
+    {key: 'hide_tile_confirmation', label: 'Hide tile confirmation'},
+    {key: 'learner_mode', label: 'Learner Mode', hint: 'Show information that can be helpful\n to players who are still learning the games'},
+    {key: 'animated_title', label: 'Animated Title', hint: 'Show spinning circle in window title on your turn.'},
+  ]},
+];
 const groups: Array<{title: string; fields: Toggle[]}> = [
   {title: 'Audio', fields: [soundToggle, {key: 'enable_music', label: 'Music'}]},
   {title: 'Display', fields: [
@@ -92,6 +106,12 @@ const groups: Array<{title: string; fields: Toggle[]}> = [
     {key: 'debug_view', label: 'Debug View', hint: 'Add information useful for development and debugging.'},
   ]},
 ];
+
+const shownGroups = computed(() => props.mission ? missionGroups : groups);
+
+function setHandSize(event: Event) {
+  props.preferencesManager.set('hand_card_size', (event.target as HTMLInputElement).valueAsNumber);
+}
 
 function setToggle(key: ToggleKey, event: Event) {
   props.preferencesManager.set(key, (event.target as HTMLInputElement).checked);
@@ -128,10 +148,6 @@ function setOwnerMarker(event: Event) {
   const value = (event.target as HTMLSelectElement).value;
   props.preferencesManager.set('map_owner_square', value === 'square');
   props.preferencesManager.set('map_owner_ring', value === 'ring');
-}
-
-function setCardSkin(event: Event) {
-  props.preferencesManager.set('card_skin', (event.target as HTMLSelectElement).value);
 }
 
 function setLanguage(event: Event) {

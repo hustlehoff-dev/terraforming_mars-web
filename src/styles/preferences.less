@@ -514,3 +514,38 @@
     justify-content: center;
   }
 }
+
+// ---- Settings on the game screen (mission).
+// Hide awards and milestones: their buttons in the right column.
+.preferences_hide_awards_and_milestones #player-home.mission-cinematic .mission-hud-ma {
+  display: none;
+}
+
+// Remove background image: a plain dark sky behind Mars.
+.preferences_remove_background #player-home.mission-cinematic .atlas-stage {
+  background: #05080d;
+}
+
+// Symbols on player colours: on the owner marker of the map spaces.
+.preferences_symbol_overlay #player-home.mission-cinematic .atlas-stage .atlas-owned > .board-cube--owner.overlay {
+  width: 17px;
+  height: 17px;
+
+  &::after {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    margin: 0;
+    place-items: center;
+    color: #fff;
+    font-size: 12px;
+    line-height: 1;
+    text-shadow: 0 0 2px #000, 0 0 2px #000;
+  }
+}
+
+// Size of the cards in the hand.
+#player-home.mission-cinematic .mission-hand__strip {
+  zoom: var(--hand-size, 1);
+}
+

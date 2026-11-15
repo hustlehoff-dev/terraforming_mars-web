@@ -19,6 +19,9 @@ async function bootstrap() {
   const preferencesTarget = document.getElementById('ts-preferences-target');
   preferencesTarget?.classList.add(`language-${lang}`);
   watchEffect(() => {
+    document.body.style.setProperty('--hand-size', String(getPreferences().hand_card_size / 100));
+  });
+  watchEffect(() => {
     for (const [key, value] of Object.entries(getPreferences())) {
       if (typeof value === 'boolean') {
         preferencesTarget?.classList.toggle(`preferences_${key}`, value);
