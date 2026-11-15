@@ -107,14 +107,20 @@ export class PlayerInput extends Handler {
         await this.performUndo(req, res, ctx, player);
       } else {
         const move = JSON.stringify(entity);
-        const menu = player.getWaitingFor();
-        const menuTitle = menu === undefined ? undefined : typeof menu.title === 'string' ? menu.title : menu.title.message;
-        const before = menuTitle === 'Take your first action' || menuTitle === 'Take your next action' ?
-          {snapshot: player.game.serialize(), logLength: player.game.gameLog.length} : undefined;
         let current = player;
+        let before: SerializedGame | undefined;
         // A repeated click from a page that has not refreshed yet: nothing is asked of the player
         // (the move is already in the game), so answer with the current state instead of an error.
-        for (let attempt = 1; current.getWaitingFor() !== undefined; attempt++) {
+        for (let attempt = 1; ; attempt++) {
+          const menu = current.getWaitingFor();
+          if (menu === undefined) {
+            before = undefined;
+            break;
+          }
+          const menuTitle = typeof menu.title === 'string' ? menu.title : menu.title.message;
+          // serialize() still references mutable state, including the live log.
+          before = menuTitle === 'Take your first action' || menuTitle === 'Take your next action' ?
+            structuredClone(current.game.serialize()) : undefined;
           current.process(JSON.parse(move));
           // Answer only once the new state is in the database: with several server instances
           // the page's next request may reach another one, which must not see an older game.
@@ -184,10 +190,10 @@ function revealedSomething(player: IPlayer, logLength: number): boolean {
     message.playerId !== undefined || / (drew|revealed|discarded)\b/.test(message.message) || message.message.startsWith('You '));
 }
 
-function rememberPlacementUndo(player: IPlayer, before: {snapshot: SerializedGame, logLength: number} | undefined): void {
+function rememberPlacementUndo(player: IPlayer, before: SerializedGame | undefined): void {
   const game = player.game;
-  if (before !== undefined && player.getWaitingFor()?.type === 'space' && !revealedSomething(player, before.logLength)) {
-    game.placementUndo = {playerId: player.id, requestId: player.requestId, snapshot: before.snapshot};
+  if (before !== undefined && player.getWaitingFor()?.type === 'space' && !revealedSomething(player, before.gameLog.length)) {
+    game.placementUndo = {playerId: player.id, requestId: player.requestId, snapshot: before};
   } else if (game.placementUndo?.playerId === player.id) {
     game.placementUndo = undefined;
   }

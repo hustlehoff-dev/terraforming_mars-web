@@ -13,6 +13,7 @@ import {Tag} from '../cards/Tag';
 import {UnderworldPlayerData} from '../underworld/UnderworldPlayerData';
 import {GlobalParameter} from '../GlobalParameter';
 import {DeltaProjectPlayerModel} from './DeltaProjectPlayerModel';
+import {MilestoneName} from '../ma/MilestoneName';
 
 export interface ViewModel {
   game: GameModel;
@@ -106,6 +107,11 @@ export interface PlayerViewModel extends ViewModel {
   canCancelPlacement?: boolean;
   /** This player created the game: they can end it early. */
   isGameCreator?: boolean;
+  milestoneAwardCosts?: {
+    awards: ReadonlyArray<number>;
+    milestone: number;
+    milestoneOverrides: Partial<Record<MilestoneName, number>>;
+  };
   thisPlayer: PublicPlayerModel;
   waitingFor: PlayerInputModel | undefined;
 }

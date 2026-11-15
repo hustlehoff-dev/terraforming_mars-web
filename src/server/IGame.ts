@@ -171,7 +171,7 @@ export interface IGame extends Logger {
   marsIsTerraformed(): boolean;
   lastSoloGeneration(): number;
   isSoloModeWin(): boolean;
-  getAwardFundingCost(): number;
+  getAwardFundingCost(fundedCount?: number): number;
   fundAward(player: IPlayer, award: IAward): void;
   hasBeenFunded(award: IAward): boolean;
   allAwardsFunded(): boolean;

@@ -1125,8 +1125,7 @@ export class Player implements IPlayer {
     if (this.playedCards.has(CardName.VANALLEN)) {
       recordClaim();
     } else {
-      const baseCost = this.milestoneCost();
-      const cost = baseCost + ((milestone.name === 'Briber') ? 12 : 0);
+      const cost = this.milestoneCost(milestone.name);
       let reserveUnits = Units.EMPTY;
       if (milestone.name === 'Merchant') {
         reserveUnits = Units.every(2);
@@ -1148,20 +1147,21 @@ export class Player implements IPlayer {
     return stagedProtests?.generationUsed === this.game.generation;
   }
 
-  public milestoneCost() {
-    if (this.playedCards.has(CardName.VANALLEN) || this.playedCards.has(CardName.NIRGAL_ENTERPRISES)) {
+  public milestoneCost(milestone?: IMilestone['name']) {
+    if (this.playedCards.has(CardName.VANALLEN)) {
       return 0;
     }
-    return this.isStagedProtestsActive() ? MILESTONE_COST + 8 : MILESTONE_COST;
+    const base = this.playedCards.has(CardName.NIRGAL_ENTERPRISES) ? 0 : MILESTONE_COST + (this.isStagedProtestsActive() ? 8 : 0);
+    return base + (milestone === 'Briber' ? 12 : 0);
   }
 
   // Public for tests.
-  public awardFundingCost() {
+  public awardFundingCost(fundedCount?: number) {
     if (this.playedCards.has(CardName.NIRGAL_ENTERPRISES)) {
       return 0;
     }
     const plus8 = this.isStagedProtestsActive() ? 8 : 0;
-    return this.game.getAwardFundingCost() + plus8;
+    return this.game.getAwardFundingCost(fundedCount) + plus8;
   }
 
   private fundAward(award: IAward): PlayerInput {

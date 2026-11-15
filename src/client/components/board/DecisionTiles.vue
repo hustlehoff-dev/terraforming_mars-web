@@ -5,13 +5,20 @@
     <p v-if="warning !== undefined" class="decision-tiles__warning card-warning">{{ $t(warning) }}</p>
     <button v-for="{choice, index} in orderedChoices" :key="index" class="decision-tiles__choice"
       :class="{'decision-tiles__choice--secondary': choice.secondary}"
-      type="button" :disabled="busy" :aria-pressed="choice.selected" @click="emit('choose', index)">
-      <img v-if="choice.icon" :src="choice.icon" alt="">
-      <strong v-if="choice.change">{{ choice.change }}</strong>
+      type="button" :disabled="busy || choice.disabled" :aria-busy="busy || undefined" :aria-pressed="choice.selected" @click="emit('choose', index)">
+      <img v-if="choice.icon" :key="choice.icon" :src="choice.icon" alt="" @error="($event.target as HTMLImageElement).style.visibility = 'hidden'">
+      <strong v-if="choice.price !== undefined" class="decision-tiles__price">{{ choice.price }} M€</strong>
+      <strong v-else-if="choice.change">{{ choice.change }}</strong>
       <span>
-        <span v-if="choice.targetColor" class="decision-tiles__player-color" :class="playerColorClass(choice.targetColor, 'bg')" aria-hidden="true"></span>
+        <span v-if="choice.targetColor && !choice.owner" class="decision-tiles__player-color" :class="playerColorClass(choice.targetColor, 'bg')" aria-hidden="true"></span>
         {{ choice.literalTitle ?? $t(choice.title) }}
       </span>
+      <small v-if="choice.description" class="decision-tiles__description">{{ $t(choice.description) }}</small>
+      <small v-if="choice.details" class="decision-tiles__details">{{ choice.details }}</small>
+      <small v-if="choice.owner" class="decision-tiles__owner">
+        <span v-if="choice.targetColor" class="decision-tiles__player-color" :class="playerColorClass(choice.targetColor, 'bg')" aria-hidden="true"></span>
+        {{ choice.owner }}
+      </small>
     </button>
   </div>
 </template>
@@ -78,7 +85,11 @@ const orderedChoices = computed(() => props.choices.map((choice, index) => ({cho
     }
 
     &:disabled {
-      opacity: 0.55;
+      opacity: 0.75;
+      cursor: not-allowed;
+    }
+
+    &[aria-busy='true'] {
       cursor: wait;
     }
   }
@@ -128,6 +139,26 @@ const orderedChoices = computed(() => props.choices.map((choice, index) => ({cho
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
+
+  .decision-tiles__price,
+  .decision-tiles__owner {
+    color: #ffe3a4;
+  }
+}
+
+.decision-tiles__description,
+.decision-tiles__details,
+.decision-tiles__owner {
+  font-size: 0.82rem;
+}
+
+.decision-tiles__description {
+  color: #c8d8e0;
+  font-weight: 500;
+}
+
+.decision-tiles__details {
+  color: #b2e6ee;
 }
 
 .decision-tiles__choice--secondary {

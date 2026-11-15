@@ -15,7 +15,7 @@ body #player-home.mission-cinematic {
   }
 
   // Corporation, resources and the card buttons stand on the bottom edge, like the turn button.
-  .mission-player-hud > :not(.mission-hand) {
+  .mission-player-hud__controls > * {
     translate: 0 14px;
   }
 
@@ -75,7 +75,7 @@ body #player-home.mission-cinematic {
   .mission-player-hud {
     gap: 12px;
     grid-column: 1;
-    justify-self: start;
+    justify-self: stretch;
     align-items: end;
   }
 
@@ -105,22 +105,18 @@ body #player-home.mission-cinematic {
   }
 
   .mission-hand__slot {
-    height: calc(352px * var(--mission-card-scale) + 4px);
+    height: calc(352px * var(--hand-scale) + 4px);
   }
 
   // Room above the cards for the cost and tags that stick out (the scroller clips vertically),
   // and no gap below so the hand sits on the same baseline as the corporation and resources.
   .mission-hand {
     align-self: end;
-    // The hand ends before the turn button column (margin, not padding: a scroller's padding
-    // still shows overflowing cards), so no card lies under the button or its labels.
-    padding: 34px 10px 0;
-    scrollbar-width: none;
   }
 
   // Cards stand on the bottom of their slot (no gap below) in a gentle arc:
   // the middle card is highest, the outer ones lower and slightly turned.
-  .mission-hand__face:not(.mission-hand__face--raised) {
+  .mission-hand__face:not(.mission-hand__face--raised, .mission-hand__face--dragged) {
     inset: auto auto 0 0 !important;
     rotate: calc(var(--card-tilt) * 0.6) !important;
     translate: 0 calc((var(--card-drop) * 1.6 - 10px) / var(--hand-scale)) !important;
@@ -131,8 +127,9 @@ body #player-home.mission-cinematic {
     margin-bottom: 0;
   }
 
-  .mission-hand {
+  .mission-hand__strip {
     justify-content: start;
+    padding: 34px 10px 1px;
 
     &::before,
     &::after {
@@ -422,6 +419,7 @@ body #player-home.mission-cinematic .mission-right-column {
   right: var(--hud-right, 24px);
   display: flex;
   width: 300px;
+  max-height: calc(var(--scene-height) - var(--dock-height) - 68px);
   flex-direction: column;
   gap: 14px;
   pointer-events: none;
@@ -436,6 +434,7 @@ body #player-home.mission-cinematic .mission-right-column {
 
   .mission-turn {
     position: static;
+    flex: none;
     justify-items: center;
   }
 

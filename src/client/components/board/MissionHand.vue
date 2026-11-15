@@ -1,47 +1,55 @@
 <template>
-  <TransitionGroup
+  <div
     v-if="cards.length"
-    name="mission-draw"
-    tag="div"
+    ref="hand"
     class="mission-hand"
     :class="{'mission-hand--dragging': drag?.moved, 'mission-hand--drop-play': drag?.armed}"
     role="group"
     :aria-label="$t('Cards In Hand')"
     :style="{'--hand-overlap': overlap + 'px'}"
-    @scroll.passive="reposition"
     @keydown.esc.stop="close">
-    <div v-for="(card, index) in cards" :key="card.name" class="mission-hand__slot" :class="{'mission-hand__slot--held': inspected === card.name}" :style="fanStyle(index)">
-      <div
-        class="mission-hand__face"
-        :class="{'mission-hand__face--raised': raised?.name === card.name && drag?.name !== card.name, 'mission-hand__face--dragged': drag?.name === card.name && drag.moved, 'mission-hand__face--armed': drag?.name === card.name && drag.armed}"
-        :style="drag?.name === card.name && drag.moved ? dragStyle : raised?.name === card.name ? raised.style : undefined"
-        :id="handId + '-' + index"
-        aria-hidden="true"
-        @pointerdown.prevent
-        @click.stop="close">
-        <Card :card="card" art :autoTall="raised?.name === card.name && drag?.name !== card.name" :class="{'mission-card-available': playableCards?.has(card.name)}" inert />
-      </div>
-      <button
-        type="button"
-        class="mission-hand__hit"
-        :aria-label="playableCards?.has(card.name) ? $t(card.name) + ' · ' + $t('Playable now') : $t(card.name)"
-        :aria-describedby="handId + '-' + index"
-        :aria-pressed="inspected === card.name"
-        @pointerenter="hover(card.name, $event)"
-        @pointerleave="leave(card.name, 'hover')"
-        @pointerdown="startDrag(card, $event)"
-        @pointermove="moveDrag"
-        @pointerup="endDrag"
-        @pointercancel="cancelDrag"
-        @focus="focusCard(card.name, $event)"
-        @blur="blurCard(card.name)"
-        @click="preview(card, $event)"></button>
+    <div v-if="canScrollBack || canScrollForward" class="mission-hand__navigation">
+      <button type="button" :aria-label="$t('Previous cards')" :aria-controls="handId" :disabled="!canScrollBack"
+        @click="scrollCards(-1)">‹</button>
+      <button type="button" :aria-label="$t('Next cards')" :aria-controls="handId" :disabled="!canScrollForward"
+        @click="scrollCards(1)">›</button>
     </div>
-  </TransitionGroup>
+    <div :id="handId" ref="strip" class="mission-hand__strip" @scroll.passive="onScroll" @wheel="onWheel">
+      <TransitionGroup name="mission-draw">
+        <div v-for="(card, index) in cards" :key="card.name" class="mission-hand__slot" :class="{'mission-hand__slot--held': inspected === card.name}" :style="fanStyle(index)">
+          <div
+            class="mission-hand__face"
+            :class="{'mission-hand__face--raised': raised?.name === card.name && drag?.name !== card.name, 'mission-hand__face--dragged': drag?.name === card.name && drag.moved, 'mission-hand__face--armed': drag?.name === card.name && drag.armed}"
+            :style="drag?.name === card.name && drag.moved ? dragStyle : raised?.name === card.name ? raised.style : undefined"
+            :id="handId + '-' + index"
+            aria-hidden="true"
+            @pointerdown.prevent
+            @click.stop="close">
+            <Card :card="card" art :autoTall="raised?.name === card.name && drag?.name !== card.name" :class="{'mission-card-available': playableCards?.has(card.name)}" inert />
+          </div>
+          <button
+            type="button"
+            class="mission-hand__hit"
+            :aria-label="playableCards?.has(card.name) ? $t(card.name) + ' · ' + $t('Playable now') : $t(card.name)"
+            :aria-describedby="handId + '-' + index"
+            :aria-pressed="inspected === card.name"
+            @pointerenter="hover(card.name, $event)"
+            @pointerleave="leave(card.name, 'hover')"
+            @pointerdown="startDrag(card, $event)"
+            @pointermove="moveDrag"
+            @pointerup="endDrag"
+            @pointercancel="cancelDrag"
+            @focus="focusCard(card.name, $event)"
+            @blur="blurCard(card.name)"
+            @click="preview(card, $event)"></button>
+        </div>
+      </TransitionGroup>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import {computed, CSSProperties, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, useId, watch} from 'vue';
+import {computed, CSSProperties, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, useId, watch} from 'vue';
 import Card from '@/client/components/card/Card.vue';
 import {CardModel} from '@/common/models/CardModel';
 import {CardName} from '@/common/cards/CardName';
@@ -49,6 +57,8 @@ import {SoundManager} from '@/client/utils/SoundManager';
 
 const props = defineProps<{cards: ReadonlyArray<CardModel>, playableCards?: ReadonlySet<CardName>, inspected?: CardName}>();
 const emit = defineEmits<{preview: [card: CardModel, origin: DOMRect], play: [card: CardModel, origin: DOMRect]}>();
+const hand = ref<HTMLDivElement>();
+const strip = ref<HTMLDivElement>();
 // Recent pointer positions, to tell a throw (fast upward release) from a calm drop.
 // Dragging a playable card out of the zone around the hand and letting go plays it; let go
 // inside the zone, the card goes back to the hand.
@@ -56,11 +66,10 @@ const ZONE_MARGIN = 70;
 
 /** True when the pointer is outside the zone around the hand (where a card is put back). */
 function outsideHandZone(x: number, y: number): boolean {
-  const root = instance?.proxy?.$el;
-  if (!(root instanceof HTMLElement)) {
+  const zone = hand.value?.getBoundingClientRect();
+  if (zone === undefined) {
     return false;
   }
-  const zone = root.getBoundingClientRect();
   return x < zone.left - ZONE_MARGIN || x > zone.right + ZONE_MARGIN || y < zone.top - ZONE_MARGIN || y > zone.bottom + ZONE_MARGIN;
 }
 type Drag = {name: CardName, card: CardModel, pointerId: number, startX: number, startY: number, x: number, y: number, moved: boolean, armed: boolean, origin: DOMRect};
@@ -210,9 +219,9 @@ function reposition() {
   if (card === undefined) {
     return;
   }
-  const strip = card.anchor.closest('.mission-hand')?.getBoundingClientRect();
+  const bounds = strip.value?.getBoundingClientRect();
   const slot = card.anchor.getBoundingClientRect();
-  if (!strip || slot.right < strip.left || slot.left > strip.right) {
+  if (!bounds || slot.right <= bounds.left || slot.left >= bounds.right) {
     close();
   } else {
     raised.value = {...card, style: position(card.anchor)};
@@ -243,37 +252,74 @@ watch(() => props.cards, (cards) => {
   }
 }, {flush: 'post'});
 
-// Many cards: they overlap (like a hand of cards) so every card stays on screen, no scrolling.
 const overlap = ref(0);
-const instance = getCurrentInstance();
-function fitHand() {
-  const root = instance?.proxy?.$el as HTMLElement | undefined;
-  const slot = root?.querySelector?.('.mission-hand__slot');
-  if (!(root instanceof HTMLElement) || !(slot instanceof HTMLElement) || props.cards.length < 2) {
-    overlap.value = 0;
+const canScrollBack = ref(false);
+const canScrollForward = ref(false);
+
+function updateScrollBounds() {
+  const row = strip.value;
+  canScrollBack.value = row !== undefined && row.scrollLeft > 1;
+  canScrollForward.value = row !== undefined && row.scrollLeft + row.clientWidth < row.scrollWidth - 1;
+}
+
+function onScroll() {
+  updateScrollBounds();
+  if (raised.value?.source === 'hover') {
+    close();
+  } else {
+    reposition();
+  }
+}
+
+function scrollCards(direction: number) {
+  const row = strip.value;
+  if (row && !drag.value) {
+    row.scrollBy({left: direction * row.clientWidth * 0.8});
+  }
+}
+
+function onWheel(event: WheelEvent) {
+  const row = strip.value;
+  if (!row || drag.value || event.ctrlKey || event.deltaX !== 0 || event.deltaY === 0 ||
+    !(event.deltaY < 0 ? canScrollBack.value : canScrollForward.value)) {
     return;
   }
-  const style = getComputedStyle(root);
-  const available = root.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-  const gap = parseFloat(style.columnGap) || 0;
+  event.preventDefault();
+  const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16 : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? row.clientWidth : 1;
+  row.scrollLeft += event.deltaY * unit;
+}
+
+function fitHand() {
+  const row = strip.value;
+  const slot = row?.querySelector<HTMLElement>('.mission-hand__slot');
   const count = props.cards.length;
-  const needed = count * slot.offsetWidth + (count - 1) * gap;
-  // More than half of every card stays visible; beyond that the hand scrolls instead.
-  const fit = needed > available ? Math.ceil((needed - available) / (count - 1)) + 1 : 0;
-  overlap.value = Math.min(fit, Math.floor(slot.offsetWidth * 0.45));
+  let inset = 0;
+  if (row && slot && count > 1) {
+    const style = getComputedStyle(row);
+    const available = row.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    const gap = parseFloat(style.columnGap) || 0;
+    const width = slot.getBoundingClientRect().width;
+    const needed = count * width + (count - 1) * gap;
+    // Keep a 44px target visible on each card, then scroll the rest of the hand.
+    inset = Math.min(Math.max(0, (needed - available) / (count - 1)), Math.max(0, width + gap - 44));
+  }
+  overlap.value = inset;
+  void nextTick(updateScrollBounds);
 }
 let observer: ResizeObserver | undefined;
-watch(() => props.cards.length, () => nextTick(fitHand));
+watch(strip, (row) => {
+  observer?.disconnect();
+  if (row && typeof ResizeObserver !== 'undefined') {
+    observer = new ResizeObserver(fitHand);
+    observer.observe(row);
+  }
+  fitHand();
+}, {flush: 'post'});
+watch(() => props.cards.length, fitHand, {flush: 'post'});
 
 onMounted(() => {
   document.addEventListener('pointerdown', closeOutside);
   window.addEventListener('resize', reposition);
-  const root = instance?.proxy?.$el;
-  if (root instanceof HTMLElement && typeof ResizeObserver !== 'undefined') {
-    observer = new ResizeObserver(() => fitHand());
-    observer.observe(root);
-  }
-  nextTick(fitHand);
 });
 
 onBeforeUnmount(() => {
@@ -284,14 +330,37 @@ onBeforeUnmount(() => {
 </script>
 
 <style lang="less">
-// The hand takes all the room left in the dock (its width must not follow the overlap, or the
-// cards would keep squeezing together).
-.mission-player-hud > .mission-hand {
-  flex: 1 1 0;
-  min-width: 0;
-  // Only with a very large hand: a thin visible scrollbar, so no card is hidden without a hint.
-  scrollbar-width: thin !important;
-  scrollbar-color: #8f796099 transparent;
+.mission-hand__navigation {
+  position: absolute;
+  z-index: 3;
+  inset: 1px 10px auto auto;
+  display: flex;
+  gap: 5px;
+
+  button {
+    display: grid;
+    width: 36px;
+    height: 31px;
+    place-items: center;
+    padding: 0;
+    border: 1px solid #8ca5af;
+    border-radius: 5px;
+    background: #142630;
+    color: #eef6f8;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+
+    &:hover:not(:disabled),
+    &:focus-visible {
+      border-color: #f1be80;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+  }
 }
 
 .mission-hand__slot:has(.mission-hand__face--raised, .mission-hand__face--dragged) {

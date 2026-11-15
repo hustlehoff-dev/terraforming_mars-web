@@ -55,6 +55,63 @@
   box-shadow: 0 0 0 1px #91f9f1, 0 0 18px #65e5dc55;
 }
 
+// The whole card is clicked to choose; the radio only keeps the choice for keyboards and readers.
+.corporation-selection__option {
+  position: relative;
+  cursor: pointer;
+
+  &:hover {
+    border-color: #f3c46b;
+  }
+
+  &:focus-within {
+    outline: 2px solid #f3c46b;
+    outline-offset: 2px;
+  }
+
+  // Clicks reach the label, not the parts of the card.
+  .card-container {
+    pointer-events: none;
+  }
+}
+
+.corporation-selection__option--disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.corporation-selection__radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.corporation-selection__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 10px;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.corporation-selection__badge {
+  padding: 2px 10px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: #143938;
+  color: #b6fff3;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
 .corporation-selection__choice {
   display: flex;
   min-width: 65%;

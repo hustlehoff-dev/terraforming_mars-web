@@ -77,6 +77,8 @@ export class Server {
       draftDeadline: game.draftDeadline,
       paused: game.paused,
       endedEarly: game.endedEarly,
+      initialDraftStage: game.phase !== Phase.INITIALDRAFTING ? undefined :
+        game.initialDraftIteration <= 2 ? 'projects' : game.initialDraftIteration === 3 ? 'preludes' : 'ceos',
       gameOptions: this.getGameOptionsAsModel(game.gameOptions),
       generation: game.getGeneration(),
       turn: game.phase === Phase.ACTION ? game.turn : undefined,
@@ -105,6 +107,7 @@ export class Server {
 
   public static getPlayerModel(player: IPlayer): PlayerViewModel {
     const game = player.game;
+    const fundedCount = game.fundedAwards.length;
 
     const players: Array<PublicPlayerModel> = game.playersInGenerationOrder.map((p) => this.getPlayer(p, p.color === player.color));
 
@@ -128,6 +131,11 @@ export class Server {
       requestId: player.requestId,
       canCancelPlacement: player.game.canCancelPlacement(player) || undefined,
       isGameCreator: player.game.isCreator(player) || undefined,
+      milestoneAwardCosts: game.players.length > 1 ? {
+        awards: Array.from({length: MAX_AWARDS - fundedCount}, (_, index) => player.awardFundingCost(fundedCount + index)),
+        milestone: player.milestoneCost(),
+        milestoneOverrides: {Briber: player.milestoneCost('Briber')},
+      } : undefined,
       thisPlayer: thisPlayer,
       waitingFor: this.getWaitingFor(player, player.getWaitingFor()),
       players: players,

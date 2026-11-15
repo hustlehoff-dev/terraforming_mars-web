@@ -1,6 +1,6 @@
 <template>
   <div>
-    <template v-if="waitingfor === undefined || waitingfor.optional">
+    <template v-if="showWaitingStatus && (waitingfor === undefined || waitingfor.optional)">
       <template v-if="waitingfor === undefined">
         {{ $t('Not your turn to take any actions') }}
       </template>
@@ -13,14 +13,14 @@
         (⌛ <span v-for="color in playersWaitingFor" class="log-player" :class="playerColorClass(color, 'bg')" :key="color">{{ getPlayerName(color) }}</span>)
       </template>
     </template>
-    <Teleport v-if="waitingfor !== undefined && !hideInput && !draftRepick" to="body" :disabled="!showDeckDialog">
+    <Teleport v-if="waitingfor !== undefined && !hideInput && (!draftRepick || showLockedDraft)" to="body" :disabled="!showDeckDialog">
       <component :is="showDeckDialog ? 'dialog' : 'div'" ref="inputContainer" class="wf-root"
         :class="{'deck-choice-dialog': showDeckDialog}" :aria-label="showDeckDialog ? $t(waitingfor.title) : undefined" @cancel.prevent>
         <PlayerInputFactory :players="playerView.players"
           :playerView="playerView"
           :playerinput="waitingfor"
           :onsave="onsave"
-          :showsave="true"
+          :showsave="!draftRepick"
           :showtitle="true"
           :key="inputKey" />
         <DialogPeek v-if="showDeckDialog && !cardsAllGiven" />
@@ -88,6 +88,8 @@ const CANNOT_CONTACT_SERVER = 'Unable to reach the server. It may be restarting 
 export default defineComponent({
   name: 'WaitingFor',
   components: {DialogPeek},
+  // Emits 'waitingPlayers' (colours still choosing) while it waits; not declared in `emits`, which
+  // would narrow `$emit` and break vueRoot(this).
   // Card inputs inside the card window lay their cards out like a deal from the deck.
   provide() {
     return {cardDialog: computed(() => this.showDeckDialog)};
@@ -95,6 +97,8 @@ export default defineComponent({
   props: {
     centerDeckChoice: Boolean,
     hideInput: Boolean,
+    showLockedDraft: Boolean,
+    showWaitingStatus: {type: Boolean, default: true},
     playerView: {
       type: Object as () => ViewModel,
       required: true,
@@ -270,15 +274,23 @@ export default defineComponent({
       const root = vueRoot(this);
       clearTimeout(ui_update_timeout_id);
       const askForUpdate = () => {
+        const view = this.playerView;
         const xhr = new XMLHttpRequest();
         xhr.open('GET', paths.API_WAITING_FOR + window.location.search + '&gameAge=' + this.playerView.game.gameAge + '&undoCount=' + this.playerView.game.undoCount);
         xhr.onerror = function() {
           root.showAlert('Error fetching state', CANNOT_CONTACT_SERVER, () => vueApp.waitForUpdate());
         };
         xhr.onload = async () => {
+          if (vueApp.playerView !== view) {
+            return;
+          }
           if (xhr.status === statusCode.ok) {
             const result = xhr.response as WaitingForModel;
             this.playersWaitingFor = result.waitingFor;
+            if (result.result === 'WAIT') {
+              // eslint-disable-next-line vue/require-explicit-emits -- see the note above `provide`.
+              vueApp.$emit('waitingPlayers', result.waitingFor);
+            }
             if (result.result === 'GO') {
               // Will only apply to player, not spectator.
               const updated = root.updatePlayer();
@@ -322,7 +334,7 @@ export default defineComponent({
       const game = this.playerView.game;
       const options = game.gameOptions;
       return game.draftDeadline === undefined && (
-        (game.phase === Phase.DRAFTING && (options?.draftTimeLimit ?? 0) > 0) ||
+        ((game.phase === Phase.DRAFTING || game.phase === Phase.INITIALDRAFTING) && (options?.draftTimeLimit ?? 0) > 0) ||
         (game.phase === Phase.RESEARCH && game.generation > 1 && (options?.buyTimeLimit ?? 0) > 0));
     },
     watchOtherPlayers() {
@@ -334,14 +346,22 @@ export default defineComponent({
           const response = await fetch(paths.API_PLAYER + window.location.search);
           if (response.ok) {
             const latest: PlayerViewModel = await response.json();
+            if (otherPlayersTimer !== timer || this.playerView !== playerView) {
+              return;
+            }
             playerView.players = latest.players;
             // The draft clock starts when another player picks: show it to this player too.
-            playerView.game.draftDeadline = latest.game.draftDeadline;
-            // Time ran out and the game picked for this player: show the new state.
-            if ((playerView.thisPlayer?.needsToDraft === true && latest.thisPlayer?.needsToDraft === false) ||
+            if (latest.game !== undefined) {
+              playerView.game.draftDeadline = latest.game.draftDeadline;
+            }
+            // A timed pick can advance the whole draft straight to the next question.
+            if ((latest.requestId !== undefined && (playerView as Partial<PlayerViewModel>).requestId !== latest.requestId) ||
+              (latest.game !== undefined && playerView.game.phase !== latest.game.phase) ||
+              (playerView.thisPlayer?.needsToDraft === true && latest.thisPlayer?.needsToDraft === false) ||
               (this.waitingfor !== undefined && latest.waitingFor === undefined)) {
-              await vueRoot(this).updatePlayer();
-              return;
+              if (await vueRoot(this).updatePlayer()) {
+                return;
+              }
             }
           } else {
             console.warn('Unable to update other players', response.status, response.statusText);

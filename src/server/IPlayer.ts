@@ -1,5 +1,6 @@
 import {PlayerId, isPlayerId} from '../common/Types';
 import {CardName} from '../common/cards/CardName';
+import {MilestoneName} from '../common/ma/MilestoneName';
 import {ICorporationCard} from './cards/corporation/ICorporationCard';
 import {IGame, isIGame} from './IGame';
 import {Payment, PaymentOptions} from '../common/inputs/Payment';
@@ -385,8 +386,8 @@ export interface IPlayer {
   clearWaitingFor(): void;
   serialize(): SerializedPlayer;
 
-  /** Returns the cost a player must spend to claim a milestone. Public for Briber. */
-  milestoneCost(): number;
+  milestoneCost(milestone?: MilestoneName): number;
+  awardFundingCost(fundedCount?: number): number;
 
   /** Shorthand for deferring evaluating a PlayerInput */
   defer(input: PlayerInput | undefined | void | (() => PlayerInput | undefined | void), priority?: Priority): void;

@@ -20,25 +20,26 @@
       <fieldset class="corporation-selection">
         <legend v-i18n>Choose your corporation</legend>
         <div class="corporation-selection__options">
-          <article
+          <!-- The whole card is the choice: a click anywhere on it selects the corporation. -->
+          <label
             v-for="card in corpCardOption.cards"
             :key="card.name"
             class="corporation-selection__option"
-            :class="{'corporation-selection__option--selected': selectedCorporations.includes(card.name)}">
-            <h2>{{ $t(card.name) }}</h2>
+            :class="{'corporation-selection__option--selected': selectedCorporations.includes(card.name), 'corporation-selection__option--disabled': card.isDisabled}">
+            <input
+              class="corporation-selection__radio"
+              type="radio"
+              :name="corporationGroup"
+              :checked="selectedCorporations.includes(card.name)"
+              :disabled="card.isDisabled"
+              :aria-label="$t(card.name)"
+              @change="corporationChanged([card.name])">
+            <span class="corporation-selection__head">
+              <h2>{{ $t(card.name) }}</h2>
+              <span v-if="selectedCorporations.includes(card.name)" class="corporation-selection__badge"><span aria-hidden="true">✓</span> {{ $t('Selected') }}</span>
+            </span>
             <Card :card="card" autoTall />
-            <label class="corporation-selection__choice">
-              <input
-                type="radio"
-                :name="corporationGroup"
-                :checked="selectedCorporations.includes(card.name)"
-                :disabled="card.isDisabled"
-                :aria-label="$t(card.name)"
-                @change="corporationChanged([card.name])">
-              <span v-if="selectedCorporations.includes(card.name)" v-i18n>Selected</span>
-              <span v-else v-i18n>Select</span>
-            </label>
-          </article>
+          </label>
         </div>
       </fieldset>
       <div v-if="playerCanChooseAridor" class="player_home_colony_cont">

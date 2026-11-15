@@ -2,6 +2,11 @@
   --hand-scale: 0.38;
   --hand-card-width: 240px;
 
+  position: relative;
+  min-width: 0;
+}
+
+.mission-hand__strip {
   display: flex;
   min-width: 0;
   gap: 3px;
@@ -80,7 +85,7 @@
   border-radius: 7px;
   background: transparent;
   cursor: pointer;
-  touch-action: none;
+  touch-action: pan-x;
 
   &:focus-visible {
     outline: 2px solid #f1be80;
@@ -93,7 +98,7 @@
     --hand-scale: 0.30;
   }
 
-  .mission-hand__face:not(.mission-hand__face--raised) {
+  .mission-hand__face:not(.mission-hand__face--raised, .mission-hand__face--dragged) {
     rotate: calc(var(--card-tilt) * 0.6);
   }
 }

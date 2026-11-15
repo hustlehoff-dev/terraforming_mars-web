@@ -1,6 +1,6 @@
 <template>
   <header class="decision-heading">
-    <h2>{{ $t(title) }}</h2>
+    <h2>{{ literalTitle ?? $t(title) }}</h2>
     <button v-if="closable" type="button" :aria-label="$t('Close')" @click="emit('close')">×</button>
   </header>
 </template>
@@ -8,7 +8,7 @@
 <script setup lang="ts">
 import {Message} from '@/common/logs/Message';
 
-defineProps<{title: string | Message, closable?: boolean}>();
+defineProps<{title: string | Message, literalTitle?: string, closable?: boolean}>();
 const emit = defineEmits<{close: []}>();
 </script>
 

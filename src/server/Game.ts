@@ -775,8 +775,8 @@ export class Game implements IGame, Logger {
     return this.generation <= this.lastSoloGeneration();
   }
 
-  public getAwardFundingCost(): number {
-    return 8 + (6 * this.fundedAwards.length);
+  public getAwardFundingCost(fundedCount = this.fundedAwards.length): number {
+    return 8 + (6 * fundedCount);
   }
 
   public fundAward(player: IPlayer, award: IAward): void {

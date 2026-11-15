@@ -31,7 +31,7 @@
               <span class="setup-crew__state">
                 <span v-if="!isReady(player)" class="setup-spinner setup-spinner--small" aria-hidden="true"></span>
                 <span v-else aria-hidden="true">✓</span>
-                {{ $t(isReady(player) ? 'Ready' : 'Choosing') }}
+                {{ $t(crewStatus(player)) }}
               </span>
             </li>
           </ol>
@@ -58,6 +58,22 @@
       </aside>
 
       <div class="setup-layout__main">
+        <a name="actions" class="player_home_anchor hotkey-target"></a>
+        <!-- Always mounted: it also keeps the page up to date while waiting for the other players. -->
+        <section v-show="playerView.waitingFor !== undefined" class="setup-section setup-section--input">
+          <WaitingFor v-if="game.phase !== 'end'" :playerView="playerView" :waitingfor="playerView.waitingFor" :requestId="playerView.requestId"
+            show-locked-draft :show-waiting-status="!showsWaiting" @waiting-players="liveWaitingPlayers = $event" />
+        </section>
+
+        <section v-if="isDraftingPhase && playerView.draftedCards.length" class="setup-section">
+          <h2 class="setup-heading"><span>{{ $t(draftedTitle) }}</span><small>{{ playerView.draftedCards.length }}</small></h2>
+          <div class="setup-cards">
+            <div v-for="card in playerView.draftedCards" :key="card.name" class="cardbox">
+              <Card :card="card" />
+            </div>
+          </div>
+        </section>
+
         <div v-if="showsWaiting" class="setup-waiting" role="status">
           <span class="setup-spinner" aria-hidden="true"></span>
           <div>
@@ -66,14 +82,9 @@
           </div>
         </div>
 
-        <a name="actions" class="player_home_anchor hotkey-target"></a>
-        <!-- Always mounted: it also keeps the page up to date while waiting for the other players. -->
-        <section v-show="playerView.waitingFor !== undefined" class="setup-section setup-section--input">
-          <WaitingFor v-if="game.phase !== 'end'" :playerView="playerView" :waitingfor="playerView.waitingFor" :requestId="playerView.requestId" />
-        </section>
-
-        <section v-for="group in cardGroups" :key="group.key" class="setup-section">
+        <section v-for="group in cardGroups" :key="group.key" class="setup-section" :class="{'setup-section--later': group.later}">
           <h2 class="setup-heading"><span>{{ $t(group.title) }}</span><small>{{ group.cards.length }}</small></h2>
+          <p v-if="group.later" class="setup-later-note" v-i18n>You choose from these after the draft.</p>
           <div class="setup-cards">
             <div v-for="card in group.cards" :key="card.name" class="cardbox">
               <Card :card="card" />
@@ -117,12 +128,14 @@ import MoonBoard from '@/client/components/moon/MoonBoard.vue';
 import PlanetaryTracks from '@/client/components/pathfinders/PlanetaryTracks.vue';
 import InfoPanel from '@/client/components/InfoPanel.vue';
 import {CardModel} from '@/common/models/CardModel';
+import {Color} from '@/common/Color';
 import {Phase} from '@/common/Phase';
 import {GameModel} from '@/common/models/GameModel';
 import {PlayerViewModel, PublicPlayerModel} from '@/common/models/PlayerModel';
 import {TileView} from './board/TileView';
 
-type CardGroup = {key: string, title: string, cards: ReadonlyArray<CardModel>};
+/** `later`: dealt cards chosen from after the draft, shown smaller. */
+type CardGroup = {key: string, title: string, cards: ReadonlyArray<CardModel>, later?: boolean};
 
 const EXPANSION_LABELS: Record<string, string> = {
   corpera: 'Corporate Era', prelude: 'Prelude', prelude2: 'Prelude 2', venus: 'Venus Next', colonies: 'Colonies', turmoil: 'Turmoil',
@@ -143,8 +156,13 @@ export default defineComponent({
     },
   },
   emits: ['toggleTileView'],
-  data(): {boardOpen: boolean, infoOpen: boolean} {
-    return {boardOpen: false, infoOpen: false};
+  data(): {boardOpen: boolean, infoOpen: boolean, liveWaitingPlayers: ReadonlyArray<Color> | undefined} {
+    return {boardOpen: false, infoOpen: false, liveWaitingPlayers: undefined};
+  },
+  watch: {
+    playerView() {
+      this.liveWaitingPlayers = undefined;
+    },
   },
   computed: {
     choosingCorporation(): boolean {
@@ -159,6 +177,9 @@ export default defineComponent({
     isInitialDraftingPhase(): boolean {
       return (this.game.phase === Phase.INITIALDRAFTING) && this.game.gameOptions.initialDraftVariant;
     },
+    isDraftingPhase(): boolean {
+      return this.game.phase === Phase.INITIALDRAFTING || this.game.phase === Phase.DRAFTING;
+    },
     expansions(): Array<string> {
       return Object.entries(this.game.gameOptions.expansions)
         .filter(([key, on]) => on && key !== 'corpera')
@@ -166,7 +187,7 @@ export default defineComponent({
     },
     /** Nothing to choose now: this player's choice is in, the others are still choosing. */
     showsWaiting(): boolean {
-      return this.playerView.waitingFor === undefined && this.game.phase !== Phase.END;
+      return this.game.phase !== Phase.END && this.isReady(this.thisPlayer);
     },
     /** The cards of this player, grouped: chosen ones once chosen, else the ones dealt or drafted. */
     cardGroups(): Array<CardGroup> {
@@ -187,26 +208,48 @@ export default defineComponent({
           groups.push({key: 'hand', title: 'Project cards', cards: view.cardsInHand});
         }
       } else if (this.isInitialDraftingPhase) {
-        const dealt: Array<[string, string, ReadonlyArray<CardModel>]> = [
-          ['dcorp', 'Corporations', view.dealtCorporationCards],
-          ['dprelude', 'Preludes', view.dealtPreludeCards],
-          ['dceo', 'CEO', view.dealtCeoCards],
-          ['dproject', 'Project cards', view.dealtProjectCards],
-        ];
-        for (const [key, title, cards] of dealt) {
-          if (cards.length > 0) {
-            groups.push({key, title, cards});
-          }
+        // During the initial draft: the cards of the stage being drafted are in the draft itself
+        // (and in "drafted" right under it). Below come the cards kept from the earlier stages,
+        // then the ones fixed for later. A pack that is still to be drafted is not shown: most of
+        // it will be passed on.
+        const stage = this.game.initialDraftStage ?? 'projects';
+        const options = this.game.gameOptions;
+        const preludesDrafted = options.expansions.prelude && options.preludeDraftVariant;
+        const ceosDrafted = options.expansions.ceo && options.ceosDraftVariant;
+        if (stage !== 'projects' && view.dealtProjectCards.length > 0) {
+          groups.push({key: 'dproject', title: 'Your drafted project cards', cards: view.dealtProjectCards});
+        }
+        if (stage === 'ceos' && preludesDrafted && view.dealtPreludeCards.length > 0) {
+          groups.push({key: 'dprelude', title: 'Your drafted preludes', cards: view.dealtPreludeCards});
+        }
+        if (view.dealtCorporationCards.length > 0) {
+          groups.push({key: 'dcorp', title: 'Corporations', cards: view.dealtCorporationCards, later: true});
+        }
+        if (!preludesDrafted && view.dealtPreludeCards.length > 0) {
+          groups.push({key: 'dprelude', title: 'Preludes', cards: view.dealtPreludeCards, later: true});
+        }
+        if (!ceosDrafted && view.dealtCeoCards.length > 0) {
+          groups.push({key: 'dceo', title: 'CEO', cards: view.dealtCeoCards, later: true});
         }
       }
-      if (view.draftedCards.length > 0) {
+      if (!this.isDraftingPhase && view.draftedCards.length > 0) {
         groups.push({key: 'drafted', title: 'Drafted Cards', cards: view.draftedCards});
       }
       return groups;
     },
+    /** The heading of the cards taken in the draft so far, by what is drafted now. */
+    draftedTitle(): string {
+      switch (this.game.initialDraftStage) {
+      case 'preludes': return 'Drafted preludes';
+      case 'ceos': return 'Drafted CEOs';
+      case 'projects': return 'Drafted project cards';
+      default: return 'Drafted Cards';
+      }
+    },
     waitingText(): string {
       const choosing = this.playerView.players.filter((player) => !this.isReady(player)).map((player) => player.name);
-      return choosing.length > 0 ? `${this.$t('Waiting for')}: ${choosing.join(', ')}` : this.$t('The game starts in a moment');
+      return choosing.length > 0 ? `${this.$t('Waiting for')}: ${choosing.join(', ')}` :
+        this.$t(this.isDraftingPhase ? 'Waiting for other players' : 'The game starts in a moment');
     },
   },
   components: {
@@ -222,11 +265,23 @@ export default defineComponent({
     InfoPanel,
   },
   methods: {
+    crewStatus(player: PublicPlayerModel): string {
+      if (!this.isReady(player)) {
+        return 'Choosing';
+      }
+      if (this.isDraftingPhase) {
+        return player.color === this.thisPlayer.color ? 'Picked · waiting' : 'Selected';
+      }
+      return 'Ready';
+    },
     isReady(player: PublicPlayerModel): boolean {
       if (player.color === this.thisPlayer.color) {
-        return this.playerView.waitingFor === undefined;
+        return this.playerView.waitingFor === undefined || (this.isDraftingPhase && this.thisPlayer.needsToDraft === false);
       }
-      if (this.game.phase === Phase.INITIALDRAFTING || this.game.phase === Phase.DRAFTING) {
+      if (this.isDraftingPhase) {
+        if (this.liveWaitingPlayers !== undefined) {
+          return !this.liveWaitingPlayers.includes(player.color);
+        }
         return player.needsToDraft === false;
       }
       return player.needsToResearch === false;
@@ -574,6 +629,16 @@ export default defineComponent({
     background: linear-gradient(155deg, #2a1a12ec, #120d0bed);
   }
 
+  .corporation-selection__badge {
+    border-color: var(--setup-gold);
+    background: #3a2410;
+    color: #ffe2b0;
+  }
+
+  .corporation-selection__option:hover {
+    border-color: var(--setup-accent);
+  }
+
   .corporation-selection__option--selected {
     border-color: var(--setup-gold);
     box-shadow: 0 0 0 1px var(--setup-gold), 0 0 22px #f3c46b55;
@@ -717,5 +782,18 @@ export default defineComponent({
     position: static;
     order: 0;
   }
+}
+
+// Cards chosen from only after the draft: smaller, under the draft.
+.setup-section--later {
+  .setup-cards .card-container {
+    zoom: 0.72;
+  }
+}
+
+.setup-later-note {
+  margin: -6px 0 10px;
+  color: var(--setup-muted);
+  font-size: 0.85rem;
 }
 </style>

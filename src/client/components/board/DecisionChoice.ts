@@ -1,9 +1,12 @@
+import {getAward, getMilestone} from '@/client/MilestoneAwardManifest';
 import {Message} from '@/common/logs/Message';
 import {LogMessageDataType} from '@/common/logs/LogMessageDataType';
 import {Color, ColorWithNeutral} from '@/common/Color';
 import {PlayerInputModel} from '@/common/models/PlayerInputModel';
 import {PublicPlayerModel} from '@/common/models/PlayerModel';
 import {Units} from '@/common/Units';
+import {AwardName} from '@/common/ma/AwardName';
+import {MilestoneName} from '@/common/ma/MilestoneName';
 
 export type DecisionChoice = {
   title: string | Message;
@@ -13,7 +16,22 @@ export type DecisionChoice = {
   selected?: boolean;
   targetColor?: Color;
   secondary?: boolean;
+  description?: string;
+  details?: string;
+  owner?: string;
+  price?: number;
+  disabled?: boolean;
 };
+
+export function milestoneAwardChoice(name: AwardName | MilestoneName, kind?: 'awards' | 'milestones'): DecisionChoice {
+  const award = kind !== 'milestones' ? getAward(name as AwardName) : undefined;
+  const milestone = kind !== 'awards' ? getMilestone(name as MilestoneName) : undefined;
+  return {
+    title: name,
+    icon: `assets/ma/${name.toLowerCase().replace(/[^a-z0-9]/g, '')}.png`,
+    description: (award ?? milestone)?.description,
+  };
+}
 
 const resourceIcons: Record<keyof Units, string> = {
   megacredits: 'megacredit',
@@ -78,6 +96,10 @@ const inputIcons: Partial<Record<PlayerInputModel['type'], string>> = {
 export function decisionChoice(input: PlayerInputModel): DecisionChoice {
   const {title} = input;
   const key = typeof title === 'string' ? title : title.message;
+  if (input.type === 'option' && typeof title === 'string' &&
+    (getAward(title as AwardName)?.name === title || getMilestone(title as MilestoneName)?.name === title)) {
+    return milestoneAwardChoice(title as AwardName | MilestoneName);
+  }
   return {title, icon: inputIcons[input.type], ...effects[key], ...resourceEffect(title)};
 }
 

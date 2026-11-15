@@ -1,27 +1,31 @@
 <template>
-  <div class="wf-component wf-component--select-card" :class="{'deck-deal': playerinput.dealtFromDeck || cardDialog, 'draft-pick': draftPick}"
+  <div class="wf-component wf-component--select-card"
+    :class="{'deck-deal': playerinput.dealtFromDeck || cardDialog || draftLocked, 'draft-pick': draftPick, 'draft-pick--locked': draftLocked}"
     :aria-busy="draftSubmitting || undefined">
-    <div v-if="showtitle === true" class="nofloat wf-component-title">{{ $t(playerinput.title) }}</div>
+    <div v-if="showtitle === true" class="nofloat wf-component-title">{{ $t(draftLocked ? 'Draft' : playerinput.title) }}</div>
     <MissionDraftClock v-if="(draftPick || buyingCards) && playerView.game.draftDeadline !== undefined" :deadline="playerView.game.draftDeadline"
       :label="draftPick ? 'Time to pick a card' : 'Time to buy cards'" />
     <div v-if="playerinput.dealtFromDeck" class="deck-deal__origin" aria-hidden="true"></div>
-    <label v-for="(card, index) in getOrderedCards()" :key="card.name" :class="[getCardBoxClass(card), {'cardbox--featured': featuredCards}]"
+    <component :is="draftLocked ? 'div' : 'label'" v-for="(card, index) in getOrderedCards()" :key="card.name"
+      :class="[getCardBoxClass(card), {'cardbox--featured': featuredCards, 'draft-pick__card--selected': lockedPicks.has(card.name)}]"
       :style="playerinput.dealtFromDeck ? {'--deal-delay': Math.min(index, 10) * 65 + 'ms'} : undefined">
-      <template v-if="!card.isDisabled && !featuredCards && !nothingToChoose">
+      <template v-if="!draftLocked && !card.isDisabled && !featuredCards && !nothingToChoose">
         <input v-if="selectOnlyOneCard" type="radio" v-model="cards" :value="card" :name="selectionGroup" :aria-label="$t(card.name)"
           :disabled="draftSubmitting" @click="submitDraftPick(card)" @change="submitDraftPick(card)">
         <input v-else type="checkbox" v-model="cards" :value="card" :aria-label="$t(card.name)"
           :disabled="draftSubmitting || (playerinput.max !== undefined && Array.isArray(cards) && cards.length >= playerinput.max && cards.includes(card) === false)"
           @change="submitDraftPick()">
       </template>
-      <Card :card="card" :actionUsed="isCardActivated(card)" :robotCard="robotCard(card)">
+      <Card :card="draftLocked && lockedPicks.has(card.name) ? {...card, isDisabled: false} : card"
+        :actionUsed="isCardActivated(card)" :robotCard="robotCard(card)">
         <template v-if="playerinput.showOwner">
           <div :class="'card-owner-label player_translucent_bg_color_'+ getOwner(card).color">
             {{ getOwner(card).name }}
           </div>
         </template>
       </Card>
-    </label>
+      <span v-if="lockedPicks.has(card.name)" class="draft-pick__selected" v-i18n>Selected</span>
+    </component>
     <div v-if="hasCardWarning()" class="card-warning" v-i18n>{{ warning }}</div>
     <WarningsComponent :warnings="warnings" />
     <div v-if="showsave === true && !draftPick" class="nofloat">
@@ -63,6 +67,7 @@ import {SelectCardResponse} from '@/common/inputs/InputResponse';
 import {Warning} from '@/common/cards/Warning';
 import {Phase} from '@/common/Phase';
 import MissionDraftClock from '@/client/components/board/MissionDraftClock.vue';
+import {isDraftRepick} from '@/client/components/board/MissionQuickAction';
 import {recallChoice, rememberChoice} from '@/client/utils/choiceMemory';
 
 type Owner = {
@@ -122,7 +127,7 @@ export default defineComponent({
   },
   mounted() {
     // A page reload keeps the cards ticked before it (draft picks are sent at once, nothing to keep).
-    if (this.draftPick) {
+    if (this.draftPick || this.draftLocked) {
       return;
     }
     const names = recallChoice<Array<CardName>>(this.question);
@@ -138,14 +143,14 @@ export default defineComponent({
   watch: {
     cards() {
       this.$emit('cardschanged', this.cardNames);
-      if (!this.draftPick) {
+      if (!this.draftPick && !this.draftLocked) {
         rememberChoice(this.question, this.cardNames);
       }
     },
   },
   methods: {
     getOrderedCards(): ReadonlyArray<CardModel> {
-      if (this.playerinput.dealtFromDeck) {
+      if (this.playerinput.dealtFromDeck || this.draftLocked) {
         return this.playerinput.cards;
       }
       let cards: ReadonlyArray<CardModel> = [];
@@ -255,6 +260,14 @@ export default defineComponent({
       const phase = this.playerView.game.phase;
       return this.showsave && this.playerView.thisPlayer.needsToDraft === true && (phase === Phase.DRAFTING || phase === Phase.INITIALDRAFTING);
     },
+    draftLocked(): boolean {
+      return isDraftRepick(this.playerinput);
+    },
+    lockedPicks(): ReadonlySet<CardName> {
+      const count = this.playerinput.max;
+      return new Set(this.draftLocked && count > 0 ?
+        this.playerView.draftedCards.slice(-count).map((card) => card.name) : []);
+    },
     /** No card can be taken at all (max 0), e.g. drawn cards the player cannot afford. */
     nothingToChoose(): boolean {
       return this.playerinput.max === 0;
@@ -266,7 +279,7 @@ export default defineComponent({
     },
     /** Shown with a gold frame and without a selection box: a single optional card, or cards that are all given. */
     featuredCards(): boolean {
-      return !this.draftPick && !this.nothingToChoose && (this.allGiven || (this.optionalDeckChoice && this.selectableCards.length === 1));
+      return !this.draftPick && !this.draftLocked && !this.nothingToChoose && (this.allGiven || (this.optionalDeckChoice && this.selectableCards.length === 1));
     },
     optionalDeckChoice(): boolean {
       return this.playerinput.dealtFromDeck === true && this.playerinput.min === 0;
@@ -342,5 +355,31 @@ export default defineComponent({
   &:checked + :deep(.card-container)::after {
     content: none;
   }
+}
+
+.draft-pick--locked .cardbox {
+  cursor: default;
+
+  &:not(.draft-pick__card--selected) :deep(.card-container) {
+    filter: grayscale(0.9) brightness(0.68);
+  }
+}
+
+.draft-pick__card--selected :deep(.card-container) {
+  outline: 2px solid #f3c46b;
+  outline-offset: 2px;
+}
+
+.draft-pick__selected {
+  display: block;
+  width: fit-content;
+  margin: 6px auto 0;
+  padding: 4px 8px;
+  border: 1px solid #f3c46b;
+  border-radius: 5px;
+  background: #291c10;
+  color: #ffe5ab;
+  font-size: 0.8rem;
+  font-weight: 800;
 }
 </style>

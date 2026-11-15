@@ -1,34 +1,36 @@
 <template>
   <div class="mission-player-hud">
-    <div class="mission-player-hud__corporations">
-      <button
-        v-for="card in corporations"
-        :key="card.name"
-        type="button"
-        :class="{'mission-card-available': actionCards.has(card.name)}"
-        :aria-label="$t(card.name)"
-        :aria-pressed="inspected === card.name"
-        @click="emit('preview', card, ($event.currentTarget as HTMLElement).getBoundingClientRect())">
-        <Card :card="card" inert aria-hidden="true" />
-        <span class="mission-player-hud__corp-art" aria-hidden="true" inert></span>
-        <span v-if="actionCards.has(card.name)" class="mission-player-hud__corp-status" aria-hidden="true">●</span>
-      </button>
+    <div class="mission-player-hud__controls">
+      <div class="mission-player-hud__corporations">
+        <button
+          v-for="card in corporations"
+          :key="card.name"
+          type="button"
+          :class="{'mission-card-available': actionCards.has(card.name)}"
+          :aria-label="$t(card.name)"
+          :aria-pressed="inspected === card.name"
+          @click="emit('preview', card, ($event.currentTarget as HTMLElement).getBoundingClientRect())">
+          <Card :card="card" inert aria-hidden="true" />
+          <span class="mission-player-hud__corp-art" aria-hidden="true" inert></span>
+          <span v-if="actionCards.has(card.name)" class="mission-player-hud__corp-status" aria-hidden="true">●</span>
+        </button>
+      </div>
+      <ul class="mission-player-hud__stocks" :aria-label="$t('Resources')">
+        <li v-for="resource in ALL_RESOURCES" :key="resource" :class="{'mission-player-hud__stock--ready': conversions?.[resource]}"
+          :title="conversions?.[resource] ? $t(conversions[resource]!.label) : undefined"
+          :role="conversions?.[resource] ? 'button' : undefined" :tabindex="conversions?.[resource] ? 0 : undefined"
+          @click="conversions?.[resource] && emit('convert', conversions[resource]!)"
+          @keydown.enter="conversions?.[resource] && emit('convert', conversions[resource]!)">
+          <ResourceIcon :resource="resource" />
+          <strong :key="player[resource]" class="mission-status__value">{{ player[resource] }}</strong>
+          <span v-if="resource === 'megacredits'" class="mission-player-hud__production"
+            :aria-label="$t('Terraform rating') + ' ' + formatProduction(player.terraformRating) + ', ' + $t('Production') + ' ' + formatProduction(player.megacreditProduction)"
+            :title="$t('Terraform rating') + ' + ' + $t('Production')">({{ formatProduction(player.terraformRating) }} TR {{ formatProduction(player.megacreditProduction) }})</span>
+          <span v-else class="mission-player-hud__production" :aria-label="$t('Production') + ' ' + formatProduction(productionFor(resource))">({{ formatProduction(productionFor(resource)) }})</span>
+        </li>
+      </ul>
+      <slot name="afterStocks"></slot>
     </div>
-    <ul class="mission-player-hud__stocks" :aria-label="$t('Resources')">
-      <li v-for="resource in ALL_RESOURCES" :key="resource" :class="{'mission-player-hud__stock--ready': conversions?.[resource]}"
-        :title="conversions?.[resource] ? $t(conversions[resource]!.label) : undefined"
-        :role="conversions?.[resource] ? 'button' : undefined" :tabindex="conversions?.[resource] ? 0 : undefined"
-        @click="conversions?.[resource] && emit('convert', conversions[resource]!)"
-        @keydown.enter="conversions?.[resource] && emit('convert', conversions[resource]!)">
-        <ResourceIcon :resource="resource" />
-        <strong :key="player[resource]" class="mission-status__value">{{ player[resource] }}</strong>
-        <span v-if="resource === 'megacredits'" class="mission-player-hud__production"
-          :aria-label="$t('Terraform rating') + ' ' + formatProduction(player.terraformRating) + ', ' + $t('Production') + ' ' + formatProduction(player.megacreditProduction)"
-          :title="$t('Terraform rating') + ' + ' + $t('Production')">({{ formatProduction(player.terraformRating) }} TR {{ formatProduction(player.megacreditProduction) }})</span>
-        <span v-else class="mission-player-hud__production" :aria-label="$t('Production') + ' ' + formatProduction(productionFor(resource))">({{ formatProduction(productionFor(resource)) }})</span>
-      </li>
-    </ul>
-    <slot name="afterStocks"></slot>
     <MissionHand :cards="cards" :playableCards="playableCards" :inspected="inspected" @preview="(card, origin) => emit('preview', card, origin)" @play="(card, origin) => emit('play', card, origin)" />
   </div>
 </template>
@@ -75,6 +77,13 @@ function formatProduction(value: number): string {
 </script>
 
 <style lang="less">
+.mission-player-hud__controls {
+  display: flex;
+  min-width: 0;
+  align-items: flex-end;
+  gap: inherit;
+}
+
 // Larger hand, corporation card and resource readouts (bundled here, independent of the cached stylesheet).
 @media (min-width: 761px) {
   body #player-home.mission-cinematic {
@@ -91,13 +100,22 @@ function formatProduction(value: number): string {
       }
 
       > .mission-hand {
-        flex: 1 1 auto;
-        min-width: 0;
+        flex: 1 1 0;
+        min-width: 150px;
+      }
+
+      > .mission-player-hud__controls {
+        flex: 0 1 auto;
       }
     }
 
     .mission-player-hud__corporations {
       width: auto;
+
+      &:has(button + button) {
+        min-width: calc(240px * var(--hand-scale));
+        overflow: auto hidden !important;
+      }
     }
     --dock-height: 262px;
 
@@ -153,17 +171,104 @@ body #player-home.mission-cinematic {
     }
   }
 
-  // The hand sits on the same baseline as the corporation and the resources.
-  .mission-hand {
-    align-self: end;
-    padding-top: 6px;
+}
+
+@media (max-width: 1150px) {
+  body #player-home.mission-cinematic .mission-player-hud {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: 6px;
+
+    > .mission-hand {
+      --hand-scale: 0.42;
+
+      grid-column: 1;
+      grid-row: 1;
+      min-width: 0;
+    }
+
+    .mission-player-hud__controls {
+      grid-column: 1;
+      grid-row: 2;
+      min-width: 0;
+      align-items: center;
+
+      > * {
+        flex: none;
+        translate: none;
+      }
+
+      .mission-player-hud__corporations {
+        --hand-scale: 0.18;
+
+        button {
+          width: calc(240px * var(--hand-scale));
+          flex-basis: calc(240px * var(--hand-scale));
+        }
+      }
+
+      .mission-player-hud__stocks {
+        height: auto;
+        grid-template-columns: repeat(3, max-content);
+        gap: 2px;
+        padding: 3px;
+
+        li {
+          flex-direction: row;
+          gap: 3px;
+          padding: 2px 3px;
+          font-size: 0.86rem;
+        }
+
+        .resource_icon {
+          width: 19px;
+          height: 19px;
+          flex-basis: 19px;
+        }
+
+        .mission-player-hud__production {
+          font-size: 0.66rem;
+        }
+      }
+
+      .mission-dock__played {
+        width: 72px;
+        height: 58px;
+        gap: 3px;
+        font-size: 0.66rem;
+
+        img {
+          width: 17px;
+          height: 22px;
+        }
+      }
+
+      .mission-dock__count {
+        width: 23px;
+        height: 23px;
+        font-size: 0.8rem;
+      }
+
+      .mission-effects {
+        height: 58px;
+      }
+    }
   }
+}
 
-  .mission-hand__slot {
-    height: calc(325px * var(--hand-scale) + 6px);
+@media (max-width: 760px) {
+  body #player-home.mission-cinematic .mission-player-hud {
+    > .mission-hand {
+      --hand-scale: 0.38;
+    }
+
+    .mission-player-hud__controls {
+      overflow: auto hidden;
+      overscroll-behavior-x: contain;
+      scrollbar-width: thin;
+    }
   }
-
-
 }
 
 @keyframes mission-stock-ready {
