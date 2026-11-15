@@ -368,6 +368,8 @@ type PlayerHomeModel = {
   quickAction: MissionQuickAction | undefined;
   choosingFinalGreenery: boolean;
   pendingGreenery: {input: SelectSpaceModel; path: number[]; payment: SelectProjectCardToPlayResponse} | undefined;
+  /** A space chosen on the map for an option of the action menu (e.g. plants to greenery), nothing sent yet. */
+  pendingSpace: {input: SelectSpaceModel; index: number} | undefined;
   /** A pause or resume request is on its way. */
   pausing: boolean;
   /** Played effect cards glowing because their effect just gave something. */
@@ -456,6 +458,7 @@ export default defineComponent({
       quickAction: undefined,
       choosingFinalGreenery: false,
       pendingGreenery: undefined,
+      pendingSpace: undefined,
       stagedAction: undefined,
       pendingHeat: undefined,
       litEffects: new Set(),
@@ -484,6 +487,7 @@ export default defineComponent({
     'playerView.requestId'() {
       const wasChoosingFinalGreenery = this.choosingFinalGreenery;
       this.pendingGreenery = undefined;
+      this.pendingSpace = undefined;
       this.choosingFinalGreenery = false;
       if (this.quickAction || (this.cinematic && this.missionPanel === 'actions' && actionMenu(this.playerView.waitingFor) !== undefined)) {
         this.closeMissionPanel();
@@ -560,11 +564,11 @@ export default defineComponent({
       return action && input?.type === 'or' && (action.id.startsWith('menu:') || this.quickActions.some(({id, index}) => id === action.id && index === action.index)) ? input.options[action.index] : undefined;
     },
     canCancelPlacement(): boolean {
-      return this.choosingFinalGreenery || this.pendingGreenery !== undefined || this.cancelMapChoice !== undefined || this.quickInput?.type === 'space' ||
+      return this.choosingFinalGreenery || this.pendingGreenery !== undefined || this.pendingSpace !== undefined || this.cancelMapChoice !== undefined || this.quickInput?.type === 'space' ||
         (this.serverPlacement !== undefined && this.playerView.canCancelPlacement === true);
     },
     mapPlacementInput(): SelectSpaceModel | undefined {
-      return (this.choosingFinalGreenery ? this.finalGreenery?.placement : undefined) ?? this.pendingGreenery?.input ?? this.serverPlacement;
+      return (this.choosingFinalGreenery ? this.finalGreenery?.placement : undefined) ?? this.pendingGreenery?.input ?? this.pendingSpace?.input ?? this.serverPlacement;
     },
     finalGreenery(): {placement: SelectSpaceModel; placeIndex: number; skipIndex: number} | undefined {
       const input = this.playerView.waitingFor;
@@ -860,6 +864,11 @@ export default defineComponent({
         (this.$refs.heatConfirm as InstanceType<typeof ConfirmDialog> | undefined)?.show();
         return;
       }
+      if (option?.type === 'space' && !action.id.startsWith('menu:')) {
+        this.closeMissionPanel();
+        this.pendingSpace = {input: option, index: action.index};
+        return;
+      }
       if (action.card && option?.type === 'projectCard') {
         // Standard projects are lifted to the centre like a card from the hand, with their payment.
         const card = option.cards.find((candidate) => candidate.name === action.card);
@@ -1022,6 +1031,11 @@ export default defineComponent({
       if (this.choosingFinalGreenery && this.finalGreenery) {
         return this.respondToMenu({type: 'or', index: this.finalGreenery.placeIndex, response});
       }
+      if (this.pendingSpace !== undefined) {
+        const index = this.pendingSpace.index;
+        this.pendingSpace = undefined;
+        return this.respondToMenu({type: 'or', index, response});
+      }
       const pending = this.pendingGreenery;
       if (!pending) {
         return this.respondToMenu(response);
@@ -1068,13 +1082,14 @@ export default defineComponent({
       this.missionPanelOpener = undefined;
     },
     cancelPlacement() {
-      if (this.serverPlacement !== undefined && this.playerView.canCancelPlacement === true && this.pendingGreenery === undefined && !this.choosingFinalGreenery) {
+      if (this.serverPlacement !== undefined && this.playerView.canCancelPlacement === true && this.pendingGreenery === undefined && this.pendingSpace === undefined && !this.choosingFinalGreenery) {
         // The action was already sent: the server takes it back.
         void this.cancelServerPlacement();
         return;
       }
       this.choosingFinalGreenery = false;
       this.pendingGreenery = undefined;
+      this.pendingSpace = undefined;
       const input = this.playerView.waitingFor;
       if (this.cancelMapChoice) {
         this.cancelMapChoice();
