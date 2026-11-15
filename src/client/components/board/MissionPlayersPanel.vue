@@ -10,6 +10,8 @@
           <strong class="mission-players__name">
             <span class="mission-players__nick">{{ player.name }}</span>
             <span v-if="player.color === activeColor" class="mission-players__turn">{{ player.color === myColor ? $t('Your turn') : $t('Turn') }}</span>
+            <span v-if="player.color === activeColor && player.color !== myColor && turnSeconds !== undefined" class="mission-players__clock"
+              :class="{'mission-players__clock--warn': turnSeconds <= 20}" role="timer" :aria-label="$t('Turn time left')">⏱ {{ turnClock }}</span>
           </strong>
         </span>
         <span class="mission-players__facts">
@@ -42,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onBeforeUnmount, reactive} from 'vue';
+import {computed, onBeforeUnmount, reactive, ref} from 'vue';
 import Card from '@/client/components/card/Card.vue';
 import {zoomCard} from '@/client/components/board/cardZoom';
 import {CardModel} from '@/common/models/CardModel';
@@ -90,6 +92,21 @@ function show(plays: ReadonlyArray<PlayedCardLogModel>) {
 }
 
 onBeforeUnmount(() => timers.forEach((timer) => window.clearTimeout(timer)));
+
+// The time left in the turn of the player now playing, when the game has a turn time limit.
+const now = ref(Date.now());
+const ticker = window.setInterval(() => {
+  now.value = Date.now();
+}, 500);
+onBeforeUnmount(() => window.clearInterval(ticker));
+const turnSeconds = computed(() => {
+  const deadline = props.players.find((player) => player.color === props.activeColor)?.turnDeadline;
+  return deadline === undefined ? undefined : Math.max(0, Math.ceil((deadline - now.value) / 1000));
+});
+const turnClock = computed(() => {
+  const seconds = turnSeconds.value ?? 0;
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+});
 defineExpose({show});
 
 type StockKey = 'megacredits' | 'steel' | 'titanium' | 'plants' | 'energy' | 'heat';
@@ -300,6 +317,32 @@ function productionClass(value: number): string {
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+// The opponent's turn clock, next to "Turn".
+.mission-players__clock {
+  flex: none;
+  padding: 1px 8px;
+  border: 1px solid #ffffff55;
+  border-radius: 5px;
+  background: #0b131bf0;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+
+  &--warn {
+    border-color: #ff7a5c;
+    background: #4a140b;
+    color: #ffd2c4;
+    animation: mission-players-clock-warn 0.8s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes mission-players-clock-warn {
+  from { box-shadow: 0 0 2px #ff7a5c55; }
+  to { box-shadow: 0 0 10px #ff7a5ccc; }
 }
 
 .mission-players__row--me .mission-players__turn {
