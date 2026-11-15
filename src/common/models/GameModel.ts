@@ -42,6 +42,8 @@ export type GameModel = {
   draftDeadline?: number;
   /** Set while a player has paused the game: no moves, turn clocks stopped. */
   paused?: {by: Color, at: number};
+  /** The game ended before Mars was terraformed: a player surrendered, or the creator ended it. */
+  endedEarly?: {by: Color, kind: 'surrender' | 'ended'};
   gameOptions: GameOptionsModel;
   generation: number;
   turn: number | undefined;

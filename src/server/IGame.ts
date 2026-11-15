@@ -316,6 +316,12 @@ export interface IGame extends Logger {
   stopClocks(): void;
   pause(player: IPlayer): void;
   resume(player: IPlayer): void;
+  /** Set when the game ended before Mars was terraformed: who ended it and how. */
+  endedEarly: {by: Color, kind: 'surrender' | 'ended'} | undefined;
+  /** The player who created the game (the first player of the create game form). */
+  isCreator(player: IPlayer): boolean;
+  /** Ends the game now: a player surrenders, or the creator ends it with the score as it stands. */
+  endEarly(player: IPlayer, kind: 'surrender' | 'ended'): Promise<void>;
   getPlayerAfter(player: IPlayer): IPlayer;
   getPlayerBefore(player: IPlayer): IPlayer;
 

@@ -220,6 +220,43 @@ export class Game implements IGame, Logger {
     this.log('${0} resumed the game', (b) => b.player(player));
     this.save();
   }
+
+  /** Set when the game ended before Mars was terraformed: who ended it and how. */
+  public endedEarly: {by: Color, kind: 'surrender' | 'ended'} | undefined = undefined;
+
+  /** The player who created the game: the first player of the create game form. */
+  public isCreator(player: IPlayer): boolean {
+    return this.players[0]?.id === player.id;
+  }
+
+  /**
+   * Ends the game now. 'surrender': this player gives up and is placed last, whatever the score.
+   * 'ended': the creator of the game stops it; it is scored as it stands (no final production or
+   * greeneries).
+   */
+  public async endEarly(player: IPlayer, kind: 'surrender' | 'ended'): Promise<void> {
+    if (this.phase === Phase.END) {
+      return;
+    }
+    if (kind === 'ended' && !this.isCreator(player)) {
+      throw new Error('Only the creator of the game can end it');
+    }
+    this.endedEarly = {by: player.color, kind};
+    this.paused = undefined;
+    this.draftRemainingMs = undefined;
+    this.draftDeadline = undefined;
+    this.stopClocks();
+    for (const p of this.players) {
+      p.clearWaitingFor();
+    }
+    while (this.deferredActions.length > 0) {
+      this.deferredActions.pop();
+    }
+    this.log(kind === 'surrender' ? '${0} surrendered' : '${0} ended the game', (b) => b.player(player));
+    this.updatePlayerVPForTheGeneration();
+    this.updateGlobalsForTheGeneration();
+    await this.gotoEndGame();
+  }
   public initialDraftIteration: number = 1;
 
   // Milestones and awards
@@ -589,6 +626,7 @@ export class Game implements IGame, Logger {
       gameLog: this.gameLog,
       activityAction: this.activityAction,
       paused: this.paused,
+      endedEarly: this.endedEarly,
       gameOptions: this.gameOptions,
       generation: this.generation,
       turn: this.turn,
@@ -1974,6 +2012,7 @@ export class Game implements IGame, Logger {
     game.gameLog = d.gameLog;
     game.activityAction = d.activityAction;
     game.paused = d.paused;
+    game.endedEarly = d.endedEarly;
     game.generation = d.generation;
     game.turn = d.turn ?? (d.phase === Phase.ACTION ? 1 : 0);
     game.turnStarted = d.turnStarted ?? d.phase === Phase.ACTION;

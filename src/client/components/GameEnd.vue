@@ -42,6 +42,7 @@
             <template v-for="(p, index) in winners" :key="p.color"><template v-if="index > 0"> + </template>{{ p.name }}</template>
           </h2>
           <p class="recap-winner__score">{{ $t('Final score') }}: <b>{{ winners[0]?.victoryPointsBreakdown.total }}</b></p>
+          <p v-if="endedEarlyText" class="recap-winner__early">{{ endedEarlyText }}</p>
         </div>
       </div>
       <div class="recap-ranking">
@@ -54,6 +55,7 @@
               <b>{{ p.name }}</b>
               <small>{{ corporationsOf(p) }}</small>
             </span>
+            <span v-if="p.color === surrenderedColor" class="recap-badge recap-badge--gaveup" v-i18n>Surrendered</span>
             <span class="recap-ranking__score">{{ p.victoryPointsBreakdown.total }}</span>
           </li>
         </ol>
@@ -381,15 +383,28 @@ export default defineComponent({
       return PRODUCTION_COLUMNS;
     },
     playersInPlace(): Array<PublicPlayerModel> {
+      // A player who surrendered is last, whatever the score.
+      const gaveUp = (p: PublicPlayerModel) => this.surrenderedColor === p.color ? 1 : 0;
       return this.participant.players.toSorted((a, b) =>
-        (b.victoryPointsBreakdown.total - a.victoryPointsBreakdown.total) || (b.megacredits - a.megacredits));
+        (gaveUp(a) - gaveUp(b)) || (b.victoryPointsBreakdown.total - a.victoryPointsBreakdown.total) || (b.megacredits - a.megacredits));
+    },
+    surrenderedColor(): string | undefined {
+      return this.game.endedEarly?.kind === 'surrender' ? this.game.endedEarly.by : undefined;
+    },
+    endedEarlyText(): string | undefined {
+      const ended = this.game.endedEarly;
+      if (ended === undefined) {
+        return undefined;
+      }
+      const name = this.participant.players.find((p) => p.color === ended.by)?.name ?? ended.by;
+      return translateTextWithParams(ended.kind === 'surrender' ? '${0} surrendered.' : '${0} ended the game before Mars was terraformed.', [name]);
     },
     winners(): Array<PublicPlayerModel> {
       const first = this.playersInPlace[0];
       if (first === undefined) {
         return [];
       }
-      return this.playersInPlace.filter((p) =>
+      return this.playersInPlace.filter((p) => p.color !== this.surrenderedColor &&
         p.victoryPointsBreakdown.total === first.victoryPointsBreakdown.total && p.megacredits === first.megacredits);
     },
     isSoloGame(): boolean {
@@ -569,7 +584,7 @@ export default defineComponent({
     rankOf(player: PublicPlayerModel, index: number): number {
       const players = this.playersInPlace;
       let rank = index;
-      while (rank > 0 && players[rank - 1].victoryPointsBreakdown.total === player.victoryPointsBreakdown.total && players[rank - 1].megacredits === player.megacredits) {
+      while (rank > 0 && player.color !== this.surrenderedColor && players[rank - 1].color !== this.surrenderedColor && players[rank - 1].victoryPointsBreakdown.total === player.victoryPointsBreakdown.total && players[rank - 1].megacredits === player.megacredits) {
         rank--;
       }
       return rank + 1;
@@ -918,6 +933,16 @@ body:has(#game-end.recap) {
     font-size: clamp(1.8rem, 4vw, 2.8rem);
     line-height: 1.1;
   }
+}
+
+.recap-winner__early {
+  margin: 10px 0 0;
+  color: #ffd2c4;
+  font-weight: 700;
+}
+
+.recap-badge--gaveup {
+  background: #b23a1d;
 }
 
 .recap-winner__crown {

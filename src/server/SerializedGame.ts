@@ -44,6 +44,7 @@ export type SerializedGame = {
     gameLog: Array<LogMessage>;
     activityAction?: LogMessage['action'];
     paused?: {by: Color, at: number};
+    endedEarly?: {by: Color, kind: 'surrender' | 'ended'};
     gameOptions: GameOptions;
     generation: number;
     turn?: number;

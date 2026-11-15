@@ -33,6 +33,7 @@ import {Reset} from '../routes/Reset';
 import {ServeApp} from '../routes/ServeApp';
 import {ServeAsset} from '../routes/ServeAsset';
 import {ApiPause} from '../routes/ApiPause';
+import {ApiEndGame} from '../routes/ApiEndGame';
 import {ApiCancelPlacement} from '../routes/ApiCancelPlacement';
 import {serverId, statsId} from '../utils/server-ids';
 import {newIpBlocklist} from './IPBlocklist';
@@ -107,6 +108,7 @@ const handlers: Map<string, IHandler> = new Map(
     [paths.API_WAITING_FOR, ApiWaitingFor.INSTANCE],
     [paths.AUTOPASS, Autopass.INSTANCE],
     [paths.API_PAUSE, ApiPause.INSTANCE],
+    [paths.API_END_GAME, ApiEndGame.INSTANCE],
     [paths.API_CANCEL_PLACEMENT, ApiCancelPlacement.INSTANCE],
     [paths.CARDS, ServeApp.INSTANCE],
     [paths.END_GAME_LOG, EndGameLog.INSTANCE],

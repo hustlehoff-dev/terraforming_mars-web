@@ -104,6 +104,8 @@ export interface PlayerViewModel extends ViewModel {
   requestId: string | undefined;
   /** The space being chosen ends an action that can still be taken back (api/cancelplacement). */
   canCancelPlacement?: boolean;
+  /** This player created the game: they can end it early. */
+  isGameCreator?: boolean;
   thisPlayer: PublicPlayerModel;
   waitingFor: PlayerInputModel | undefined;
 }
