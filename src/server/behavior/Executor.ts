@@ -525,8 +525,8 @@ export class Executor implements BehaviorExecutor {
 
     if (behavior.tr !== undefined) {
       const count = ctx.count(behavior.tr);
-      // Always logged, so the activity feed shows the TR a card gives (e.g. a prelude copied by Double Down).
-      const log = true;
+      // Logged whenever the player is in a game, so the activity feed shows the TR a card gives.
+      const log = typeof(behavior.tr) === 'object' || player.game !== undefined;
       if (count >= 0) {
         player.increaseTerraformRating(count, {log: log});
       } else {

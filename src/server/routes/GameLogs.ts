@@ -82,6 +82,16 @@ function unitChange(message: LogMessage): {player: Color, text: string} | undefi
   return {player: first.value, text: `${lost ? '-' : '+'}${count}${icon}`};
 }
 
+/** Messages shown as a remark under the action that caused them. */
+const noteMessages = new Map<string, string>([
+  ['${0} placed a Community (player marker)', 'Placed a Community marker'],
+  ['${0} acted as World Government and placed an ocean', 'As World Government: ocean without TR or bonuses'],
+  ['${0} acted as World Government and increased temperature', 'As World Government: temperature without TR or bonuses'],
+  ['${0} acted as World Government and increased oxygen level', 'As World Government: oxygen without TR or bonuses'],
+  ['${0} acted as World Government and increased Venus scale', 'As World Government: Venus without TR or bonuses'],
+  ['${0} acted as World Government and removed a hazard tile', 'As World Government: hazard tile removed'],
+]);
+
 const cardActions = new Map<string, GameActivityKind>([
   ['${0} used ${1} action', 'action'],
   ['${0} used ${1} action with ${2}', 'action'],
@@ -191,6 +201,8 @@ function toActivity(message: LogMessage): Activity | undefined {
     return {kind: 'venus', player};
   case '${0} passed':
     return {kind: 'passed', player};
+  case '${0} ran out of time':
+    return {kind: 'passed', player, subject: 'time ran out'};
   case '${0} ended turn':
     return {kind: 'ended', player};
   }
@@ -324,6 +336,21 @@ export class GameLogs {
         continue;
       }
       if (current?.player === undefined) {
+        continue;
+      }
+      const note = noteMessages.get(message.message);
+      if (note !== undefined) {
+        addStep(current, {kind: 'note', text: note});
+        continue;
+      }
+      // What a player paid outside playing a card (standard project, card action, award...).
+      if (message.message === '${0} spent ${1}' && actor?.type === LogMessageDataType.PLAYER) {
+        const tokens = String(verb?.value ?? '').split(' ').filter((token) => /^-\d+/.test(token));
+        if (actor.value === current.player) {
+          own.push(...tokens);
+        } else {
+          others.set(actor.value, [...(others.get(actor.value) ?? []), ...tokens]);
+        }
         continue;
       }
       if (message.message === '${0} copied the direct effect of ${1} with ${2}' && verb?.type === LogMessageDataType.CARD) {

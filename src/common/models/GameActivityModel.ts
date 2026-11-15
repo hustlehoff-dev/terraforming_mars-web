@@ -23,7 +23,9 @@ export type ActivityStep =
   {kind: 'draw', player?: Color, count?: number, deck?: DeckActivity} |
   {kind: 'event', event: GameActivityKind, player?: Color, subject?: string, card?: CardName} |
   /** Resources added to (count > 0) or removed from (count < 0) a card, e.g. 1 microbe onto Decomposers. */
-  {kind: 'resource', player?: Color, card: CardName, count: number, resource: string};
+  {kind: 'resource', player?: Color, card: CardName, count: number, resource: string} |
+  /** A short remark on the action, e.g. that World Government placed the ocean (no TR, no bonuses). */
+  {kind: 'note', text: string};
 
 export const deckLabels = {
   drawn: 'Drawn',
