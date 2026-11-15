@@ -581,6 +581,8 @@
   "Draft": "Draft kart",
   "Score": "Wynik",
   "Timeline": "Przebieg",
+  "Your turn time": "Czas Twojej tury",
+  "Turn time left": "Pozostały czas tury",
   "Bought": "Kupione",
   "You drew a card": "Dobrałeś kartę",
   "You drew ${0} cards": "Dobrałeś ${0} karty",

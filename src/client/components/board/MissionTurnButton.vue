@@ -22,7 +22,9 @@
       </li>
     </ul>
     <span v-if="secondsLeft !== undefined" class="mission-turn__clock" :class="{'mission-turn__clock--warn': secondsLeft <= 20}" role="timer">
-      <template v-if="secondsLeft <= 20">{{ $t('Auto pass in') }} </template>{{ clock }}
+      <span class="mission-turn__clock-icon" aria-hidden="true">⏱</span>
+      <span class="mission-turn__clock-label">{{ $t(secondsLeft <= 20 ? 'Auto pass in' : 'Your turn time') }}</span>
+      <b>{{ clock }}</b>
     </span>
     <div v-if="active && actionsTaken !== undefined && noActionLimit" class="mission-turn__count" aria-live="polite">
       <span>{{ $t(soloGame ? 'No action limit' : 'Others passed: no action limit') }}</span>
@@ -192,20 +194,48 @@ function press() {
 }
 
 .mission-turn__clock {
-  padding: 3px 10px;
-  border: 1px solid #6f8c98;
-  border-radius: 5px;
+  display: grid;
+  align-items: center;
+  grid-template-columns: auto auto;
+  gap: 0 10px;
+  min-width: 170px;
+  padding: 8px 16px;
+  border: 2px solid #6f8c98;
+  border-radius: 10px;
   background: #0b141cf0;
+  box-shadow: 0 6px 16px #000a;
   color: #eef6f8;
-  font-size: 1.1rem;
-  font-weight: 800;
   font-variant-numeric: tabular-nums;
+
+  b {
+    grid-column: 2;
+    font-size: 2.1rem;
+    font-weight: 900;
+    line-height: 1;
+  }
 
   &--warn {
     border-color: #ff7a5c;
     background: #4a140b;
     color: #ffd2c4;
     animation: mission-turn-warn 0.8s ease-in-out infinite alternate;
+  }
+}
+
+.mission-turn__clock-icon {
+  grid-row: span 2;
+  font-size: 1.9rem;
+}
+
+.mission-turn__clock-label {
+  color: #9fb8c2;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+
+  .mission-turn__clock--warn & {
+    color: #ffd2c4;
   }
 }
 

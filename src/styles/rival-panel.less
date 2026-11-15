@@ -96,10 +96,38 @@
 }
 
 .rival-tile__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: #ffdcaf;
   font-size: 0.49rem;
   line-height: 1.15;
   white-space: nowrap;
+}
+
+// The opponent's turn clock, next to "Now playing".
+.rival-tile__clock {
+  padding: 1px 6px;
+  border: 1px solid #ffdcaf88;
+  border-radius: 5px;
+  background: #0b141ce6;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+
+  &--warn {
+    border-color: #ff7a5c;
+    background: #4a140b;
+    color: #ffd2c4;
+    animation: rival-clock-warn 0.8s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes rival-clock-warn {
+  from { box-shadow: 0 0 2px #ff7a5c55; }
+  to { box-shadow: 0 0 10px #ff7a5ccc; }
 }
 
 .rival-tile__resource {
