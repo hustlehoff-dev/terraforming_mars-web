@@ -129,7 +129,11 @@ function giveAwards(player: IPlayer, builder: VictoryPointsBreakdownBuilder) {
       maybeSetVP(player, players[0], fundedAward, 5, '1st', builder);
       players.shift();
 
-      if (players.length > 1) {
+      if (players.length === 1) {
+        // Two players: the other one is 2nd and gets 2 VP as well (house rule; the
+        // printed rules give nothing for 2nd place in a 2-player game).
+        maybeSetVP(player, players[0], fundedAward, 2, '2nd', builder);
+      } else if (players.length > 1) {
         // There is one rank 2 player
         if (scorer.get(players[0]) > scorer.get(players[1])) {
           maybeSetVP(player, players[0], fundedAward, 2, '2nd', builder);
