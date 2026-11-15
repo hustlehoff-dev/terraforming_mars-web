@@ -245,18 +245,18 @@
       </h2>
       <div class="recap-insights">
         <div v-for="insight in insights" :key="insight.key" class="recap-insight">
-          <span class="recap-insight__icon" aria-hidden="true">{{ insight.icon }}</span>
-          <div>
+          <header class="recap-insight__head">
+            <span class="recap-insight__icon" aria-hidden="true">{{ insight.icon }}</span>
             <b>{{ $t(insight.title) }}</b>
-            <p class="recap-insight__who">
-              <template v-for="(who, index) in insight.players" :key="who.color">
-                <template v-if="index > 0"> · </template>
-                <span class="recap-dot" :class="'player_bg_color_' + who.color" aria-hidden="true"></span>{{ who.name }}
-              </template>
-              <template v-if="insight.badge">{{ insight.badge }}</template>
-            </p>
-            <small>{{ insight.text }}</small>
-          </div>
+          </header>
+          <p class="recap-insight__who">
+            <template v-for="(who, index) in insight.players" :key="who.color">
+              <span v-if="index > 0" aria-hidden="true">·</span>
+              <span class="recap-insight__player"><span class="recap-dot" :class="'player_bg_color_' + who.color" aria-hidden="true"></span>{{ who.name }}</span>
+            </template>
+            <span v-if="insight.badge" class="recap-insight__badge">{{ insight.badge }}</span>
+          </p>
+          <p class="recap-insight__text">{{ insight.text }}</p>
         </div>
       </div>
     </section>
@@ -632,7 +632,10 @@ body:has(#game-end.recap) {
 
 #game-end.recap {
   // Headings of the light panels: no glow from the global heading styles.
+  // The global heading styles add a blurred drop shadow: not on this page.
   h1, h2, h3, small, b {
+    padding: 0;
+    filter: none;
     text-shadow: none;
   }
 
@@ -1295,37 +1298,72 @@ body:has(#game-end.recap) {
 .recap-insights {
   display: grid;
   gap: 14px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
 }
 
+// One insight: icon and title on top, then who, then a line of explanation across the full width.
 .recap-insight {
   display: flex;
-  gap: 12px;
-  padding: 14px;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
   border: 1px solid #ffffff2a;
   border-radius: 14px;
   background: #ffffff12;
+  line-height: 1.35;
+}
+
+.recap-insight__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 
   b {
-    font-size: 1.05rem;
-  }
-
-  small {
-    color: #f1d3bd;
+    color: #ffd7b5;
+    font-size: 0.95rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 }
 
 .recap-insight__icon {
-  font-size: 1.8rem;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  place-items: center;
+  border-radius: 10px;
+  background: #ffffff1c;
+  font-size: 1.3rem;
 }
 
 .recap-insight__who {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
-  margin: 6px 0;
-  font-weight: 800;
+  gap: 6px;
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+.recap-insight__player {
+  display: inline-flex;
+  align-items: center;
+}
+
+.recap-insight__badge {
+  padding: 2px 10px;
+  border-radius: 8px;
+  background: #e8743b;
+  font-size: 1rem;
+}
+
+.recap-insight__text {
+  margin: 0;
+  color: #f1d3bd;
+  font-size: 0.9rem;
 }
 
 .recap-more {
