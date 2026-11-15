@@ -55,6 +55,29 @@ describe('ActivityFeed', () => {
     }
   });
 
+  it('opens the card window for cards revealed or discarded only for the player who did it', async () => {
+    let history: Array<GameActivityModel> = [];
+    vi.stubGlobal('fetch', async () => ({ok: true, json: async () => history}));
+    const model = fakeViewModel();
+    const wrapper = shallowMount(ActivityFeed, {...globalConfig, props: {viewModel: model}});
+    try {
+      await flushPromises();
+      // Another player (red) uses Search for Life: this player (blue) gets no window.
+      history = [{key: 'a', kind: 'action', card: CardName.SEARCH_FOR_LIFE, player: 'red', deck: [{kind: 'discarded', cards: [CardName.FISH]}]}];
+      await wrapper.setProps({viewModel: {...model, game: {...model.game, gameAge: 1}}});
+      await flushPromises();
+      expect(wrapper.findComponent({name: 'ActivityCardReveal'}).exists()).is.false;
+      // This player uses it: the window shows the discarded card.
+      history = [{key: 'b', kind: 'action', card: CardName.SEARCH_FOR_LIFE, player: 'blue', deck: [{kind: 'discarded', cards: [CardName.BIRDS]}]}, ...history];
+      await wrapper.setProps({viewModel: {...model, game: {...model.game, gameAge: 2}}});
+      await flushPromises();
+      expect(wrapper.findComponent({name: 'ActivityCardReveal'}).exists()).is.true;
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('updates the Comet row when a legacy server sends the ocean as a separate entry', async () => {
     let history: Array<GameActivityModel> = [{key: 'play', kind: 'played', card: CardName.COMET, player: 'blue', effects: '+3:r:heat:'}];
     vi.stubGlobal('fetch', async () => ({ok: true, json: async () => history}));

@@ -29,7 +29,8 @@
             <span v-if="entry.player" class="activity-feed__marker" :class="'player_bg_color_' + entry.player" aria-hidden="true"></span>
             <span class="activity-feed__line">
               <strong v-if="entry.actor">{{ entry.actor + ' ' }}</strong>
-              <span class="activity-feed__verb">{{ entry.action + ' ' }}</span>
+              <span v-if="entry.kind === 'action' && entry.card" class="activity-feed__action-tag"><span aria-hidden="true">➜</span>{{ $t('Card action') }}</span>
+              <span v-else class="activity-feed__verb">{{ entry.action + ' ' }}</span>
               <b v-if="entry.subjectText">{{ entry.subjectText }}</b>
               <span v-for="(step, index) in entry.stepLines" :key="index" class="activity-feed__reveal" v-html="'→ ' + renderIcons(step)"></span>
               <span v-if="entry.spent" class="activity-feed__units activity-feed__units--spent" v-html="renderIcons(entry.spent)"></span>
@@ -47,6 +48,12 @@
       <p v-if="loaded && entries.length === 0" class="activity-feed__empty" v-i18n>No activity yet</p>
     </div>
     <div v-if="previewEntry?.groups.length" ref="preview" class="activity-feed__preview activity-feed__preview--deck" :style="previewStyle" aria-hidden="true">
+      <div v-if="previewCards.length" class="activity-feed__group activity-feed__group--source" :class="{'activity-feed__group--action': previewEntry.kind === 'action'}">
+        <p>{{ $t(previewEntry.kind === 'action' ? 'Card action' : 'Card') }}</p>
+        <div class="activity-feed__group-cards">
+          <Card v-for="card in previewCards" :key="card.name" :card="card" />
+        </div>
+      </div>
       <div v-for="group in previewEntry.groups" :key="group.label" class="activity-feed__group" :class="{'activity-feed__group--dim': group.dim}">
         <p>{{ group.label }}</p>
         <div class="activity-feed__group-cards">
@@ -765,9 +772,39 @@ button.activity-feed__entry {
 // The card itself floats beside the hovered row: no frame, no background, no close button.
 .activity-feed__preview--deck {
   display: grid;
-  gap: 8px;
+  grid-auto-flow: column;
+  align-items: start;
+  gap: 14px;
   width: max-content;
   max-width: calc(100vw - 100% - 60px);
+}
+
+// The card whose action (or play) revealed the cards, before them in the preview.
+.activity-feed__group--action > p {
+  color: #9fd4ff;
+}
+
+.activity-feed__group--action :deep(.card-container) {
+  box-shadow: 0 0 0 3px #3c9be6, 0 0 18px #3c9be699;
+}
+
+.activity-feed__action-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 5px;
+  padding: 0 7px;
+  border: 1px solid #3c9be6;
+  border-radius: 6px;
+  background: #0f2a40;
+  color: #cfe8ff;
+  font-size: 0.85em;
+  font-weight: 800;
+  vertical-align: 1px;
+
+  > span {
+    color: #ff7a5c;
+  }
 }
 
 .activity-feed__group {
