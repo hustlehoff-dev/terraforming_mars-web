@@ -43,6 +43,8 @@ export type Preferences = {
   music_url: string,
   /** Size of the cards in the hand, in percent of the normal size. */
   hand_card_size: number,
+  /** How long a card someone played stays next to the players panel, in seconds. */
+  played_card_seconds: number,
 }
 
 export type Preference = keyof Preferences;
@@ -62,6 +64,7 @@ const defaults: Preferences = {
   music_track: 'builtin',
   music_url: '',
   hand_card_size: 100,
+  played_card_seconds: 5,
 
   hide_hand: false,
   hide_awards_and_milestones: false,
@@ -120,6 +123,9 @@ export class PreferencesManager {
     } else if (key === 'card_skin') {
       // Only the classic cards are offered.
       this._values.card_skin = 'classic';
+    } else if (key === 'played_card_seconds') {
+      const seconds = Number(val);
+      this._values.played_card_seconds = Number.isFinite(seconds) ? Math.min(30, Math.max(2, Math.round(seconds))) : defaults.played_card_seconds;
     } else if (key === 'hand_card_size') {
       const size = Number(val);
       this._values.hand_card_size = Number.isFinite(size) ? Math.min(150, Math.max(70, Math.round(size))) : defaults.hand_card_size;

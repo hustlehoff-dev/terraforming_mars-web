@@ -366,10 +366,17 @@ dialog.deck-choice-dialog {
     margin: 12px 0 0 !important;
   }
 
-  // Colonies and parties: picked like cards.
+  // Colonies and parties: picked like cards. The six parties in one row, small enough to fit the
+  // window without scrolling.
   .wf-component--list-party {
     flex-wrap: wrap;
-    gap: 8px;
+    justify-content: center;
+    gap: 6px;
+
+    .party-container {
+      margin: 12px 0 0;
+      zoom: 0.6;
+    }
   }
 
   .wf-component--select-party label,

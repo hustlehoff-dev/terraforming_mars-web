@@ -45,6 +45,7 @@
 </template>
 
 <script setup lang="ts">
+import {getPreferences} from '@/client/utils/PreferencesManager';
 import {computed, onBeforeUnmount, reactive, ref} from 'vue';
 import Card from '@/client/components/card/Card.vue';
 import {zoomCard} from '@/client/components/board/cardZoom';
@@ -67,8 +68,10 @@ const queues = new Map<Color, Array<PlayedCardLogModel>>();
 const timers = new Map<Color, number>();
 
 /** How long a played card stays next to its player; after the pointer leaves it, a bit more. */
-const SHOW_MS = 15000;
-const AFTER_HOVER_MS = 4000;
+function showMs(): number {
+  return getPreferences().played_card_seconds * 1000;
+}
+const AFTER_HOVER_MS = 3000;
 /** Players whose played card is pointed at: it stays until the pointer leaves. */
 const held = new Set<Color>();
 
@@ -85,7 +88,7 @@ function showNext(player: Color) {
     return;
   }
   visible[player] = play;
-  timers.set(player, window.setTimeout(() => showNext(player), SHOW_MS));
+  timers.set(player, window.setTimeout(() => showNext(player), showMs()));
 }
 
 function hold(player: Color) {

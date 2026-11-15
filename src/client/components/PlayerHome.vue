@@ -91,6 +91,7 @@
           <MissionParameters :game="game" :solo="playerView.players.length === 1">
             <button type="button" class="mission-hud-ma" :class="{lit: hudMenusState.awards}" @click="hudShow('awards')"><span aria-hidden="true">🏆</span>{{ $t('Awards') }}</button>
             <button type="button" class="mission-hud-ma" :class="{lit: hudMenusState.milestones}" @click="hudShow('milestones')"><span aria-hidden="true">🏅</span>{{ $t('Milestones') }}</button>
+            <MissionColonies :colonies="game.colonies" :players="playerView.players" />
             <button type="button" :aria-expanded="missionPanel === 'details'" @click="toggleMissionPanel('details')">{{ $t('Game details') }}</button>
             <button type="button" :aria-expanded="missionPanel === 'log'" @click="toggleMissionPanel('log')">{{ $t('Game log') }}</button>
             <button type="button" class="primary" :aria-expanded="missionPanel === 'actions'" @click="openActions">{{ $t(finalGreenery ? 'Final greenery placement' : 'Actions') }}</button>
@@ -310,6 +311,7 @@ import WaitingFor from '@/client/components/WaitingFor.vue';
 import DecisionHeading from '@/client/components/board/DecisionHeading.vue';
 import Sidebar from '@/client/components/Sidebar.vue';
 import MissionSettings from '@/client/components/MissionSettings.vue';
+import MissionColonies from '@/client/components/board/MissionColonies.vue';
 import InfoPanel from '@/client/components/InfoPanel.vue';
 import Colony from '@/client/components/colonies/Colony.vue';
 import LogPanel from '@/client/components/logpanel/LogPanel.vue';
@@ -844,6 +846,7 @@ export default defineComponent({
     AppButton,
     Sidebar,
     MissionSettings,
+    MissionColonies,
     InfoPanel,
     Colony,
     LogPanel,

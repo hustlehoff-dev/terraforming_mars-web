@@ -40,7 +40,21 @@ const props = defineProps<{batches: ReadonlyArray<DeckActivity>, playerName?: (c
 const emit = defineEmits<{close: []}>();
 const dialog = ref<HTMLDialogElement>();
 
-const groups = computed(() => props.batches.map((batch) => {
+/** Batches of the same kind for the same player in a row (e.g. a card from the card and one from the ocean bonus) form one group. */
+const merged = computed(() => {
+  const result: Array<DeckActivity> = [];
+  for (const batch of props.batches) {
+    const last = result.at(-1);
+    if (last !== undefined && last.kind === batch.kind && last.player === batch.player) {
+      result[result.length - 1] = {...last, cards: [...last.cards, ...batch.cards]};
+    } else {
+      result.push(batch);
+    }
+  }
+  return result;
+});
+
+const groups = computed(() => merged.value.map((batch) => {
   const who = props.playerName?.(batch.player);
   let title: string;
   if (batch.kind === 'drawn' && who === undefined) {
@@ -64,7 +78,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  if (dialog.value?.open) {
+  if (dialog.value?.open && typeof dialog.value.close === 'function') {
     dialog.value.close();
   }
 });

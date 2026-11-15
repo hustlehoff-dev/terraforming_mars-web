@@ -42,6 +42,10 @@
           <span>{{ $t('Size of the cards in hand') }} <span class="preference-fields__value">{{ prefs.hand_card_size }}%</span></span>
           <input type="range" min="70" max="150" step="5" :value="prefs.hand_card_size" @input="setHandSize">
         </label>
+        <label class="preference-fields__volume">
+          <span>{{ $t('Played card shown for') }} <span class="preference-fields__value">{{ prefs.played_card_seconds }} s</span></span>
+          <input type="range" min="2" max="30" step="1" :value="prefs.played_card_seconds" @input="setPlayedCardSeconds">
+        </label>
       </template>
     </details>
     <label v-if="mission" class="preference-fields__language">
@@ -108,6 +112,10 @@ const groups: Array<{title: string; fields: Toggle[]}> = [
 ];
 
 const shownGroups = computed(() => props.mission ? missionGroups : groups);
+
+function setPlayedCardSeconds(event: Event) {
+  props.preferencesManager.set('played_card_seconds', (event.target as HTMLInputElement).valueAsNumber);
+}
 
 function setHandSize(event: Event) {
   props.preferencesManager.set('hand_card_size', (event.target as HTMLInputElement).valueAsNumber);

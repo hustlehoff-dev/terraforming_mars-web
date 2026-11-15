@@ -46,6 +46,7 @@
     <aside class="atlas-inspector" :aria-label="$t('Board')">
       <div class="atlas-inspector__tools">
         <button type="button" :aria-pressed="showTracks" @click="showTracks = !showTracks" v-i18n>Tracks</button>
+        <MissionColonies :colonies="game.colonies" :players="players" />
         <button type="button" @click="$emit('toggleTileView')">{{ $t(nextView + ' tiles') }}</button>
       </div>
     </aside>
@@ -110,6 +111,7 @@ import Board from '@/client/components/Board.vue';
 import {sectorName} from '@/client/components/Legends';
 import MarsSurface from '@/client/components/board/MarsSurface.vue';
 import MissionPlacementBanner from '@/client/components/board/MissionPlacementBanner.vue';
+import MissionColonies from '@/client/components/board/MissionColonies.vue';
 import {mapPlacementKey} from '@/client/components/board/MapPlacement';
 import {nextTileView, TileView} from '@/client/components/board/TileView';
 import {spacesById} from '@/client/utils/spacesById';
@@ -156,7 +158,7 @@ function tileImage(tile: TileType | undefined): string {
 
 export default defineComponent({
   name: 'AtlasBoard',
-  components: {Board, MarsSurface, MissionPlacementBanner},
+  components: {Board, MarsSurface, MissionPlacementBanner, MissionColonies},
   emits: ['toggleTileView'],
   props: {
     orbitLayout: Boolean,
