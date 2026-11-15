@@ -23,7 +23,7 @@ describe('ActivityFeed', () => {
       Object.defineProperty(list, 'scrollHeight', {get: () => list.children.length * 40});
       list.scrollTop = 60;
       expect(wrapper.findAll('.activity-feed__entry--new')).has.length(0);
-      await wrapper.get('[title*="placed ocean tile"]').trigger('click');
+      await wrapper.get('[aria-label*="placed ocean tile"]').trigger('click');
       expect(wrapper.emitted('spaceClicked')).deep.eq([['05']]);
 
       history = [{key: '3', kind: 'played', card: CardName.FISH, player: 'red'}, ...history];

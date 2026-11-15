@@ -19,7 +19,6 @@
             :type="entry.card || entry.targetSpace || entry.deck?.length ? 'button' : undefined"
             class="activity-feed__entry"
             :class="{'activity-feed__entry--new': newKeys.has(entry.key)}"
-            :title="entry.text"
             :aria-label="entry.card || entry.targetSpace || entry.deck?.length ? entry.text : undefined"
             :aria-expanded="entry.deck?.length ? reveal?.key === entry.key : entry.card ? previewKey === entry.key : undefined"
             @click="inspect(entry)"
@@ -67,9 +66,12 @@
         <p>{{ $t(previewMa.description) }}</p>
       </div>
     </div>
-    <div v-else-if="previewCard || previewEntry?.stepLines.length" ref="preview" class="activity-feed__preview" :style="previewStyle" aria-hidden="true">
-      <p v-if="previewEntry?.stepLines.length" class="activity-feed__summary">{{ previewEntry.text }}</p>
-      <Card v-if="previewCard" :key="previewCard.name" :card="previewCard" autoTall />
+    <div v-else-if="previewCards.length || previewEntry?.stepLines.length" ref="preview" class="activity-feed__preview" :style="previewStyle" aria-hidden="true">
+      <p v-if="previewCards.length === 0" class="activity-feed__summary">{{ previewEntry?.text }}</p>
+      <!-- The card of the entry and every card it led to: played with it, or given resources. -->
+      <div v-else class="activity-feed__preview-cards" :class="{'activity-feed__preview-cards--many': previewCards.length > 1}">
+        <Card v-for="card in previewCards" :key="card.name" :card="card" autoTall />
+      </div>
     </div>
   </aside>
   <ActivityCardReveal v-if="reveal?.deck?.length" :key="reveal.key" :batches="reveal.deck" :playerName="revealPlayerName" @close="closeReveal" />
@@ -241,13 +243,34 @@ const entries = computed(() => mergeDeckRuns(events.value).map((event) => {
   return {...event, actor, action, subjectText, targetLines, stepLines, groups: event.deck?.length ? deckGroups(event) : [], targetSpace: event.space ?? event.placements?.[0]?.space,
     text: [summary, ...stepLines, science].filter(Boolean).join(' → ')};
 }));
-const previewCard = computed<CardModel | undefined>(() => {
+const previewCards = computed<Array<CardModel>>(() => {
   const event = events.value.find((entry) => entry.key === previewKey.value);
-  const card = event?.card;
-  if (!event || !card || !getCard(card)) {
-    return undefined;
+  if (!event) {
+    return [];
   }
-  return (event.player && players.value.get(event.player)?.tableau.find((model) => model.name === card)) || {name: card};
+  // The card itself, then the cards its steps name (e.g. a prelude played by New Partner,
+  // the card that got science from it).
+  const named: Array<{name: CardName, owner?: Color}> = [];
+  if (event.card) {
+    named.push({name: event.card, owner: event.player});
+  }
+  for (const step of event.steps ?? []) {
+    if ((step.kind === 'event' || step.kind === 'resource') && step.card) {
+      named.push({name: step.card, owner: step.player ?? event.player});
+    }
+  }
+  const seen = new Set<CardName>();
+  const cards: Array<CardModel> = [];
+  for (const {name, owner} of named) {
+    if (seen.has(name) || !getCard(name)) {
+      continue;
+    }
+    seen.add(name);
+    const fromOwner = owner ? players.value.get(owner)?.tableau.find((model) => model.name === name) : undefined;
+    const fromAnyone = [...players.value.values()].flatMap((player) => player.tableau).find((model) => model.name === name);
+    cards.push(fromOwner ?? fromAnyone ?? {name});
+  }
+  return cards.slice(0, 4);
 });
 const previewEntry = computed(() => entries.value.find((entry) => entry.key === previewKey.value));
 const previewMa = computed(() => {
@@ -733,6 +756,21 @@ button.activity-feed__entry {
   :deep(.card-container) {
     margin: 0;
     zoom: 0.95;
+  }
+}
+
+.activity-feed__preview-cards {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+
+  // Two or more cards side by side: a bit smaller, so they fit next to the feed.
+  &--many :deep(.card-container) {
+    zoom: 0.85;
+
+    @media (max-height: 760px) {
+      zoom: 0.7;
+    }
   }
 }
 
