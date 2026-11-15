@@ -14,6 +14,7 @@ export class OrOptions extends OptionsInput<undefined> {
     const initialIdx = this.options.findIndex((option) => option.eligibleForDefault !== false);
     const model: OrOptionsModel = {
       title: this.title,
+      warning: this.warning,
       buttonLabel: this.buttonLabel,
       type: 'or',
       options: this.options.map((option) => option.toModel(player)),

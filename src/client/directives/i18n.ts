@@ -26,8 +26,8 @@ export function setTranslationContext(playerView: PlayerViewModel) {
 }
 
 export function translateMessage(message: Message): string {
-  message.message = translateText(message.message);
-  return Log.applyData(message, (datum) => {
+  const translated = {...message, message: translateText(message.message)};
+  return Log.applyData(translated, (datum) => {
     if (datum === undefined) {
       return '';
     }

@@ -236,22 +236,14 @@ dialog.deck-choice-dialog {
   backdrop-filter: blur(6px);
   transform: translate(-50%, -50%);
 
-  .mission-panel__nav {
-    justify-content: center;
-    padding: 10px 14px 4px;
-    border-bottom: 0;
-
-    strong {
-      color: #f6e2b8;
-      font-size: 0.85rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-    }
+  .mission-panel__decision-heading {
+    max-width: 680px;
+    margin: 0 auto 14px;
   }
 
   .mission-panel__body {
     overflow: auto;
-    padding: 6px 18px 18px;
+    padding: 14px 18px 18px;
     scrollbar-width: thin;
     scrollbar-color: #6f8c98 transparent;
   }
@@ -262,6 +254,14 @@ dialog.deck-choice-dialog {
     justify-content: center;
     gap: 8px;
   }
+}
+
+dialog.deck-choice-dialog:has(> .decision-options):not(.dialog--peek) {
+  min-width: min(580px, calc(100vw - 24px));
+  border-color: #e2c27f99;
+  border-radius: 14px;
+  background: linear-gradient(#152330ee, #0b131bee);
+  backdrop-filter: blur(6px);
 }
 
 // Shared look of choices in the decision window and the card window.
@@ -288,6 +288,23 @@ dialog.deck-choice-dialog {
     display: flex;
     flex-direction: column;
     gap: 8px;
+  }
+
+  .wf-action .btn,
+  .wf-component > .nofloat:last-child > .btn,
+  .select-amount__save > .btn {
+    min-height: 44px;
+    height: auto;
+    border-color: #49616d;
+    border-radius: 9px;
+    background: #142630;
+    color: #eef4f6;
+    white-space: normal;
+
+    &:hover:not(:disabled) {
+      border-color: #92dbe5;
+      background: #1d3945;
+    }
   }
 
   // Option, player and resource choices as tiles.
@@ -353,8 +370,15 @@ dialog.deck-choice-dialog {
   }
 
   // Colonies and parties: picked like cards.
+  .wf-component--list-party {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
   .wf-component--select-party label,
-  .wf-component--select-card > label.cardbox:has(.colony) {
+  .wf-component--select-card > label.cardbox:has(.colony),
+  .wf-component--select-global-event > label,
+  .underground-tokens > label {
     border-radius: 10px;
     cursor: pointer;
 

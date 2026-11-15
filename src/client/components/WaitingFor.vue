@@ -13,15 +13,7 @@
         (⌛ <span v-for="color in playersWaitingFor" class="log-player" :class="playerColorClass(color, 'bg')" :key="color">{{ getPlayerName(color) }}</span>)
       </template>
     </template>
-    <Teleport v-if="resourceRemovalOptions.length" to="body">
-      <section class="resource-removal-panel" :aria-label="$t(waitingfor?.title)">
-        <h2>{{ $t(waitingfor?.title) }}</h2>
-        <AppButton v-for="(option, index) in resourceRemovalOptions" :key="index"
-          :title="option.title === 'Do not remove resource' ? 'Skip this action' : option.title"
-          @click="onsave({type: 'or', index, response: {type: 'option'}})" />
-      </section>
-    </Teleport>
-    <Teleport v-else-if="waitingfor !== undefined && !hideInput && !draftRepick" to="body" :disabled="!showDeckDialog">
+    <Teleport v-if="waitingfor !== undefined && !hideInput && !draftRepick" to="body" :disabled="!showDeckDialog">
       <component :is="showDeckDialog ? 'dialog' : 'div'" ref="inputContainer" class="wf-root"
         :class="{'deck-choice-dialog': showDeckDialog}" :aria-label="showDeckDialog ? $t(waitingfor.title) : undefined" @cancel.prevent>
         <PlayerInputFactory :players="playerView.players"
@@ -41,9 +33,8 @@
 /* global RequestInit */
 
 import {computed, defineComponent} from 'vue';
-import {isDraftRepick, isResourceRemovalChoice, showsCards} from '@/client/components/board/MissionQuickAction';
+import {isDraftRepick, showsCards} from '@/client/components/board/MissionQuickAction';
 import DialogPeek from '@/client/components/common/DialogPeek.vue';
-import AppButton from '@/client/components/common/AppButton.vue';
 import * as constants from '@/common/constants';
 import raw_settings from '@/genfiles/settings.json';
 import {vueRoot} from '@/client/components/vueRoot';
@@ -96,7 +87,7 @@ const CANNOT_CONTACT_SERVER = 'Unable to reach the server. It may be restarting 
 
 export default defineComponent({
   name: 'WaitingFor',
-  components: {AppButton, DialogPeek},
+  components: {DialogPeek},
   // Card inputs inside the card window lay their cards out like a deal from the deck.
   provide() {
     return {cardDialog: computed(() => this.showDeckDialog)};
@@ -420,10 +411,6 @@ export default defineComponent({
     showDeckDialog(): boolean {
       return this.centerDeckChoice && !this.hideInput && showsCards(this.waitingfor) && !this.draftRepick;
     },
-    resourceRemovalOptions(): ReadonlyArray<PlayerInputModel> {
-      const input = this.waitingfor;
-      return this.centerDeckChoice && input?.type === 'or' && isResourceRemovalChoice(input) ? input.options : [];
-    },
     draftRepick(): boolean {
       return isDraftRepick(this.waitingfor);
     },
@@ -440,35 +427,4 @@ export default defineComponent({
 });
 
 </script>
-
-<style lang="less">
-.resource-removal-panel {
-  position: fixed;
-  z-index: 130;
-  inset: 50% auto auto 50%;
-  display: grid;
-  gap: 8px;
-  width: min(440px, calc(100vw - 24px));
-  max-height: 75dvh;
-  overflow: auto;
-  padding: 16px;
-  border: 1px solid #8cabb6;
-  border-radius: 10px;
-  background: #101a24;
-  color: #f1f7f9;
-  box-shadow: 0 12px 40px #0009;
-  transform: translate(-50%, -50%);
-
-  h2 {
-    margin: 0 0 6px;
-    font-size: 1.15rem;
-  }
-
-  .btn {
-    min-height: 44px;
-    height: auto;
-    white-space: normal;
-  }
-}
-</style>
 

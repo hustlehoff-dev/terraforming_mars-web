@@ -1,8 +1,14 @@
 <template>
-  <div v-if="worldGovernmentChoice">
-    <WorldGovernmentActions :options="displayedOptions" :busy="requestInProgress" @choose="chooseWorldGovernmentAction" />
-    <SelectSpace v-if="selectedOption?.type === 'space'" :key="selectedIdx" :playerView="playerView"
-      :playerinput="selectedOption" :onsave="playerFactorySaved(selectedIdx)" :showsave="true" :showtitle="false" />
+  <div v-if="tileChoices" class="decision-options">
+    <DecisionTiles :title="tileTitle" :warning="playerinput.warning" :choices="decisionChoices" :busy="requestInProgress"
+      :owns-heading="showtitle && showsave" @choose="chooseTile" />
+    <PlayerInputFactory v-if="selectedOption && !isImmediateChoice(selectedOption)" :key="selectedIdx"
+      class="decision-options__detail" ref="inputfactory" :playerView="playerView" :playerinput="selectedOption"
+      :onsave="playerFactorySaved(selectedIdx)" :showsave="showsave && showChildSaveButton(selectedOption)" :showtitle="false" />
+    <div v-if="showsave && selectedOption && !isImmediateChoice(selectedOption) && selectedOption.type !== 'space' && !showChildSaveButton(selectedOption)" class="wf-action">
+      <AppButton :title="selectedOption.buttonLabel" type="submit" @click="saveData" />
+    </div>
+    <AppButton v-if="canCancelMapChoice && !mapPlacement?.cancel" title="Cancel" @click="clearSelection" />
   </div>
   <div v-else class="wf-options">
     <label v-if="showtitle"><div>{{ $t(playerinput.title) }}</div></label>
@@ -33,10 +39,11 @@
 
 <script lang="ts">
 
-import {defineComponent, inject} from 'vue';
+import {defineComponent, inject, Ref} from 'vue';
 import AppButton from '@/client/components/common/AppButton.vue';
-import SelectSpace from '@/client/components/SelectSpace.vue';
-import WorldGovernmentActions from '@/client/components/board/WorldGovernmentActions.vue';
+import DecisionTiles from '@/client/components/board/DecisionTiles.vue';
+import {DecisionChoice, decisionChoice} from '@/client/components/board/DecisionChoice';
+import {actionMenu} from '@/client/components/board/MissionQuickAction';
 import {vueRoot} from '@/client/components/vueRoot';
 import {isHTMLElement} from '@/client/utils/vueUtils';
 import {PlayerViewModel} from '@/common/models/PlayerModel';
@@ -54,7 +61,11 @@ function isDisplayed(option: PlayerInputModel): boolean {
 
 export default defineComponent({
   name: 'OrOptions',
-  setup: () => ({mapPlacement: inject(mapPlacementKey, undefined)}),
+  setup: () => ({
+    mapPlacement: inject(mapPlacementKey, undefined),
+    missionCards: inject<Ref<boolean>>('missionCards'),
+    cardDialog: inject<Ref<boolean>>('cardDialog'),
+  }),
   props: {
     playerView: {
       type: Object as () => PlayerViewModel,
@@ -77,8 +88,7 @@ export default defineComponent({
   },
   components: {
     AppButton,
-    SelectSpace,
-    WorldGovernmentActions,
+    DecisionTiles,
   },
   data() {
     const displayedOptions = this.playerinput.options.filter(isDisplayed);
@@ -110,6 +120,21 @@ export default defineComponent({
     },
     worldGovernmentChoice(): boolean {
       return this.showsave && this.showtitle && this.playerinput.title === WORLD_GOVERNMENT_TITLE;
+    },
+    tileChoices(): boolean {
+      return this.worldGovernmentChoice || (Boolean(this.missionCards || this.cardDialog) && actionMenu(this.playerinput) === undefined);
+    },
+    tileTitle(): PlayerInputModel['title'] | undefined {
+      if (this.showtitle) {
+        return this.worldGovernmentChoice ? 'World Government Terraforming' : this.playerinput.title;
+      }
+      return undefined;
+    },
+    decisionChoices(): ReadonlyArray<DecisionChoice> {
+      return this.displayedOptions.map((option) => ({
+        ...decisionChoice(option),
+        selected: this.isImmediateChoice(option) ? undefined : option === this.selectedOption,
+      }));
     },
     requestInProgress(): boolean {
       return vueRoot(this).isServerSideRequestInProgress;
@@ -164,14 +189,20 @@ export default defineComponent({
       if (this.showsave && (options.length > 1 && isGreeneryChoice(option) || this.showtitle && this.playerinput.title === WORLD_GOVERNMENT_TITLE)) {
         return undefined;
       }
+      if (this.showsave && (this.missionCards || this.cardDialog) && options.some((choice) => decisionChoice(choice).targetColor !== undefined)) {
+        return undefined;
+      }
       return option;
     },
-    chooseWorldGovernmentAction(index: number) {
+    isImmediateChoice(option: PlayerInputModel): boolean {
+      return this.showsave && option.type === 'option' && (option.warnings?.length ?? 0) === 0 && option.warning === undefined;
+    },
+    chooseTile(index: number) {
       const option = this.displayedOptions[index];
-      if (option?.type === 'space') {
-        this.selectedOption = option;
-      } else if (option?.type === 'option') {
+      if (this.isImmediateChoice(option)) {
         this.playerFactorySaved(index)({type: 'option'});
+      } else {
+        this.selectedOption = option;
       }
     },
     clearSelection() {
@@ -229,4 +260,12 @@ export default defineComponent({
 });
 
 </script>
+
+<style scoped lang="less">
+.decision-options__detail {
+  width: 100%;
+  max-width: 680px;
+  margin: 14px auto 0;
+}
+</style>
 

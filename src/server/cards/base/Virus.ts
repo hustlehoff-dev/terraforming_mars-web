@@ -45,7 +45,8 @@ export class Virus extends Card implements IProjectCard {
 
     const orOptionsPlants = new RemoveAnyPlants(player, 5).execute();
     const removePlants = orOptionsPlants !== undefined ?
-      orOptionsPlants.options.slice(0, -1) :
+      orOptionsPlants.options.filter((option) => option instanceof SelectOption &&
+        option.title !== 'Skip removing plants' && !option.warnings?.includes('removeOwnPlants')) :
       undefined;
 
     // If no other player has resources to remove

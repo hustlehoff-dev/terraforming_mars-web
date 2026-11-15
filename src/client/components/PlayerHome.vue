@@ -150,11 +150,13 @@
       :onsave="placeTile" :showsave="true" :showtitle="false" />
 
     <section v-show="!setupMode && (!cinematic || missionPanel !== undefined)" ref="missionPanelElement" class="mission-panel" :class="{'mission-panel--decision': decisionMode}" tabindex="-1" :aria-label="$t('Game details')" @keydown.esc.stop="closeMissionPanel">
-      <header v-if="cinematic" class="mission-panel__nav">
+      <header v-if="cinematic && !decisionMode" class="mission-panel__nav">
         <strong v-if="missionPanelLabel">{{ $t(missionPanelLabel) }}</strong>
         <button type="button" class="mission-panel__close" :aria-label="$t('Close')" @click="closeMissionPanel">×</button>
       </header>
       <div class="mission-panel__body" ref="missionPanelBody">
+        <DecisionHeading v-if="decisionMode && missionPanelLabel" class="mission-panel__decision-heading"
+          :title="missionPanelLabel" closable @close="closeMissionPanel" />
         <div v-if="finalGreenery && missionPanel === 'actions'" class="mission-final-greenery">
           <AppButton type="submit" :title="finalGreenery.placement.title" @click="chooseFinalGreenery" />
           <AppButton :title="'Don\'t place a greenery'" @click="skipFinalGreenery" />
@@ -305,6 +307,7 @@ import RivalPanel from '@/client/components/overview/RivalPanel.vue';
 import {Color} from '@/common/Color';
 import {Phase} from '@/common/Phase';
 import WaitingFor from '@/client/components/WaitingFor.vue';
+import DecisionHeading from '@/client/components/board/DecisionHeading.vue';
 import Sidebar from '@/client/components/Sidebar.vue';
 import MissionSettings from '@/client/components/MissionSettings.vue';
 import InfoPanel from '@/client/components/InfoPanel.vue';
@@ -355,7 +358,7 @@ import {CardName} from '@/common/cards/CardName';
 import MissionParameters from '@/client/components/board/MissionParameters.vue';
 import MissionPlayersPanel from '@/client/components/board/MissionPlayersPanel.vue';
 import {PlayedCardLogModel} from '@/common/models/PlayedCardLogModel';
-import {actionMenu, cardActionOption, getMissionQuickActions, isResourceRemovalChoice, MaxedParameters, MissionQuickAction, passOptionIndex, showsCards} from '@/client/components/board/MissionQuickAction';
+import {actionMenu, cardActionOption, getMissionQuickActions, MaxedParameters, MissionQuickAction, passOptionIndex, showsCards} from '@/client/components/board/MissionQuickAction';
 import MissionCardStage from '@/client/components/board/MissionCardStage.vue';
 import {SoundManager} from '@/client/utils/SoundManager';
 import {KeyboardNavigation} from '@/client/components/KeyboardNavigation';
@@ -419,6 +422,7 @@ export default defineComponent({
   provide() {
     return {
       missionCards: computed(() => this.cinematic),
+      missionDecisionPanel: computed(() => this.decisionMode),
       closeMissionPanel: this.closeMissionPanel,
     };
   },
@@ -494,10 +498,12 @@ export default defineComponent({
     },
     'playerView.requestId'() {
       const wasChoosingFinalGreenery = this.choosingFinalGreenery;
+      const input = this.playerView.waitingFor;
       this.pendingGreenery = undefined;
       this.pendingSpace = undefined;
       this.choosingFinalGreenery = false;
-      if (this.quickAction || (this.cinematic && this.missionPanel === 'actions' && actionMenu(this.playerView.waitingFor) !== undefined)) {
+      if (this.quickAction || (this.cinematic && this.missionPanel === 'actions' &&
+        (input === undefined || actionMenu(input) !== undefined || input.type === 'space' || showsCards(input)))) {
         this.closeMissionPanel();
       }
       this.stagedAction = undefined;
@@ -658,7 +664,7 @@ export default defineComponent({
     pendingDecision(): boolean {
       const input = this.playerView.waitingFor;
       return this.cinematic && input !== undefined && this.missionPanel === undefined && this.mapPlacement === undefined &&
-        actionMenu(input) === undefined && input.type !== 'space' && !showsCards(input) && !isResourceRemovalChoice(input) &&
+        actionMenu(input) === undefined && input.type !== 'space' && !showsCards(input) &&
         this.previewedProject === undefined && this.stagedAction === undefined;
     },
     pendingDecisionTitle(): string {
@@ -833,6 +839,7 @@ export default defineComponent({
     PlayersOverview,
     RivalPanel,
     WaitingFor,
+    DecisionHeading,
     SelectSpace,
     AppButton,
     Sidebar,
@@ -960,14 +967,10 @@ export default defineComponent({
      */
     showFollowUpDecision() {
       const input = this.playerView.waitingFor;
-      if (this.cinematic && isResourceRemovalChoice(input)) {
-        this.closeMissionPanel();
-        return;
-      }
       if (!this.cinematic || input === undefined || actionMenu(input) !== undefined || input.type === 'space' || showsCards(input)) {
         return;
       }
-      if (this.missionPanel === undefined) {
+      if (this.missionPanel !== 'actions') {
         this.showMissionPanel('actions');
       }
     },
