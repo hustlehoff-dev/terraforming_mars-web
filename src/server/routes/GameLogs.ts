@@ -233,36 +233,64 @@ export class GameLogs {
     const viewerColor = game.players.find((player) => player.id === viewer)?.color;
     // How many cards each player was last dealt to choose from. Only the number is used for
     // other players: which cards stays secret.
-    const offered = new Map<Color, number>();
+    const offered = new Map<Color, Array<CardName>>();
+    // Private "You bought ..." lines already shown in the viewer's own buying row.
+    const consumed = new Set<number>();
     for (let index = 0; index < game.gameLog.length; index++) {
       const message = game.gameLog[index];
       if (message?.message === '${0} received ${1} from the project deck' && message.playerId !== undefined) {
         const owner = game.players.find((player) => player.id === message.playerId)?.color;
         const cards = message.data.find((datum) => datum.type === LogMessageDataType.CARDS)?.value;
         if (owner !== undefined && Array.isArray(cards)) {
-          offered.set(owner, cards.length);
+          offered.set(owner, cards as Array<CardName>);
         }
-      }
-      if (!message || (message.playerId !== undefined && message.playerId !== viewer)) {
+        // Shown in the buying row that follows (bought and discarded cards), not on a row of its own.
         continue;
       }
-      // Another player buying cards outside a card action (e.g. in the research phase):
-      // a line of its own with how many were bought and discarded, and what it cost.
-      if (message.action === undefined && message.data[0]?.type === LogMessageDataType.PLAYER && message.data[0].value !== viewerColor &&
+      if (!message || (message.playerId !== undefined && message.playerId !== viewer) || consumed.has(index)) {
+        continue;
+      }
+      // A player buying cards outside a card action (e.g. in the research phase): a line of its own
+      // with how many were bought and discarded, and what it cost. The same for every player; the
+      // viewer's own line also names the cards.
+      if (message.action === undefined && message.data[0]?.type === LogMessageDataType.PLAYER &&
         (message.message === '${0} bought no cards' || (message.message === '${0} ${1} ${2} card(s)' && message.data[1]?.value === 'bought'))) {
         const buyer = message.data[0].value;
         const bought = message.message === '${0} bought no cards' ? 0 : Number(message.data[2]?.value) || 0;
-        const dealt = offered.get(buyer);
+        const dealtCards = offered.get(buyer);
         offered.delete(buyer);
-        const discarded = dealt !== undefined ? Math.max(0, dealt - bought) : undefined;
+        const discarded = dealtCards !== undefined ? Math.max(0, dealtCards.length - bought) : undefined;
         const cardCost = game.players.find((player) => player.color === buyer)?.cardCost ?? 3;
+        const deck: Array<DeckActivity> = [];
+        if (buyer === viewerColor) {
+          // The viewer's own names: the private line that follows, and the dealt cards not bought.
+          let boughtNames: Array<CardName> = [];
+          for (let next = index + 1; next < Math.min(game.gameLog.length, index + 4); next++) {
+            const follow = game.gameLog[next];
+            if (follow?.message === 'You bought ${0}' && follow.playerId === viewer) {
+              const cards = follow.data.find((datum) => datum.type === LogMessageDataType.CARDS)?.value;
+              boughtNames = Array.isArray(cards) ? cards as Array<CardName> : [];
+              consumed.add(next);
+              break;
+            }
+          }
+          if (boughtNames.length > 0) {
+            deck.push({kind: 'bought', cards: boughtNames});
+          }
+          const rest = (dealtCards ?? []).filter((name) => !boughtNames.includes(name));
+          if (rest.length > 0 && (boughtNames.length > 0 || bought === 0)) {
+            deck.push({kind: 'discarded', cards: rest});
+          }
+        }
         close();
         current = undefined;
         history.push({
           kind: 'bought',
           player: buyer,
-          subject: `${bought} card(s)` + (discarded !== undefined ? `, discarded ${discarded}` : ''),
+          subject: `${bought} card(s)`,
+          buying: {bought, ...(discarded !== undefined ? {discarded} : {})},
           ...(bought > 0 ? {spent: `-${bought * cardCost}:r:mc:`} : {}),
+          ...(deck.length > 0 ? {deck} : {}),
           key: `${index}:${message.timestamp}:bought:${buyer}`,
         });
         continue;

@@ -203,7 +203,9 @@ const entries = computed(() => mergeDeckRuns(events.value).map((event) => {
   const actor = event.player ? players.value.get(event.player)?.name ?? event.player : undefined;
   const action = translateText(labels[event.kind]);
   const subject = event.card?.split(':')[0] ?? event.subject;
-  const subjectText = subject && translateText(subject);
+  const subjectText = event.buying !== undefined ?
+    translateTextWithParams(event.buying.discarded !== undefined ? '${0} card(s), discarded ${1}' : '${0} card(s)', [String(event.buying.bought), String(event.buying.discarded ?? 0)]) :
+    subject && translateText(subject);
   const targetLines = (event.targets ?? []).map((target) => ({...target, name: players.value.get(target.player)?.name ?? target.player}));
   const stepLines = event.steps?.map((step) => {
     if (step.kind === 'placed' || step.kind === 'removed') {

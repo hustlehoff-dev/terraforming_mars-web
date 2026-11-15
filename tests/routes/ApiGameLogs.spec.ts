@@ -193,6 +193,29 @@ describe('ApiGameLogs', () => {
     ]);
   });
 
+  it('shows buying cards the same way for every player, with the own card names of the viewer', async () => {
+    const [game, player, rival] = testGame(2);
+    await scaffolding.ctx.gameLoader.add(game);
+    game.gameLog.length = 0;
+    game.log('${0} received ${1} from the project deck', (b) => b.player(player).cardNames([CardName.BIRDS, CardName.FISH, CardName.LICHEN]), {reservedFor: player});
+    game.log('${0} received ${1} from the project deck', (b) => b.player(rival).cardNames([CardName.ANTS, CardName.TARDIGRADES, CardName.ZEPPELINS, CardName.SOLETTA]), {reservedFor: rival});
+    game.log('${0} ${1} ${2} card(s)', (b) => b.player(rival).string('bought').number(1));
+    game.log('${0} ${1} ${2} card(s)', (b) => b.player(player).string('bought').number(2));
+    game.log('You bought ${0}', (b) => b.cardNames([CardName.BIRDS, CardName.LICHEN]), {reservedFor: player});
+
+    scaffolding.url = '/api/game/logs?id=' + player.id + '&view=activity';
+    await scaffolding.get(ApiGameLogs.INSTANCE, res);
+    const history = JSON.parse(res.content);
+    expect(history.map(({key: _key, ...event}: {key: string}) => event)).deep.eq([
+      {
+        kind: 'bought', player: player.color, subject: '2 card(s)', buying: {bought: 2, discarded: 1}, spent: '-6:r:mc:',
+        deck: [{kind: 'bought', cards: [CardName.BIRDS, CardName.LICHEN]}, {kind: 'discarded', cards: [CardName.FISH]}],
+      },
+      // The rival: only how many, never which cards.
+      {kind: 'bought', player: rival.color, subject: '1 card(s)', buying: {bought: 1, discarded: 3}, spent: '-3:r:mc:'},
+    ]);
+  });
+
   it('groups the Convoy play, ocean placement and both draws across separate inputs', async () => {
     const [game, player, rival] = testGame(2);
     await scaffolding.ctx.gameLoader.add(game);

@@ -47,6 +47,8 @@ export type GameActivityModel = {
   drawnCount?: number;
   deck?: ReadonlyArray<DeckActivity>;
   scienceGained?: 0 | 1;
+  /** Buying cards (research phase): how many were bought and how many of those dealt were discarded. */
+  buying?: {bought: number, discarded?: number};
   /** What the player paid, as icon shortcodes, e.g. `-13:r:mc: -2:r:steel:`. */
   spent?: string;
   /** What changed for the player as a result, e.g. `+1:p:mc: -1:p:energy: +1:i:tr:`. */

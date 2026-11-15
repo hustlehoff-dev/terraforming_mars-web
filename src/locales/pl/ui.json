@@ -500,6 +500,8 @@
   "As World Government: Venus without TR or bonuses": "Jako Rząd Światowy: Wenus bez TR i bonusów",
   "As World Government: hazard tile removed": "Jako Rząd Światowy: usunięto płytkę zagrożenia",
   "time ran out": "skończył się czas",
+  "${0} card(s), discarded ${1}": "${0} kart(y), odrzuca ${1}",
+  "${0} card(s)": "${0} kart(y)",
   "Bought": "Kupione",
   "You drew a card": "Dobrałeś kartę",
   "You drew ${0} cards": "Dobrałeś ${0} karty",
