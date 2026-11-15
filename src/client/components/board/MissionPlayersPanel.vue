@@ -33,7 +33,8 @@
           </li>
         </ul>
       </button>
-      <div v-if="player.played" :key="player.played.key" class="mission-players__played" role="status">
+      <div v-if="player.played" :key="player.played.key" class="mission-players__played" role="status"
+        @pointerenter="hold(player.color)" @pointerleave="release(player.color)" @focusin="hold(player.color)" @focusout="release(player.color)">
         <p class="mission-players__played-label" :class="'player_bg_color_' + player.color">{{ player.name }} <span v-i18n>played</span></p>
         <button type="button" class="mission-players__played-card" :title="$t('Click to view up close')" @click="zoomCard(playedModel(player))">
           <Card :card="playedModel(player)" autoTall />
@@ -65,7 +66,17 @@ const visible = reactive<Partial<Record<Color, PlayedCardLogModel>>>({});
 const queues = new Map<Color, Array<PlayedCardLogModel>>();
 const timers = new Map<Color, number>();
 
+/** How long a played card stays next to its player; after the pointer leaves it, a bit more. */
+const SHOW_MS = 15000;
+const AFTER_HOVER_MS = 4000;
+/** Players whose played card is pointed at: it stays until the pointer leaves. */
+const held = new Set<Color>();
+
 function showNext(player: Color) {
+  if (held.has(player)) {
+    timers.set(player, window.setTimeout(() => showNext(player), AFTER_HOVER_MS));
+    return;
+  }
   const play = queues.get(player)?.shift();
   if (play === undefined) {
     delete visible[player];
@@ -74,7 +85,22 @@ function showNext(player: Color) {
     return;
   }
   visible[player] = play;
-  timers.set(player, window.setTimeout(() => showNext(player), 7000));
+  timers.set(player, window.setTimeout(() => showNext(player), SHOW_MS));
+}
+
+function hold(player: Color) {
+  held.add(player);
+  window.clearTimeout(timers.get(player));
+  // Keep the entry so new plays queue behind the one shown.
+  timers.set(player, -1);
+}
+
+function release(player: Color) {
+  if (!held.delete(player)) {
+    return;
+  }
+  window.clearTimeout(timers.get(player));
+  timers.set(player, window.setTimeout(() => showNext(player), AFTER_HOVER_MS));
 }
 
 function show(plays: ReadonlyArray<PlayedCardLogModel>) {

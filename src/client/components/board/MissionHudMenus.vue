@@ -13,7 +13,7 @@
             <p v-if="maPrices.length" class="mission-hud-dialog__hint mission-hud-dialog__costs">
               {{ $t('Cost') }} <strong>{{ maPrices.map((price) => price + ' M€').join(' → ') }}</strong>
             </p>
-            <div v-for="(item, index) in maItems" :key="item.title" class="mission-hud-dialog__ma" :class="{'mission-hud-dialog__ma--taken': item.owner}">
+            <div v-for="(item, index) in maItems" :key="index" class="mission-hud-dialog__ma" :class="{'mission-hud-dialog__ma--taken': item.owner}">
               <img :src="item.icon" alt="" @error="($event.target as HTMLImageElement).style.visibility = 'hidden'">
               <div class="mission-hud-dialog__ma-text">
                 <strong>{{ $t(item.title) }}</strong>
@@ -571,17 +571,22 @@ function chooseMa(index: number) {
     flex-basis: min(560px, 100%) !important;
     min-width: 0;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
+    min-height: 76px;
     padding: 8px 10px;
     border: 1px solid #5f7d8a;
     border-radius: 6px;
     background: #142430;
     text-align: left;
 
+    // The tile of the award or milestone (140 x 83) as tall as the row, at its own proportions.
     img {
-      width: 46px;
-      height: 46px;
+      width: auto;
+      height: auto;
+      min-height: 58px;
       flex: none;
+      align-self: stretch;
+      aspect-ratio: 140 / 83;
       object-fit: contain;
     }
 
