@@ -15,66 +15,91 @@
       <img class="setup-hero__dome" src="assets/board/mars-dome.png" alt="">
     </header>
 
-    <section v-if="playerView.players.length > 1" class="setup-section">
-      <h2 class="setup-heading"><span v-i18n>Players</span><small v-i18n>Turn order</small></h2>
-      <ol class="setup-crew">
-        <li v-for="(player, index) in playerView.players" :key="player.color" class="setup-crew__player"
-          :class="['setup-crew__player--' + player.color, {'setup-crew__player--me': player.color === thisPlayer.color, 'setup-crew__player--ready': isReady(player)}]">
-          <span class="setup-crew__order">{{ index + 1 }}</span>
-          <span class="setup-crew__swatch" :class="'player_bg_color_' + player.color" aria-hidden="true"></span>
-          <span class="setup-crew__name">
-            <strong>{{ player.name }}</strong>
-            <small v-if="player.color === thisPlayer.color" v-i18n>(you)</small>
-          </span>
-          <span class="setup-crew__state">
-            <span v-if="!isReady(player)" class="setup-spinner setup-spinner--small" aria-hidden="true"></span>
-            <span v-else aria-hidden="true">✓</span>
-            {{ $t(isReady(player) ? 'Ready' : 'Choosing') }}
-          </span>
-        </li>
-      </ol>
-    </section>
+    <div class="setup-layout">
+      <aside class="setup-layout__side">
+        <section v-if="playerView.players.length > 1" class="setup-section">
+          <h2 class="setup-heading"><span v-i18n>Players</span><small v-i18n>Turn order</small></h2>
+          <ol class="setup-crew">
+            <li v-for="(player, index) in playerView.players" :key="player.color" class="setup-crew__player"
+              :class="['setup-crew__player--' + player.color, {'setup-crew__player--me': player.color === thisPlayer.color, 'setup-crew__player--ready': isReady(player)}]">
+              <span class="setup-crew__order">{{ index + 1 }}</span>
+              <span class="setup-crew__swatch" :class="'player_bg_color_' + player.color" aria-hidden="true"></span>
+              <span class="setup-crew__name">
+                <strong>{{ player.name }}</strong>
+                <small v-if="player.color === thisPlayer.color" v-i18n>(you)</small>
+              </span>
+              <span class="setup-crew__state">
+                <span v-if="!isReady(player)" class="setup-spinner setup-spinner--small" aria-hidden="true"></span>
+                <span v-else aria-hidden="true">✓</span>
+                {{ $t(isReady(player) ? 'Ready' : 'Choosing') }}
+              </span>
+            </li>
+          </ol>
+        </section>
 
-    <div v-if="showsWaiting" class="setup-waiting" role="status">
-      <span class="setup-spinner" aria-hidden="true"></span>
-      <div>
-        <strong v-i18n>Your choice is saved</strong>
-        <p>{{ waitingText }}</p>
+        <section class="setup-section">
+          <h2 class="setup-heading"><span v-i18n>Game</span></h2>
+          <dl class="setup-facts">
+            <div><dt v-i18n>Board</dt><dd>{{ $t(game.gameOptions.boardName) }}</dd></div>
+            <div><dt v-i18n>Project deck</dt><dd>{{ game.deckSize }}</dd></div>
+            <div v-if="game.gameOptions.draftVariant"><dt v-i18n>Draft</dt><dd v-i18n>Yes</dd></div>
+            <div v-if="game.gameOptions.turnTimeLimit"><dt v-i18n>Turn time limit</dt><dd>{{ game.gameOptions.turnTimeLimit }} s</dd></div>
+          </dl>
+          <details class="setup-details" @toggle="infoOpen = ($event.target as HTMLDetailsElement).open">
+            <summary v-i18n>Game Setup Details</summary>
+            <InfoPanel v-if="infoOpen" embedded :gameOptions="game.gameOptions" :playerNumber="playerView.players.length"
+              :lastSoloGeneration="game.lastSoloGeneration" :deckSize="game.deckSize" :discardPileSize="game.discardPileSize" :otherDeckSizes="game.otherDeckSizes" />
+          </details>
+          <div class="setup-links">
+            <a href="help" target="_blank" rel="noopener"><span aria-hidden="true">📖</span>{{ $t('Player aid') }}</a>
+            <a :href="'/spectator?id=' + game.spectatorId" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">👁</span>{{ $t('Spectator link') }}</a>
+          </div>
+        </section>
+      </aside>
+
+      <div class="setup-layout__main">
+        <div v-if="showsWaiting" class="setup-waiting" role="status">
+          <span class="setup-spinner" aria-hidden="true"></span>
+          <div>
+            <strong v-i18n>Your choice is saved</strong>
+            <p>{{ waitingText }}</p>
+          </div>
+        </div>
+
+        <a name="actions" class="player_home_anchor hotkey-target"></a>
+        <!-- Always mounted: it also keeps the page up to date while waiting for the other players. -->
+        <section v-show="playerView.waitingFor !== undefined" class="setup-section setup-section--input">
+          <WaitingFor v-if="game.phase !== 'end'" :playerView="playerView" :waitingfor="playerView.waitingFor" :requestId="playerView.requestId" />
+        </section>
+
+        <section v-for="group in cardGroups" :key="group.key" class="setup-section">
+          <h2 class="setup-heading"><span>{{ $t(group.title) }}</span><small>{{ group.cards.length }}</small></h2>
+          <div class="setup-cards">
+            <div v-for="card in group.cards" :key="card.name" class="cardbox">
+              <Card :card="card" />
+            </div>
+          </div>
+        </section>
+
+        <details class="setup-section setup-more" :open="boardOpen" @toggle="boardOpen = ($event.target as HTMLDetailsElement).open">
+          <summary class="setup-heading"><span v-i18n>Board, milestones and awards</span><small aria-hidden="true">{{ boardOpen ? '−' : '+' }}</small></summary>
+          <template v-if="boardOpen">
+            <AtlasBoard :game="game" :tileView="tileView" @toggleTileView="$emit('toggleTileView')" />
+            <div v-if="playerView.players.length > 1" class="setup-more__ma">
+              <Milestones :showScores="false" :milestones="game.milestones" />
+              <Awards :show-scores="false" :awards="game.awards" />
+            </div>
+            <div v-if="game.turmoil || game.gameOptions.expansions.pathfinders || game.moon || game.gameOptions.expansions.deltaProject">
+              <Turmoil v-if="game.turmoil" :turmoil="game.turmoil" />
+              <PlanetaryTracks v-if="game.gameOptions.expansions.pathfinders" :tracks="game.pathfinders" :gameOptions="game.gameOptions" />
+              <a name="moonBoard" class="player_home_anchor"></a>
+              <MoonBoard v-if="game.moon !== undefined" :model="game.moon" :tileView="tileView" id="shortkey-moonBoard" />
+              <DeltaProjectBoard v-if="game.gameOptions.expansions.deltaProject" :players="playerView.players" />
+            </div>
+          </template>
+        </details>
       </div>
     </div>
-
-    <a name="actions" class="player_home_anchor hotkey-target"></a>
-    <!-- Always mounted: it also keeps the page up to date while waiting for the other players. -->
-    <section v-show="playerView.waitingFor !== undefined" class="setup-section setup-section--input">
-      <WaitingFor v-if="game.phase !== 'end'" :playerView="playerView" :waitingfor="playerView.waitingFor" :requestId="playerView.requestId" />
-    </section>
-
-    <section v-for="group in cardGroups" :key="group.key" class="setup-section">
-      <h2 class="setup-heading"><span>{{ $t(group.title) }}</span><small>{{ group.cards.length }}</small></h2>
-      <div class="setup-cards">
-        <div v-for="card in group.cards" :key="card.name" class="cardbox">
-          <Card :card="card" />
-        </div>
-      </div>
-    </section>
-
-    <details class="setup-section setup-more" :open="boardOpen" @toggle="boardOpen = ($event.target as HTMLDetailsElement).open">
-      <summary class="setup-heading"><span v-i18n>Board, milestones and awards</span><small aria-hidden="true">{{ boardOpen ? '−' : '+' }}</small></summary>
-      <template v-if="boardOpen">
-        <AtlasBoard :game="game" :tileView="tileView" @toggleTileView="$emit('toggleTileView')" />
-        <div v-if="playerView.players.length > 1" class="setup-more__ma">
-          <Milestones :showScores="false" :milestones="game.milestones" />
-          <Awards :show-scores="false" :awards="game.awards" />
-        </div>
-        <div v-if="game.turmoil || game.gameOptions.expansions.pathfinders || game.moon || game.gameOptions.expansions.deltaProject">
-          <Turmoil v-if="game.turmoil" :turmoil="game.turmoil" />
-          <PlanetaryTracks v-if="game.gameOptions.expansions.pathfinders" :tracks="game.pathfinders" :gameOptions="game.gameOptions" />
-          <a name="moonBoard" class="player_home_anchor"></a>
-          <MoonBoard v-if="game.moon !== undefined" :model="game.moon" :tileView="tileView" id="shortkey-moonBoard" />
-          <DeltaProjectBoard v-if="game.gameOptions.expansions.deltaProject" :players="playerView.players" />
-        </div>
-      </template>
-    </details>
   </div>
 </template>
 
@@ -90,6 +115,7 @@ import WaitingFor from '@/client/components/WaitingFor.vue';
 import Turmoil from '@/client/components/turmoil/Turmoil.vue';
 import MoonBoard from '@/client/components/moon/MoonBoard.vue';
 import PlanetaryTracks from '@/client/components/pathfinders/PlanetaryTracks.vue';
+import InfoPanel from '@/client/components/InfoPanel.vue';
 import {CardModel} from '@/common/models/CardModel';
 import {Phase} from '@/common/Phase';
 import {GameModel} from '@/common/models/GameModel';
@@ -117,8 +143,8 @@ export default defineComponent({
     },
   },
   emits: ['toggleTileView'],
-  data(): {boardOpen: boolean} {
-    return {boardOpen: false};
+  data(): {boardOpen: boolean, infoOpen: boolean} {
+    return {boardOpen: false, infoOpen: false};
   },
   computed: {
     choosingCorporation(): boolean {
@@ -193,6 +219,7 @@ export default defineComponent({
     Turmoil,
     PlanetaryTracks,
     MoonBoard,
+    InfoPanel,
   },
   methods: {
     isReady(player: PublicPlayerModel): boolean {
@@ -573,6 +600,115 @@ export default defineComponent({
     right: -20px;
     bottom: -10px;
     opacity: 0.45;
+  }
+}
+
+// Behind the setup page: Mars from orbit, instead of the plain background of the game screen.
+#player-home.mission-setup-mode {
+  background:
+    radial-gradient(circle at 50% 0%, #f07a2a22, transparent 55%),
+    linear-gradient(#0b0705d9, #0b0705f5),
+    url(./assets/board/mars-orbit.jpg) center top / cover fixed no-repeat,
+    #0b0705;
+}
+
+.setup-layout {
+  display: grid;
+  align-items: start;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+}
+
+.setup-layout__main {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.setup-layout__side {
+  position: sticky;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  order: 2;
+  gap: 18px;
+
+  .setup-crew {
+    grid-template-columns: 1fr;
+  }
+}
+
+.setup-facts {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+
+  div {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: #ffffff0a;
+  }
+
+  dt {
+    color: var(--setup-muted);
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 800;
+  }
+}
+
+.setup-details {
+  margin-bottom: 12px;
+
+  > summary {
+    color: #ffcfa8;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .info_panel {
+    margin-top: 8px;
+    color: var(--setup-text);
+  }
+}
+
+.setup-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid #ffffff2e;
+    border-radius: 8px;
+    background: #ffffff0a;
+    color: var(--setup-text);
+    font-size: 0.85rem;
+    text-decoration: none;
+
+    &:hover {
+      border-color: var(--setup-accent);
+    }
+  }
+}
+
+@media (max-width: 1100px) {
+  .setup-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .setup-layout__side {
+    position: static;
+    order: 0;
   }
 }
 </style>

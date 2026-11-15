@@ -1,5 +1,5 @@
 <template>
-  <div id="player-home" :class="{'with-turmoil': game.turmoil, 'mission-cinematic': cinematic, 'mission-placing': cinematic && mapPlacement !== undefined}" @click="startMissionAudio" @keydown="startMissionAudio">
+  <div id="player-home" :class="{'with-turmoil': game.turmoil, 'mission-cinematic': cinematic, 'mission-setup-mode': setupMode, 'mission-placing': cinematic && mapPlacement !== undefined}" @click="startMissionAudio" @keydown="startMissionAudio">
     <div v-if="game.phase === 'end'">
       <div class="player_home_block">
         <DynamicTitle title="This game is over!" :color="thisPlayer.color" />
@@ -17,7 +17,7 @@
       @click.stop="toggleMissionAudio">
       <span aria-hidden="true">♪</span>
     </button>
-    <MissionSettings v-if="cinematic" />
+    <MissionSettings v-if="cinematic || setupMode" />
     <Sidebar v-else-if="!setupMode"
       :actingPlayer="isPlayerActing(playerView)"
       :playerColor="thisPlayer.color"

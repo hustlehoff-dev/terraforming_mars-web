@@ -1,14 +1,18 @@
 <template>
   <div id="game-end" class="recap">
+    <nav class="recap-hero__nav">
+      <HomeLink>{{ constants.APP_NAME }}</HomeLink>
+      <span class="recap-hero__sep" aria-hidden="true">|</span>
+      <span v-i18n>Game summary</span>
+      <span class="recap-hero__spacer"></span>
+      <a class="recap-navbtn" href="#recap-scores"><span aria-hidden="true">🏆</span>{{ $t('Score') }}</a>
+      <a class="recap-navbtn" href="#recap-timeline"><span aria-hidden="true">📈</span>{{ $t('Timeline') }}</a>
+      <a class="recap-navbtn" href="#recap-board" @click="boardOpen = true"><span aria-hidden="true">🗺</span>{{ $t('Board') }}</a>
+      <a class="recap-navbtn" :href="downloadLogUrl" target="_blank"><span aria-hidden="true">⬇</span>{{ $t('Game log') }}</a>
+      <a class="recap-navbtn" href="."><span aria-hidden="true">⌂</span>{{ $t('Go to main page') }}</a>
+      <a class="recap-navbtn recap-navbtn--primary" href="new-game"><span aria-hidden="true">＋</span>{{ $t('Create New Game') }}</a>
+    </nav>
     <header class="recap-hero">
-      <nav class="recap-hero__nav">
-        <HomeLink>{{ constants.APP_NAME }}</HomeLink>
-        <span class="recap-hero__sep" aria-hidden="true">|</span>
-        <span v-i18n>Game summary</span>
-        <span class="recap-hero__spacer"></span>
-        <a href="new-game" v-i18n>Create New Game</a>
-        <a href="." v-i18n>Go to main page</a>
-      </nav>
       <div class="recap-hero__body">
         <div>
           <h1 v-i18n>Game summary</h1>
@@ -70,7 +74,7 @@
       </div>
     </section>
 
-    <section class="recap-panel">
+    <section id="recap-scores" class="recap-panel">
       <h2 class="recap-title">
         <span class="recap-slash" aria-hidden="true"></span><span v-i18n>Score breakdown</span>
         <small v-i18n>How each player earned their final score.</small>
@@ -119,7 +123,7 @@
     </section>
     <MissionCardZoom :playerView="participant" />
 
-    <section class="recap-panel">
+    <section id="recap-timeline" class="recap-panel">
       <h2 class="recap-title">
         <span class="recap-slash" aria-hidden="true"></span><span v-i18n>Gameplay timeline</span>
         <small v-i18n>Terraforming progress and key moments</small>
@@ -257,7 +261,7 @@
       </div>
     </section>
 
-    <details class="recap-panel recap-more">
+    <details id="recap-board" class="recap-panel recap-more" :open="boardOpen" @toggle="boardOpen = ($event.target as HTMLDetailsElement).open">
       <summary class="recap-title"><span class="recap-slash" aria-hidden="true"></span><span v-i18n>Final situation on the board</span><small v-i18n>and the game log</small></summary>
       <div class="recap-more__body">
         <div>
@@ -354,9 +358,10 @@ export default defineComponent({
       required: true,
     },
   },
-  data(): {tileView: TileView} {
+  data(): {tileView: TileView, boardOpen: boolean} {
     return {
       tileView: 'show',
+      boardOpen: false,
     };
   },
   computed: {
@@ -616,7 +621,25 @@ export default defineComponent({
 
 <style lang="less">
 // End of the game: a recap page in warm Mars colours.
+// The whole page over Mars from orbit.
+body:has(#game-end.recap) {
+  background:
+    radial-gradient(circle at 50% 0%, #e8743b33, transparent 60%),
+    linear-gradient(#120a06cc, #120a06f2 70%),
+    url(./assets/board/mars-orbit.jpg) center top / cover fixed no-repeat,
+    #120a06;
+}
+
 #game-end.recap {
+  // Headings of the light panels: no glow from the global heading styles.
+  h1, h2, h3, small, b {
+    text-shadow: none;
+  }
+
+  .recap-hero h1 {
+    text-shadow: 0 4px 18px #000;
+  }
+
   --recap-panel: #fbf4ec;
   --recap-card: #fffaf4;
   --recap-line: #ead9c6;
@@ -660,6 +683,44 @@ export default defineComponent({
 
     &:hover {
       color: #ffc58f;
+    }
+  }
+}
+
+.recap-hero__nav {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  margin: 0 -16px -20px;
+  border-bottom: 1px solid #ffffff1f;
+  background: #120a06e6;
+  backdrop-filter: blur(8px);
+  color: #fff;
+}
+
+.recap-navbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid #ffffff38;
+  border-radius: 9px;
+  background: #ffffff14;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background 120ms ease, border-color 120ms ease;
+
+  &:hover {
+    border-color: #ffb27a;
+    background: #ffffff24;
+  }
+
+  &--primary {
+    border-color: #e8743b;
+    background: #e8743b;
+
+    &:hover {
+      background: #f08a52;
     }
   }
 }
