@@ -1,5 +1,10 @@
 <template>
-  <div class="wf-options">
+  <div v-if="worldGovernmentChoice">
+    <WorldGovernmentActions :options="displayedOptions" :busy="requestInProgress" @choose="chooseWorldGovernmentAction" />
+    <SelectSpace v-if="selectedOption?.type === 'space'" :key="selectedIdx" :playerView="playerView"
+      :playerinput="selectedOption" :onsave="playerFactorySaved(selectedIdx)" :showsave="true" :showtitle="false" />
+  </div>
+  <div v-else class="wf-options">
     <label v-if="showtitle"><div>{{ $t(playerinput.title) }}</div></label>
     <label v-if="playerinput.warning !== undefined" class="card-warning"><div>({{ $t(playerinput.warning) }})</div></label>
     <div v-for="(option, idx) in displayedOptions" :key="idx">
@@ -17,8 +22,8 @@
           :showtitle="false" />
       </div>
     </div>
-    <button v-if="canCancelGreenery && !mapPlacement?.cancel" type="button" @click="cancelGreenery" v-i18n>Cancel</button>
-    <div v-if="showsave && selectedOption && !canCancelGreenery && !showChildSaveButton(selectedOption)">
+    <button v-if="canCancelMapChoice && !mapPlacement?.cancel" type="button" @click="clearSelection" v-i18n>Cancel</button>
+    <div v-if="showsave && selectedOption && !canCancelMapChoice && !showChildSaveButton(selectedOption)">
       <div style="margin: 5px 30px 10px" class="wf-action">
         <AppButton :title="$t(selectedOption.buttonLabel)" type="submit" size="normal" @click="saveData" />
       </div>
@@ -30,6 +35,9 @@
 
 import {defineComponent, inject} from 'vue';
 import AppButton from '@/client/components/common/AppButton.vue';
+import SelectSpace from '@/client/components/SelectSpace.vue';
+import WorldGovernmentActions from '@/client/components/board/WorldGovernmentActions.vue';
+import {vueRoot} from '@/client/components/vueRoot';
 import {isHTMLElement} from '@/client/utils/vueUtils';
 import {PlayerViewModel} from '@/common/models/PlayerModel';
 import {OrOptionsModel, PlayerInputModel} from '@/common/models/PlayerInputModel';
@@ -38,6 +46,7 @@ import {InputResponse, OrOptionsResponse} from '@/common/inputs/InputResponse';
 import {isGreeneryChoice, mapPlacementKey} from '@/client/components/board/MapPlacement';
 
 let unique = 0;
+const WORLD_GOVERNMENT_TITLE = 'Select action for World Government Terraforming';
 
 function isDisplayed(option: PlayerInputModel): boolean {
   return !(option.type === 'card' && option.showOnlyInLearnerMode !== false && !getPreferences().learner_mode);
@@ -68,6 +77,8 @@ export default defineComponent({
   },
   components: {
     AppButton,
+    SelectSpace,
+    WorldGovernmentActions,
   },
   data() {
     const displayedOptions = this.playerinput.options.filter(isDisplayed);
@@ -97,8 +108,17 @@ export default defineComponent({
       }
       return this.displayedOptions.indexOf(this.selectedOption);
     },
-    canCancelGreenery(): boolean {
-      return this.showsave && this.displayedOptions.length > 1 && isGreeneryChoice(this.selectedOption);
+    worldGovernmentChoice(): boolean {
+      return this.showsave && this.showtitle && this.playerinput.title === WORLD_GOVERNMENT_TITLE;
+    },
+    requestInProgress(): boolean {
+      return vueRoot(this).isServerSideRequestInProgress;
+    },
+    canCancelMapChoice(): boolean {
+      return this.showsave && (
+        (this.worldGovernmentChoice && this.selectedOption?.type === 'space') ||
+        (this.displayedOptions.length > 1 && isGreeneryChoice(this.selectedOption))
+      );
     },
   },
   watch: {
@@ -108,11 +128,11 @@ export default defineComponent({
         this.selectedOption = this.defaultOption(newOptions[0], newOptions);
       }
     },
-    canCancelGreenery(active: boolean) {
+    canCancelMapChoice(active: boolean) {
       const cancel = this.mapPlacement?.cancel;
       if (active && cancel) {
-        cancel.value = this.cancelGreenery;
-      } else if (cancel?.value === this.cancelGreenery) {
+        cancel.value = this.clearSelection;
+      } else if (cancel?.value === this.clearSelection) {
         cancel.value = undefined;
       }
     },
@@ -134,16 +154,27 @@ export default defineComponent({
   },
   beforeUnmount() {
     const cancel = this.mapPlacement?.cancel;
-    if (cancel?.value === this.cancelGreenery) {
+    if (cancel?.value === this.clearSelection) {
       cancel.value = undefined;
     }
   },
   methods: {
     // Takes the options explicitly: data() calls this before computed properties exist.
     defaultOption(option: PlayerInputModel | undefined, options: ReadonlyArray<PlayerInputModel>): PlayerInputModel | undefined {
-      return this.showsave && options.length > 1 && isGreeneryChoice(option) ? undefined : option;
+      if (this.showsave && (options.length > 1 && isGreeneryChoice(option) || this.showtitle && this.playerinput.title === WORLD_GOVERNMENT_TITLE)) {
+        return undefined;
+      }
+      return option;
     },
-    cancelGreenery() {
+    chooseWorldGovernmentAction(index: number) {
+      const option = this.displayedOptions[index];
+      if (option?.type === 'space') {
+        this.selectedOption = option;
+      } else if (option?.type === 'option') {
+        this.playerFactorySaved(index)({type: 'option'});
+      }
+    },
+    clearSelection() {
       this.selectedOption = undefined;
     },
     getSelectedOptionTop(): number | undefined {
