@@ -560,7 +560,8 @@ export default defineComponent({
       return action && input?.type === 'or' && (action.id.startsWith('menu:') || this.quickActions.some(({id, index}) => id === action.id && index === action.index)) ? input.options[action.index] : undefined;
     },
     canCancelPlacement(): boolean {
-      return this.choosingFinalGreenery || this.pendingGreenery !== undefined || this.cancelMapChoice !== undefined || this.quickInput?.type === 'space';
+      return this.choosingFinalGreenery || this.pendingGreenery !== undefined || this.cancelMapChoice !== undefined || this.quickInput?.type === 'space' ||
+        (this.serverPlacement !== undefined && this.playerView.canCancelPlacement === true);
     },
     mapPlacementInput(): SelectSpaceModel | undefined {
       return (this.choosingFinalGreenery ? this.finalGreenery?.placement : undefined) ?? this.pendingGreenery?.input ?? this.serverPlacement;
@@ -1057,6 +1058,11 @@ export default defineComponent({
       this.missionPanelOpener = undefined;
     },
     cancelPlacement() {
+      if (this.serverPlacement !== undefined && this.playerView.canCancelPlacement === true && this.pendingGreenery === undefined && !this.choosingFinalGreenery) {
+        // The action was already sent: the server takes it back.
+        void this.cancelServerPlacement();
+        return;
+      }
       this.choosingFinalGreenery = false;
       this.pendingGreenery = undefined;
       const input = this.playerView.waitingFor;
@@ -1066,6 +1072,13 @@ export default defineComponent({
       this.closeMissionPanel();
       if (input !== undefined && actionMenu(input) === undefined) {
         this.showFollowUpDecision();
+      }
+    },
+    async cancelServerPlacement() {
+      try {
+        await fetch(paths.API_CANCEL_PLACEMENT + '?id=' + encodeURIComponent(this.playerView.id));
+      } finally {
+        await vueRoot(this).updatePlayer();
       }
     },
     chooseFinalGreenery() {

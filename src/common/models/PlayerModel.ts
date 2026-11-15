@@ -102,6 +102,8 @@ export interface PlayerViewModel extends ViewModel {
   preludeCardsInHand: ReadonlyArray<CardModel>;
   /** The id of `waitingFor`, sent back with the response to it. */
   requestId: string | undefined;
+  /** The space being chosen ends an action that can still be taken back (api/cancelplacement). */
+  canCancelPlacement?: boolean;
   thisPlayer: PublicPlayerModel;
   waitingFor: PlayerInputModel | undefined;
 }

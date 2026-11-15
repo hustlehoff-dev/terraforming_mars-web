@@ -345,7 +345,8 @@ export interface IPlayer {
   /** Return then amount of spendable units of a given card resource */
   getSpendable(resource: SpendableCardResource): number;
   checkPaymentAndPlayCard(selectedCard: IProjectCard, payment: Payment, cardAction?: CardAction): void;
-  pay(payment: Payment): void;
+  pay(payment: Payment, options?: {log?: boolean}): void;
+  stopTurnLimit(): void;
   availableHeat(): number;
   spendHeat(amount: number, cb?: () => (undefined | PlayerInput)) : PlayerInput | undefined;
 

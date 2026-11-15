@@ -17,6 +17,7 @@ import {INVALID_REQUEST_ID, INVALID_RUN_ID, PAUSED, RESPONDING_TOO_QUICKLY} from
 import {RouteError} from './RouteError';
 import {readBody} from './readBody';
 import {stringToNumber} from '../database/utils';
+import {SerializedGame} from '../SerializedGame';
 
 export const playerInputMetrics = {
   responseInterval: new prometheus.Histogram({
@@ -106,6 +107,10 @@ export class PlayerInput extends Handler {
         await this.performUndo(req, res, ctx, player);
       } else {
         const move = JSON.stringify(entity);
+        const menu = player.getWaitingFor();
+        const menuTitle = menu === undefined ? undefined : typeof menu.title === 'string' ? menu.title : menu.title.message;
+        const before = menuTitle === 'Take your first action' || menuTitle === 'Take your next action' ?
+          {snapshot: player.game.serialize(), logLength: player.game.gameLog.length} : undefined;
         let current = player;
         // A repeated click from a page that has not refreshed yet: nothing is asked of the player
         // (the move is already in the game), so answer with the current state instead of an error.
@@ -129,6 +134,7 @@ export class PlayerInput extends Handler {
           current = fresh.getPlayerById(current.id);
           this.resetTableauCardState(current);
         }
+        rememberPlacementUndo(current, before);
         responses.writeJson(res, ctx, Server.getPlayerModel(current));
       }
     } catch (e) {
@@ -172,6 +178,21 @@ export class PlayerInput extends Handler {
     return responseInterval < this.minResponseIntervalMs;
   }
 }
+/** Hidden information shown since the action started: then it cannot be taken back. */
+function revealedSomething(player: IPlayer, logLength: number): boolean {
+  return player.game.gameLog.slice(logLength).some((message) =>
+    message.playerId !== undefined || / (drew|revealed|discarded)\b/.test(message.message) || message.message.startsWith('You '));
+}
+
+function rememberPlacementUndo(player: IPlayer, before: {snapshot: SerializedGame, logLength: number} | undefined): void {
+  const game = player.game;
+  if (before !== undefined && player.getWaitingFor()?.type === 'space' && !revealedSomething(player, before.logLength)) {
+    game.placementUndo = {playerId: player.id, requestId: player.requestId, snapshot: before.snapshot};
+  } else if (game.placementUndo?.playerId === player.id) {
+    game.placementUndo = undefined;
+  }
+}
+
 function validateRunId(player: IPlayer, entity: any) {
   if (entity.runId !== undefined && runId !== undefined) {
     // A page from before a restart or a new deployment: accepted while the game reloaded since has

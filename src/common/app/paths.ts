@@ -11,6 +11,7 @@ export const paths = {
   API_METRICS: 'api/metrics',
   API_LOGOUT: 'api/logout',
   API_PAUSE: 'api/pause',
+  API_CANCEL_PLACEMENT: 'api/cancelplacement',
   API_PLAYER: 'api/player',
   API_PROFILE: 'api/profile',
   API_SPECTATOR: 'api/spectator',

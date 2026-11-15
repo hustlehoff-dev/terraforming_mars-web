@@ -310,6 +310,10 @@ export interface IGame extends Logger {
   draftExpire?: () => void;
   /** Set while a player has paused the game. */
   paused: {by: Color, at: number} | undefined;
+  /** The game before an action that now asks for a space; restored if the player cancels. */
+  placementUndo: {playerId: IPlayer['id'], requestId: string | undefined, snapshot: SerializedGame} | undefined;
+  canCancelPlacement(player: IPlayer): boolean;
+  stopClocks(): void;
   pause(player: IPlayer): void;
   resume(player: IPlayer): void;
   getPlayerAfter(player: IPlayer): IPlayer;

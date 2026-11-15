@@ -818,7 +818,14 @@ export class Player implements IPlayer {
     return this.resourcesOnCard(CARD_FOR_SPENDABLE_RESOURCE[SpendableResource]);
   }
 
-  public pay(payment: Payment) {
+  public pay(payment: Payment, options?: {log?: boolean}) {
+    // Playing a card logs its payment with the card; anything else is logged here.
+    if (options?.log !== false) {
+      const spent = Payment.toLogString(payment);
+      if (spent !== '0') {
+        this.game.log('${0} spent ${1}', (b) => b.player(this).markdown(spent));
+      }
+    }
     const standardUnits = Units.of({
       megacredits: payment.megacredits,
       steel: payment.steel,
@@ -853,7 +860,7 @@ export class Player implements IPlayer {
 
   public playCard(selectedCard: IProjectCard, payment?: Payment, cardAction: CardAction = 'add'): void {
     if (payment !== undefined) {
-      this.pay(payment);
+      this.pay(payment, {log: false});
     }
 
     const selfReplicatingRobots = this.tableau.get(CardName.SELF_REPLICATING_ROBOTS);
@@ -1751,6 +1758,11 @@ export class Player implements IPlayer {
   /** When the current action turn runs out (epoch ms), if the game has a turn time limit. */
   public turnDeadline: number | undefined = undefined;
   private turnTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
+
+  /** Stops this player's turn clock for good (e.g. this copy of the game is being replaced). */
+  public stopTurnLimit(): void {
+    this.clearTurnLimit();
+  }
 
   private clearTurnLimit(): void {
     if (this.turnTimeout !== undefined) {

@@ -158,6 +158,25 @@ export class Game implements IGame, Logger {
   public draftTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
   public draftExpire: (() => void) | undefined = undefined;
   public paused: {by: Color, at: number} | undefined = undefined;
+  public placementUndo: {playerId: IPlayer['id'], requestId: string | undefined, snapshot: SerializedGame} | undefined = undefined;
+
+  /** True while the player chooses the space for an action they can still take back. */
+  public canCancelPlacement(player: IPlayer): boolean {
+    const undo = this.placementUndo;
+    return undo !== undefined && undo.playerId === player.id && undo.requestId === player.requestId &&
+      player.getWaitingFor()?.type === 'space' && this.paused === undefined;
+  }
+
+  /** Stops every timer of this copy of the game, which is about to be replaced. */
+  public stopClocks(): void {
+    for (const p of this.players) {
+      p.stopTurnLimit();
+    }
+    if (this.draftTimeout !== undefined) {
+      clearTimeout(this.draftTimeout);
+    }
+    this.draftTimeout = undefined;
+  }
   /** Milliseconds left on the draft clock when the game was paused. */
   private draftRemainingMs: number | undefined = undefined;
 

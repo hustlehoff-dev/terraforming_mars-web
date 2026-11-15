@@ -125,6 +125,7 @@ export class Server {
       pickedCorporationCard: player.pickedCorporationCard ? cardsToModel(player, [player.pickedCorporationCard]) : [],
       preludeCardsInHand: cardsToModel(player, player.preludeCardsInHand),
       requestId: player.requestId,
+      canCancelPlacement: player.game.canCancelPlacement(player) || undefined,
       thisPlayer: thisPlayer,
       waitingFor: this.getWaitingFor(player, player.getWaitingFor()),
       players: players,
