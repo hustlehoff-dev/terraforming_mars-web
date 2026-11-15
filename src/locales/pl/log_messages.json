@@ -1,4 +1,6 @@
 {
+  "${0} copied the direct effect of ${1} with ${2}": "${0} kopiuje bezpośredni efekt ${1} kartą ${2}",
+  "${0} fizzled. ${1} gains 15:r:mc:": "${0} przepada (nie da się zagrać). ${1} otrzymuje 15:r:mc:",
   "${0} resumed the game": "${0} wznawia grę",
   "${0} paused the game": "${0} wstrzymuje grę",
   "${0} ran out of time and bought no cards": "${0} skończył się czas, nie kupił kart",

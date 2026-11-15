@@ -5,7 +5,11 @@ import {SpaceId} from '../Types';
 export type GameActivityKind =
   'played' | 'action' | 'project' | 'placed' | 'removed' |
   'milestone' | 'award' | 'colony' | 'trade' |
-  'temperature' | 'oxygen' | 'venus' | 'passed' | 'ended' | 'generation' | 'deck' | 'bought' | 'sold';
+  'temperature' | 'oxygen' | 'venus' | 'passed' | 'ended' | 'generation' | 'deck' | 'bought' | 'sold' |
+  /** A prelude that could not be played: discarded for 15 M€. */
+  'fizzled' |
+  /** Double Down copying the direct effect of the other prelude. */
+  'copied';
 
 export type DeckActivity = {
   kind: 'drawn' | 'revealed' | 'discarded' | 'offered' | 'bought';

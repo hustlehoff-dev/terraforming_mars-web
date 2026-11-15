@@ -113,6 +113,8 @@ const labels: Record<GameActivityKind, string> = {
   generation: 'Generation',
   bought: 'bought',
   sold: 'sold',
+  fizzled: 'discarded the unplayable prelude',
+  copied: 'copied the direct effect of',
   deck: 'Project deck',
 };
 

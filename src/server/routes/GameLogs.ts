@@ -124,6 +124,9 @@ function deckActivity(message: LogMessage): DeckActivity | undefined {
 
 function toActivity(message: LogMessage): Activity | undefined {
   const [actor, detail, extra, location] = message.data;
+  if (message.message === '${0} fizzled. ${1} gains 15:r:mc:' && actor?.type === LogMessageDataType.CARD && detail?.type === LogMessageDataType.PLAYER) {
+    return {kind: 'fizzled', player: detail.value, card: actor.value as CardName, effects: '+15:r:mc:'};
+  }
   if (message.type === LogMessageType.NEW_GENERATION && actor?.type === LogMessageDataType.RAW_STRING) {
     return {kind: 'generation', subject: actor.value};
   }
@@ -321,6 +324,10 @@ export class GameLogs {
         continue;
       }
       if (current?.player === undefined) {
+        continue;
+      }
+      if (message.message === '${0} copied the direct effect of ${1} with ${2}' && verb?.type === LogMessageDataType.CARD) {
+        addStep(current, {kind: 'event', event: 'copied', card: verb.value as CardName});
         continue;
       }
       // Which card got (or lost) resources, e.g. CEO's Favorite Project adding 1 to Decomposers.

@@ -491,6 +491,8 @@
   "(you)": "(ty)",
   "Ready": "Gotowy",
   "Choosing": "Wybiera",
+  "discarded the unplayable prelude": "odrzuca niemożliwe do zagrania preludium",
+  "copied the direct effect of": "skopiował efekt",
   "Bought": "Kupione",
   "You drew a card": "Dobrałeś kartę",
   "You drew ${0} cards": "Dobrałeś ${0} karty",

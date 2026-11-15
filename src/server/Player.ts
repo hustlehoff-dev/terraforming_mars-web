@@ -865,7 +865,10 @@ export class Player implements IPlayer {
 
     ColoniesHandler.maybeActivateColonies(this.game, selectedCard);
 
-    if (selectedCard.type !== CardType.PROXY) {
+    if (cardAction === 'double-down') {
+      this.lastCardPlayed = selectedCard.name;
+      this.game.log('${0} copied the direct effect of ${1} with ${2}', (b) => b.player(this).card(selectedCard).cardName(CardName.DOUBLE_DOWN));
+    } else if (selectedCard.type !== CardType.PROXY) {
       this.lastCardPlayed = selectedCard.name;
       if (!selectedCard.cost) {
         this.game.log('${0} played ${1}', (b) => b.player(this).card(selectedCard));
