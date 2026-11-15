@@ -183,6 +183,8 @@ const projectCards = computed(() => {
 });
 const PLAYED_GROUPS: ReadonlyArray<{type: CardType, label: string}> = [
   {type: CardType.CORPORATION, label: 'Corporation'},
+  {type: CardType.PRELUDE, label: 'Preludes'},
+  {type: CardType.CEO, label: 'CEO'},
   {type: CardType.ACTIVE, label: 'Active'},
   {type: CardType.AUTOMATED, label: 'Automated'},
   {type: CardType.EVENT, label: 'Events'},

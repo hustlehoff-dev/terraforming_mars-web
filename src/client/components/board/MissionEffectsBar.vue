@@ -24,11 +24,12 @@ import {computed, ref} from 'vue';
 import Card from '@/client/components/card/Card.vue';
 import {CardModel} from '@/common/models/CardModel';
 import {CardName} from '@/common/cards/CardName';
+import {CardType} from '@/common/cards/CardType';
 import {getCard} from '@/client/cards/ClientCardManifest';
 
 /*
- * The player's played cards with an ongoing effect ("When any city tile is placed..."), small,
- * in the dock. Hover shows the card; a card glows for a moment when its effect gives something.
+ * The player's played cards that keep working: the corporation, preludes, CEO, active cards and
+ * any card with an ongoing effect or action ("When any city tile is placed..."), small, in the dock. Hover shows the card; a card glows for a moment when its effect gives something.
  */
 const props = defineProps<{tableau: ReadonlyArray<CardModel>, lit: ReadonlySet<CardName>, usable?: ReadonlySet<CardName>}>();
 const emit = defineEmits<{use: [card: CardModel], openAll: []}>();
@@ -44,7 +45,20 @@ function hasEffect(name: CardName): boolean {
   return known;
 }
 
-const effectCards = computed(() => props.tableau.filter((card) => hasEffect(card.name)));
+/** Corporation and preludes first (the player's starting cards), then the rest in play order. */
+const ALWAYS: ReadonlyArray<CardType> = [CardType.CORPORATION, CardType.PRELUDE, CardType.CEO, CardType.ACTIVE];
+function rank(card: CardModel): number {
+  const type = getCard(card.name)?.type;
+  return type === CardType.CORPORATION ? 0 : type === CardType.PRELUDE ? 1 : type === CardType.CEO ? 2 : 3;
+}
+const effectCards = computed(() => props.tableau
+  .filter((card) => {
+    const known = getCard(card.name);
+    return known !== undefined && (ALWAYS.includes(known.type) || known.hasAction || hasEffect(card.name));
+  })
+  .map((card, index) => ({card, index}))
+  .sort((a, b) => rank(a.card) - rank(b.card) || a.index - b.index)
+  .map(({card}) => card));
 </script>
 
 <style lang="less">
