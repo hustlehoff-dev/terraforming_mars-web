@@ -64,6 +64,7 @@ const TEMPERATURE = 'assets/global-parameters/temperature.png';
 const OXYGEN = 'assets/global-parameters/oxygen.png';
 const VENUS = 'assets/global-parameters/venus.png';
 const CARD = 'assets/resources/card.png';
+const TR = 'assets/resources/tr.png';
 
 const lastGeneration = computed(() => props.solo ? props.game.lastSoloGeneration : undefined);
 
@@ -110,7 +111,7 @@ const tracks = computed<Track[]>(() => {
   if (game.gameOptions.expansions.venus) {
     list.push(makeTrack('venus', 'Venus Scale', VENUS, '%', game.venusScaleLevel, 0, max.venus, 2, [
       {at: VENUS_LEVEL_FOR_CARD_BONUS, icon: CARD, text: '+1', title: 'Draw a card'},
-      {at: VENUS_LEVEL_FOR_TR_BONUS, icon: TEMPERATURE, text: 'TR', title: 'Terraform rating'},
+      {at: VENUS_LEVEL_FOR_TR_BONUS, icon: TR, text: '+1', title: 'Terraform rating'},
     ]));
   }
   return list;
