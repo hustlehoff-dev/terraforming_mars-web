@@ -12,7 +12,11 @@ export type GameActivityKind =
   'copied';
 
 export type DeckActivity = {
-  kind: 'drawn' | 'revealed' | 'discarded' | 'offered' | 'bought';
+  /**
+   * skipped: cards turned over and discarded while looking in the deck for one with a given tag.
+   * setup: cards turned over to place the neutral tiles of a solo game.
+   */
+  kind: 'drawn' | 'revealed' | 'discarded' | 'offered' | 'bought' | 'sold' | 'skipped' | 'setup';
   cards: ReadonlyArray<CardName>;
   player?: Color;
 };
@@ -33,6 +37,9 @@ export const deckLabels = {
   discarded: 'Revealed and discarded',
   offered: 'Dealt from the project deck',
   bought: 'Bought',
+  sold: 'Sold',
+  skipped: 'Skipped in the deck',
+  setup: 'Revealed to place a neutral tile',
 } satisfies Record<DeckActivity['kind'], string>;
 
 export type GameActivityModel = {

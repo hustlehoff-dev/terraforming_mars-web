@@ -49,6 +49,7 @@ export function showsCards(input: PlayerInputModel | undefined): boolean {
   case 'card':
   case 'initialCards':
   case 'projectCard':
+  case 'colony':
     return true;
   case 'or':
   case 'and':

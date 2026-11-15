@@ -40,6 +40,10 @@ export class SellPatentsStandardProject extends StandardProjectCard {
         cards.forEach((card) => player.discardCardFromHand(card));
         this.projectPlayed(player);
         player.game.log('${0} sold ${1} patents', (b) => b.player(player).number(cards.length));
+        // Sold cards are shown to everyone (activity feed).
+        if (cards.length > 0) {
+          player.game.log('${0} sold ${1}', (b) => b.player(player).cards(cards));
+        }
         return undefined;
       });
   }

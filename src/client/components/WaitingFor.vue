@@ -23,7 +23,7 @@
           :showsave="!draftRepick"
           :showtitle="true"
           :key="inputKey" />
-        <DialogPeek v-if="showDeckDialog && !cardsAllGiven" />
+        <DialogPeek v-if="showDeckDialog && (!cardsAllGiven || preludeChoice)" />
       </component>
     </Teleport>
   </div>
@@ -424,6 +424,9 @@ export default defineComponent({
   },
   computed: {
     /** Cards that are simply received (nothing to choose): no "Show the game" in their window. */
+    preludeChoice(): boolean {
+      return this.waitingfor?.type === 'card' && this.waitingfor.title === 'Select prelude card to play';
+    },
     cardsAllGiven(): boolean {
       const input = this.waitingfor;
       return input?.type === 'card' && input.min === input.cards.length && (input.max ?? input.cards.length) === input.cards.length;

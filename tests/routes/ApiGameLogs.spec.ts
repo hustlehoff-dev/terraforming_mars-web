@@ -17,6 +17,9 @@ import {ConvoyFromEuropa} from '@/server/cards/base/ConvoyFromEuropa';
 import {IoMiningIndustries} from '@/server/cards/base/IoMiningIndustries';
 import {PermafrostExtraction} from '@/server/cards/base/PermafrostExtraction';
 import {CupolaCity} from '@/server/cards/base/CupolaCity';
+import {Birds} from '@/server/cards/base/Birds';
+import {Fish} from '@/server/cards/base/Fish';
+import {SellPatentsStandardProject} from '@/server/cards/base/standardProjects/SellPatentsStandardProject';
 import {OrOptions} from '@/server/inputs/OrOptions';
 import {SelectProjectCardToPlay} from '@/server/inputs/SelectProjectCardToPlay';
 import {SelectSpace} from '@/server/inputs/SelectSpace';
@@ -191,6 +194,23 @@ describe('ApiGameLogs', () => {
         targets: [{player: rival.color, effects: '-2:p:plants:'}],
       },
     ]);
+  });
+
+  it('shows the sold cards to every player', async () => {
+    const [game, player, rival] = testGame(2);
+    await scaffolding.ctx.gameLoader.add(game);
+    game.gameLog.length = 0;
+    const birds = new Birds();
+    const fish = new Fish();
+    player.cardsInHand.push(birds, fish);
+    new SellPatentsStandardProject().action(player).cb([birds, fish]);
+
+    scaffolding.url = '/api/game/logs?id=' + rival.id + '&view=activity';
+    await scaffolding.get(ApiGameLogs.INSTANCE, res);
+    const history: Array<{player?: string, deck?: Array<{kind: string, cards: Array<string>}>}> = JSON.parse(res.content);
+    const sale = history.find((event) => event.deck?.some((batch) => batch.kind === 'sold'));
+    expect(sale?.player).eq(player.color);
+    expect(sale?.deck?.find((batch) => batch.kind === 'sold')?.cards).deep.eq([CardName.BIRDS, CardName.FISH]);
   });
 
   it('shows buying cards the same way for every player, with the own card names of the viewer', async () => {

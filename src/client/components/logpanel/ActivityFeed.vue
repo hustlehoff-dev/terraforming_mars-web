@@ -204,7 +204,7 @@ function deckGroups(event: GameActivityModel): Array<DeckGroup> {
   for (const batch of batches) {
     if (batch.kind !== 'offered' && batch.kind !== 'bought') {
       const recipient = batch.player && batch.player !== event.player ? players.value.get(batch.player)?.name : undefined;
-      groups.push({label: [recipient, translateText(deckLabels[batch.kind])].filter(Boolean).join(' '), cards: [...batch.cards], dim: batch.kind === 'discarded'});
+      groups.push({label: [recipient, translateText(deckLabels[batch.kind])].filter(Boolean).join(' '), cards: [...batch.cards], dim: batch.kind === 'discarded' || batch.kind === 'skipped' || batch.kind === 'setup'});
     }
   }
   return groups.filter((group) => group.cards.length > 0 || group.label === translateText('Bought'));

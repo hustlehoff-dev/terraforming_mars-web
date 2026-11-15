@@ -2,7 +2,8 @@
   <div class="wf-component wf-component--select-card"
     :class="{'deck-deal': playerinput.dealtFromDeck || cardDialog || draftLocked, 'draft-pick': draftPick, 'draft-pick--locked': draftLocked, 'buy-cards': buyingWindow}"
     :aria-busy="draftSubmitting || undefined">
-    <div v-if="showtitle === true" class="nofloat wf-component-title">{{ $t(draftLocked ? 'Draft' : playerinput.title) }}</div>
+    <div v-if="showtitle === true" class="nofloat wf-component-title">{{ $t(draftLocked ? 'Draft' : preludeChoice ? 'Choose the prelude to play' : playerinput.title) }}</div>
+    <p v-if="preludeChoice && selectableCards.length > 1" class="nofloat prelude-choice__hint" v-i18n>Click a card, then Play.</p>
     <MissionDraftClock v-if="(draftPick || buyingCards) && playerView.game.draftDeadline !== undefined" :deadline="playerView.game.draftDeadline"
       :label="draftPick ? 'Time to pick a card' : 'Time to buy cards'" />
     <!-- Buying cards: what you have, what a card costs, what the chosen ones cost. -->
@@ -42,7 +43,10 @@
       <!-- Optional choice from the project deck: one card offers Buy / Pass; several cards turn Pass into "Buy N" as they are selected. -->
       <!-- Nothing can be taken (e.g. no M€ to buy the drawn cards): one OK, no selection. -->
       <AppButton v-if="nothingToChoose" type="submit" @click="onsave({type: 'card', cards: []})" :title="$t('OK')" />
-      <AppButton v-else-if="allGiven" type="submit" @click="onsave({type: 'card', cards: selectableCards.map((card) => card.name)})" :title="$t('OK')" />
+      <AppButton v-else-if="allGiven" type="submit" @click="onsave({type: 'card', cards: selectableCards.map((card) => card.name)})"
+        :title="preludeChoice ? playLabel(selectableCards[0]) : $t('OK')" />
+      <AppButton v-else-if="preludeChoice" type="submit" @click="saveData" :disabled="cardsSelected === 0"
+        :title="cardsSelected === 0 ? $t('Choose a prelude') : playLabel(Array.isArray(cards) ? cards[0] : cards)" />
       <template v-else-if="optionalDeckChoice && selectableCards.length === 1">
         <AppButton type="submit" @click="onsave({type: 'card', cards: [selectableCards[0].name]})" :title="$t(playerinput.buttonLabel)" />
         <AppButton type="submit" @click="onsave({type: 'card', cards: []})" :title="$t('Pass')" />
@@ -160,6 +164,9 @@ export default defineComponent({
     },
   },
   methods: {
+    playLabel(card: CardModel | undefined): string {
+      return card === undefined ? translateText('Play') : translateTextWithParams('Play ${0}', [translateText(card.name)]);
+    },
     getOrderedCards(): ReadonlyArray<CardModel> {
       if (this.playerinput.dealtFromDeck || this.draftLocked) {
         return this.playerinput.cards;
@@ -270,6 +277,10 @@ export default defineComponent({
     /** The window to buy cards in the research phase (not the first choice of the game, which has its own summary). */
     buyingWindow(): boolean {
       return this.buyingCards && this.showsave === true && this.playerView.game.generation > 1;
+    },
+    /** Choosing which prelude to play (start of the game, or a card that plays one). */
+    preludeChoice(): boolean {
+      return this.playerinput.title === 'Select prelude card to play';
     },
     cardCost(): number {
       return this.playerView.thisPlayer?.cardCost ?? 3;
@@ -478,5 +489,13 @@ export default defineComponent({
     font-weight: 900;
     box-shadow: 0 2px 8px #000a;
   }
+}
+
+.prelude-choice__hint {
+  flex-basis: 100%;
+  margin: -6px 0 6px;
+  color: #cfe0e6;
+  font-size: 0.9rem;
+  text-align: center;
 }
 </style>
