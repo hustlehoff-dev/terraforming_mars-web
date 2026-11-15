@@ -23,9 +23,9 @@
             :aria-label="entry.card || entry.targetSpace || entry.deck?.length ? entry.text : undefined"
             :aria-expanded="entry.deck?.length ? reveal?.key === entry.key : entry.card ? previewKey === entry.key : undefined"
             @click="inspect(entry)"
-            @pointerenter="hoverEntry(entry)"
+            @pointerenter="hoverEntry(entry, $event)"
             @pointerleave="unhoverEntry(entry)"
-            @focus="hoverEntry(entry)"
+            @focus="hoverEntry(entry, $event)"
             @blur="unhoverEntry(entry)">
             <span v-if="entry.player" class="activity-feed__marker" :class="'player_bg_color_' + entry.player" aria-hidden="true"></span>
             <span class="activity-feed__line">
@@ -47,7 +47,7 @@
       </ol>
       <p v-if="loaded && entries.length === 0" class="activity-feed__empty" v-i18n>No activity yet</p>
     </div>
-    <div v-if="previewEntry?.groups.length" class="activity-feed__preview activity-feed__preview--deck" aria-hidden="true">
+    <div v-if="previewEntry?.groups.length" ref="preview" class="activity-feed__preview activity-feed__preview--deck" :style="previewStyle" aria-hidden="true">
       <div v-for="group in previewEntry.groups" :key="group.label" class="activity-feed__group" :class="{'activity-feed__group--dim': group.dim}">
         <p>{{ group.label }}</p>
         <div class="activity-feed__group-cards">
@@ -59,7 +59,7 @@
       </div>
     </div>
     <!-- Milestone or award: its tile, name and what it asks for. -->
-    <div v-else-if="previewMa" class="activity-feed__preview" aria-hidden="true">
+    <div v-else-if="previewMa" ref="preview" class="activity-feed__preview" :style="previewStyle" aria-hidden="true">
       <div class="activity-feed__ma">
         <img :src="previewMa.icon" alt="" @error="($event.target as HTMLImageElement).style.visibility = 'hidden'">
         <small>{{ $t(previewMa.kind) }}</small>
@@ -67,7 +67,7 @@
         <p>{{ $t(previewMa.description) }}</p>
       </div>
     </div>
-    <div v-else-if="previewCard || previewEntry?.stepLines.length" class="activity-feed__preview" aria-hidden="true">
+    <div v-else-if="previewCard || previewEntry?.stepLines.length" ref="preview" class="activity-feed__preview" :style="previewStyle" aria-hidden="true">
       <p v-if="previewEntry?.stepLines.length" class="activity-feed__summary">{{ previewEntry.text }}</p>
       <Card v-if="previewCard" :key="previewCard.name" :card="previewCard" autoTall />
     </div>
@@ -430,9 +430,32 @@ function toggleFeed() {
   closePreview();
 }
 
-function hoverEntry(entry: GameActivityModel) {
+/** Where the preview stands: level with the entry pointed at, kept inside the screen. */
+const previewStyle = ref<Record<string, string>>({});
+const preview = ref<HTMLElement>();
+let previewAnchor: HTMLElement | undefined;
+
+function placePreview() {
+  const aside = previewAnchor?.closest('.activity-feed');
+  // On narrow screens the preview sits under the feed (see the media query).
+  if (!previewAnchor || !aside || window.innerWidth <= 760) {
+    previewStyle.value = {};
+    return;
+  }
+  const entry = previewAnchor.getBoundingClientRect();
+  const box = aside.getBoundingClientRect();
+  const height = preview.value?.offsetHeight ?? 0;
+  const top = Math.max(8, Math.min(entry.top, window.innerHeight - height - 8));
+  previewStyle.value = {top: `${top - box.top}px`, bottom: 'auto'};
+}
+
+function hoverEntry(entry: GameActivityModel, event?: Event) {
   if ((entry.card || entry.steps?.length || entry.deck?.length || entry.kind === 'milestone' || entry.kind === 'award') && !previewPinned) {
+    previewAnchor = event?.currentTarget instanceof HTMLElement ? event.currentTarget : undefined;
     previewKey.value = entry.key;
+    placePreview();
+    // Once more after the card is drawn, now that its height is known.
+    void nextTick(placePreview);
   }
 }
 
@@ -707,7 +730,7 @@ button.activity-feed__entry {
 
   :deep(.card-container) {
     margin: 0;
-    zoom: 0.8;
+    zoom: 0.95;
   }
 }
 

@@ -175,7 +175,7 @@ defineExpose({pin});
 
   :deep(.card-container) {
     margin: 0;
-    zoom: 0.5;
+    zoom: 0.65;
   }
 
   &:hover {

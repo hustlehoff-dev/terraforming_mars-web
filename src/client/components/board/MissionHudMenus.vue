@@ -461,9 +461,9 @@ function chooseMa(subIndex: number) {
   // A centred window, not the whole screen: content scrolls inside it. No panel of its own:
   // the cards float over the blurred game.
   &.deck-choice-dialog {
-    width: min(1100px, 92vw);
-    max-width: min(1100px, 92vw);
-    max-height: min(86dvh, 900px);
+    width: min(1400px, 95vw);
+    max-width: min(1400px, 95vw);
+    max-height: 92dvh;
     overflow: hidden;
     border: 0;
     background: none;
@@ -644,7 +644,11 @@ function chooseMa(subIndex: number) {
 
   .mission-hud-dialog__played .card-container {
     margin: 0;
-    zoom: 0.62;
+    zoom: 0.95;
+
+    @media (max-height: 760px) {
+      zoom: 0.8;
+    }
   }
 
   .mission-hud-dialog__hint {
