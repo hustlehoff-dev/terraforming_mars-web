@@ -117,6 +117,7 @@ import {ColonyModel, simpleColonyModel} from '@/common/models/ColonyModel';
 import * as titles from '@/common/inputs/SelectInitialCards';
 import {sum} from '@/common/utils/utils';
 import {translateText} from '@/client/directives/i18n';
+import {recallChoice, rememberChoice} from '@/client/utils/choiceMemory';
 
 
 type SetupStep = 'corporation' | 'prelude' | 'ceo' | 'projects';
@@ -398,6 +399,9 @@ export default defineComponent({
     confirmSelection() {
       this.saveData();
     },
+    rememberSetup() {
+      rememberChoice(this.setupQuestion, {corporation: this.selectedCorporations[0], step: this.step});
+    },
     getColony(colonyName: ColonyName): ColonyModel {
       return simpleColonyModel(colonyName);
     },
@@ -419,6 +423,10 @@ export default defineComponent({
         status: `${this.selectedCards.length} · −${this.selectedCards.length * this.cardCost} M€`,
       });
       return steps;
+    },
+    /** Identifies this setup across page reloads: the corporations dealt. */
+    setupQuestion(): string {
+      return JSON.stringify(['setup', this.corpCardOption.cards.map((card) => card.name)]);
     },
     nextStep(): SetupStep | undefined {
       const index = this.steps.findIndex((item) => item.id === this.step);
@@ -462,7 +470,23 @@ export default defineComponent({
     },
   },
   mounted() {
+    // After a page reload: the corporation and the step chosen before it.
+    const saved = recallChoice<{corporation?: CardName, step?: SetupStep}>(this.setupQuestion);
+    if (saved?.corporation !== undefined && this.corpCardOption.cards.some((card) => card.name === saved.corporation && !card.isDisabled)) {
+      this.selectedCorporations = [saved.corporation];
+    }
+    if (saved?.step !== undefined && this.steps.some((item) => item.id === saved.step)) {
+      this.step = saved.step;
+    }
     this.validate();
+  },
+  watch: {
+    selectedCorporations() {
+      this.rememberSetup();
+    },
+    step() {
+      this.rememberSetup();
+    },
   },
 });
 

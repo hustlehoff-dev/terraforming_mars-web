@@ -96,7 +96,7 @@ export class PlayerInput extends Handler {
       if (player.game.paused !== undefined) {
         throw new AppError(PAUSED, 'The game is paused.');
       }
-      validateRunId(entity);
+      validateRunId(player, entity);
       validateRequestId(player, entity);
 
       // Placed here because it fits in a temporally cohesive sense.
@@ -172,9 +172,11 @@ export class PlayerInput extends Handler {
     return responseInterval < this.minResponseIntervalMs;
   }
 }
-function validateRunId(entity: any) {
+function validateRunId(player: IPlayer, entity: any) {
   if (entity.runId !== undefined && runId !== undefined) {
-    if (entity.runId !== runId) {
+    // A page from before a restart or a new deployment: accepted while the game reloaded since has
+    // not asked anything new (no request ID yet); the move is then checked against the game.
+    if (entity.runId !== runId && player.requestId !== undefined) {
       throw new AppError(INVALID_RUN_ID, 'The server has restarted. Click OK to refresh this page.');
     }
   }

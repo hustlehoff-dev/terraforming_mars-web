@@ -63,6 +63,7 @@ import {SelectCardResponse} from '@/common/inputs/InputResponse';
 import {Warning} from '@/common/cards/Warning';
 import {Phase} from '@/common/Phase';
 import MissionDraftClock from '@/client/components/board/MissionDraftClock.vue';
+import {recallChoice, rememberChoice} from '@/client/utils/choiceMemory';
 
 type Owner = {
   name: string;
@@ -119,9 +120,27 @@ export default defineComponent({
     AppButton,
     MissionDraftClock,
   },
+  mounted() {
+    // A page reload keeps the cards ticked before it (draft picks are sent at once, nothing to keep).
+    if (this.draftPick) {
+      return;
+    }
+    const names = recallChoice<Array<CardName>>(this.question);
+    if (!Array.isArray(names) || names.length === 0) {
+      return;
+    }
+    const chosen = this.playerinput.cards.filter((card) => names.includes(card.name) && !card.isDisabled);
+    if (chosen.length === 0) {
+      return;
+    }
+    this.cards = this.selectOnlyOneCard ? chosen[0] : chosen.slice(0, this.playerinput.max ?? chosen.length);
+  },
   watch: {
     cards() {
       this.$emit('cardschanged', this.cardNames);
+      if (!this.draftPick) {
+        rememberChoice(this.question, this.cardNames);
+      }
     },
   },
   methods: {
@@ -251,6 +270,11 @@ export default defineComponent({
     },
     optionalDeckChoice(): boolean {
       return this.playerinput.dealtFromDeck === true && this.playerinput.min === 0;
+    },
+    /** Identifies this question across page reloads: its title, limits and cards. */
+    question(): string {
+      const input = this.playerinput;
+      return JSON.stringify(['card', input.title, input.min, input.max, input.cards.map((card) => card.name)]);
     },
     selectOnlyOneCard() : boolean {
       return this.playerinput.max === 1 && this.playerinput.min === 1;
