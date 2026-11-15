@@ -648,3 +648,54 @@ body #player-home.mission-cinematic .mission-params__buttons .mission-pause-butt
   gap: 6px;
 }
 
+// A choice the game is waiting for, with its window closed: one click goes back to it.
+.mission-pending-decision {
+  position: fixed;
+  z-index: 25;
+  top: 84px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 16px;
+  border: 1px solid #e2c27f;
+  border-radius: 12px;
+  background: #0b141cf2;
+  box-shadow: 0 0 0 1px #e2c27f, 0 0 22px #e2c27f66, 0 8px 20px #000a;
+  color: #eef6f8;
+  font: inherit;
+  cursor: pointer;
+  transform: translateX(-50%);
+  animation: mission-pending-glow 1.4s ease-in-out infinite alternate;
+
+  b {
+    color: #fff3c4;
+  }
+}
+
+.mission-pending-decision__icon {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: #e2c27f;
+  color: #1b1200;
+  font-weight: 900;
+}
+
+.mission-pending-decision__open {
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: #5a4116;
+  color: #ffe9bd;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+@keyframes mission-pending-glow {
+  to { box-shadow: 0 0 0 1px #e2c27f, 0 0 8px #e2c27f33, 0 8px 20px #000a; }
+}
+

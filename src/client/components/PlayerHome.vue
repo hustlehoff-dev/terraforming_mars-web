@@ -101,6 +101,11 @@
             :requestId="playerView.requestId" :deadline="thisPlayer.turnDeadline" :actionsTaken="thisPlayer.actionsTakenThisRound" :noActionLimit="othersPassed" :soloGame="playerView.players.length === 1" @select="openQuickAction" @cardAction="(card) => stageCardAction(card)" @pass="passNow" @endTurn="endTurn" />
         </div>
         <MissionCardZoom v-if="cinematic" :playerView="playerView" />
+        <button v-if="pendingDecision" type="button" class="mission-pending-decision" @click="showMissionPanel('actions')">
+          <span class="mission-pending-decision__icon" aria-hidden="true">!</span>
+          <span>{{ $t('A decision is waiting') }}: <b>{{ pendingDecisionTitle }}</b></span>
+          <span class="mission-pending-decision__open" v-i18n>Open</span>
+        </button>
         <MissionPauseOverlay v-if="cinematic" :paused="game.paused" :players="playerView.players" :busy="pausing" @resume="setPaused(false)" />
         <MissionDraftWaiting v-if="cinematic && draftLockedIn" :players="playerView.players" :deadline="game.draftDeadline" />
         <ConfirmDialog v-if="cinematic" ref="heatConfirm" message="Spend 8 heat to raise the temperature 1 step?" @accept="convertHeatNow" />
@@ -344,6 +349,7 @@ import {paths} from '@/common/app/paths';
 import {vueRoot} from '@/client/components/vueRoot';
 import MissionPauseOverlay from '@/client/components/board/MissionPauseOverlay.vue';
 import MissionCardZoom from '@/client/components/board/MissionCardZoom.vue';
+import {translateMessage, translateText} from '@/client/directives/i18n';
 import MissionEffectBadges from '@/client/components/board/MissionEffectBadges.vue';
 import MissionEffectsBar from '@/client/components/board/MissionEffectsBar.vue';
 import {CardName} from '@/common/cards/CardName';
@@ -632,6 +638,20 @@ export default defineComponent({
       return option && option.cards.length > 0 ? option : undefined;
     },
     /** A choice that follows an action: shown as a compact bar above the hand instead of the side window. */
+    /** The game waits for a choice (not the action menu, a space or cards) and its window is closed. */
+    pendingDecision(): boolean {
+      const input = this.playerView.waitingFor;
+      return this.cinematic && input !== undefined && this.missionPanel === undefined && this.mapPlacement === undefined &&
+        actionMenu(input) === undefined && input.type !== 'space' && !showsCards(input) && !isResourceRemovalChoice(input) &&
+        this.previewedProject === undefined && this.stagedAction === undefined;
+    },
+    pendingDecisionTitle(): string {
+      const title = this.playerView.waitingFor?.title;
+      if (title === undefined) {
+        return '';
+      }
+      return typeof title === 'string' ? translateText(title) : translateMessage(title);
+    },
     decisionMode(): boolean {
       const input = this.playerView.waitingFor;
       if (!this.cinematic || this.missionPanel !== 'actions') {

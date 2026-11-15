@@ -215,6 +215,8 @@ export class GameLogs {
     let current: GameActivityModel | undefined;
     let actionId: number | undefined;
     let own: Array<string> = [];
+    // A "spent" line was logged in this action: bought cards are not charged a second time.
+    let spentSeen = false;
     let others = new Map<Color, Array<string>>();
     // Attach the unit changes that followed an activity to it, newest activity first in the result.
     const close = () => {
@@ -226,6 +228,7 @@ export class GameLogs {
       }
       own = [];
       others = new Map();
+      spentSeen = false;
     };
     const addStep = (entry: GameActivityModel, step: ActivityStep) => {
       entry.steps = [...(entry.steps ?? []), step];
@@ -375,6 +378,7 @@ export class GameLogs {
       if (message.message === '${0} spent ${1}' && actor?.type === LogMessageDataType.PLAYER) {
         const tokens = String(verb?.value ?? '').split(' ').filter((token) => /^-\d+/.test(token));
         if (actor.value === current.player) {
+          spentSeen = true;
           own.push(...tokens);
         } else {
           others.set(actor.value, [...(others.get(actor.value) ?? []), ...tokens]);
@@ -416,7 +420,7 @@ export class GameLogs {
       }
       if (boughtCount !== undefined && Number.isFinite(boughtCount) && ['action', 'played', 'project'].includes(current.kind)) {
         addStep(current, {kind: 'event', event: 'bought', subject: boughtCount === 0 ? 'no cards' : `${boughtCount} card(s)`});
-        if (boughtCount > 0) {
+        if (boughtCount > 0 && !spentSeen) {
           const cardCost = game.players.find((candidate) => candidate.color === current?.player)?.cardCost ?? 3;
           own.push(`-${boughtCount * cardCost}:r:mc:`);
         }
