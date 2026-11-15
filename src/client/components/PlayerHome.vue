@@ -107,7 +107,8 @@
           <span class="mission-pending-decision__open" v-i18n>Open</span>
         </button>
         <MissionPauseOverlay v-if="cinematic" :paused="game.paused" :players="playerView.players" :busy="pausing" @resume="setPaused(false)" />
-        <MissionDraftWaiting v-if="cinematic && draftLockedIn" :players="playerView.players" :deadline="game.draftDeadline" />
+        <MissionDraftWaiting v-if="cinematic && (draftLockedIn || researchLockedIn)" :players="playerView.players" :deadline="game.draftDeadline"
+          :stage="draftLockedIn ? 'draft' : 'research'" />
         <ConfirmDialog v-if="cinematic" ref="heatConfirm" message="Spend 8 heat to raise the temperature 1 step?" @accept="convertHeatNow" />
         <MissionStandardProjects v-if="cinematic && !mapPlacement" :actions="quickActions" @select="openQuickAction" />
         <div class="mission-dock">
@@ -479,6 +480,12 @@ export default defineComponent({
     };
   },
   watch: {
+    // Own choice in, the others still choosing: the waiting notice in the middle, no empty actions window.
+    waitingForOthers(waiting: boolean) {
+      if (waiting && this.missionPanel === 'actions') {
+        this.closeMissionPanel();
+      }
+    },
     canCancelPlacement: {
       immediate: true,
       handler(canCancel: boolean) {
@@ -669,6 +676,14 @@ export default defineComponent({
       return this.quickAction !== undefined || (input !== undefined && actionMenu(input) === undefined);
     },
     /** This player has picked a draft card and others are still choosing. */
+    /** Cards bought in the research phase, the others still buying. */
+    waitingForOthers(): boolean {
+      return this.draftLockedIn || this.researchLockedIn;
+    },
+    researchLockedIn(): boolean {
+      return this.game.phase === Phase.RESEARCH && this.playerView.waitingFor === undefined && this.thisPlayer.needsToResearch === false &&
+        this.playerView.players.some((player) => player.needsToResearch === true);
+    },
     draftLockedIn(): boolean {
       return this.thisPlayer.needsToDraft === false && this.playerView.players.some((player) => player.needsToDraft === true);
     },

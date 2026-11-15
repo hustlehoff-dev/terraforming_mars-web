@@ -15,9 +15,11 @@ import {PublicPlayerModel} from '@/common/models/PlayerModel';
 /*
  * Shows who is still choosing and, with a draft time limit, how long they have left.
  */
-const props = defineProps<{players: ReadonlyArray<PublicPlayerModel>, deadline?: number}>();
+const props = defineProps<{players: ReadonlyArray<PublicPlayerModel>, deadline?: number, stage?: 'draft' | 'research'}>();
 
-const waitingFor = computed(() => props.players.filter((player) => player.needsToDraft === true));
+// Drafting: who still picks a card. Research: who still buys cards.
+const waitingFor = computed(() => props.players.filter((player) =>
+  props.stage === 'research' ? player.needsToResearch === true : player.needsToDraft === true));
 const now = ref(Date.now());
 const timer = window.setInterval(() => {
   now.value = Date.now();
