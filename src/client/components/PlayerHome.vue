@@ -864,7 +864,8 @@ export default defineComponent({
         (this.$refs.heatConfirm as InstanceType<typeof ConfirmDialog> | undefined)?.show();
         return;
       }
-      if (option?.type === 'space' && !action.id.startsWith('menu:')) {
+      // Every space choice of the action menu (icon or menu) uses the one map placement, with Cancel.
+      if (option?.type === 'space') {
         this.closeMissionPanel();
         this.pendingSpace = {input: option, index: action.index};
         return;
