@@ -1,7 +1,7 @@
 <template>
   <div class="ma-block">
     <div class="ma-player" v-if="award.playerName">
-      <i :title="award.playerName" class="board-cube" :class="`board-cube--${award.color}`"></i>
+      <i :title="$t('Funded by') + ' ' + award.playerName" class="board-cube" :class="`board-cube--${award.color}`"></i>
     </div>
 
     <div class="ma-name ma-name--awards award-block" :class="nameCss">
@@ -21,6 +21,7 @@
             v-text="score.score"
             data-test="player-score"
           ></p>
+          <p v-if="award.playerName && points(score) > 0" class="ma-score ma-score--vp" :title="$t('Victory points for this place')">+{{ points(score) }}</p>
         </template>
       </div>
     </div>
@@ -68,6 +69,17 @@ export default defineComponent({
     },
   },
   methods: {
+    /** VP the score earns now: 5 for 1st (every tied player), 2 for 2nd with 3+ players and no tie for 1st. */
+    points(score: AwardScore): number {
+      const values = this.sortedScores.map((s) => s.score);
+      const top = values[0];
+      if (score.score === top) {
+        return 5;
+      }
+      const tiedFirst = values.filter((v) => v === top).length > 1;
+      const second = values.find((v) => v < top);
+      return values.length > 2 && !tiedFirst && score.score === second ? 2 : 0;
+    },
     playerSymbol(color: Color) {
       return playerSymbol(color);
     },
@@ -93,3 +105,11 @@ export default defineComponent({
   },
 });
 </script>
+
+<style lang="less">
+.ma-score--vp {
+  background: #e2c27f;
+  color: #1b1200;
+  font-weight: 800;
+}
+</style>

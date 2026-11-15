@@ -125,13 +125,13 @@
               <div class="game-end-column-vp">&nbsp;</div>
               <div class="game-end-column-text">&nbsp;</div>
             </div>
-            <div v-for="v in p.victoryPointsBreakdown.detailsMilestones" :key="v.message">
+            <div v-for="(v, i) in p.victoryPointsBreakdown.detailsMilestones" :key="i">
               <div class="game-end-column-row">
                 <div class="game-end-column-vp">{{ v.victoryPoint }}</div>
                 <div class="game-end-column-text">{{ translateMilestoneDetails(v) }}</div>
               </div>
             </div>
-            <div v-for="v in p.victoryPointsBreakdown.detailsAwards" :key="v.message">
+            <div v-for="(v, i) in p.victoryPointsBreakdown.detailsAwards" :key="i">
               <div class="game-end-column-row">
                 <div class="game-end-column-vp">{{ v.victoryPoint }}</div>
                 <div class="game-end-column-text">{{ translateAwardDetails(v) }}</div>
