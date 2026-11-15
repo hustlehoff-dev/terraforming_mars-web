@@ -9,7 +9,7 @@ import {globalConfig} from '../getLocalVue';
 import {fakeViewModel} from '../testHelpers';
 
 describe('ActivityFeed', () => {
-  it('preserves the reader’s scroll position and shows new cards and board actions together', async () => {
+  it('keeps the latest entry at the bottom, keeps the reader’s place and shows new cards and board actions together', async () => {
     let history: Array<GameActivityModel> = [
       {key: '2', kind: 'played', card: CardName.MINING_AREA, player: 'blue'},
       {key: '1', kind: 'placed', subject: 'ocean tile', space: '05', player: 'red'},
@@ -18,18 +18,21 @@ describe('ActivityFeed', () => {
     const model = fakeViewModel();
     const wrapper = shallowMount(ActivityFeed, {...globalConfig, props: {viewModel: model}});
     try {
-      await flushPromises();
       const list = wrapper.get('ol').element;
       Object.defineProperty(list, 'scrollHeight', {get: () => list.children.length * 40});
-      list.scrollTop = 60;
+      await flushPromises();
+      // Oldest first, the latest at the bottom, scrolled down to it.
+      expect(wrapper.findAll('.activity-feed__entry').map((entry) => entry.attributes('aria-label'))).deep.eq(['red placed ocean tile', 'blue played Mining Area']);
+      expect(list.scrollTop).eq(80);
       expect(wrapper.findAll('.activity-feed__entry--new')).has.length(0);
       await wrapper.get('[aria-label*="placed ocean tile"]').trigger('click');
       expect(wrapper.emitted('spaceClicked')).deep.eq([['05']]);
 
+      // At the latest entry: a new one comes in at the bottom and the list follows it.
       history = [{key: '3', kind: 'played', card: CardName.FISH, player: 'red'}, ...history];
       await wrapper.setProps({viewModel: {...model, game: {...model.game, gameAge: 1}}});
       await flushPromises();
-      expect(list.scrollTop).eq(100);
+      expect(list.scrollTop).eq(120);
       expect(wrapper.get('.activity-feed__entry--new').text()).contains('played ' + CardName.FISH);
       expect(wrapper.findAll('.activity-feed__entry')).has.length(3);
 
@@ -38,12 +41,14 @@ describe('ActivityFeed', () => {
       expect(zoomedCard.value?.name).eq(CardName.FISH);
       closeCardZoom();
 
+      // Reading older entries: the place is kept, and the button goes back to the latest.
+      list.scrollTop = 10;
+      await wrapper.get('ol').trigger('scroll');
       await wrapper.setProps({viewModel: {...model, game: {...model.game, gameAge: 2}}});
       await flushPromises();
-      expect(list.scrollTop).eq(100);
-      expect(wrapper.findAll('.activity-feed__entry')).has.length(3);
+      expect(list.scrollTop).eq(10);
       await wrapper.get('.activity-feed__header button').trigger('click');
-      expect(list.scrollTop).eq(0);
+      expect(list.scrollTop).eq(120);
     } finally {
       wrapper.unmount();
       vi.unstubAllGlobals();

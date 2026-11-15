@@ -419,7 +419,6 @@ body #player-home.mission-cinematic .mission-right-column {
   right: var(--hud-right, 24px);
   display: flex;
   width: 300px;
-  max-height: calc(var(--scene-height) - var(--dock-height) - 68px);
   flex-direction: column;
   gap: 14px;
   pointer-events: none;
@@ -587,7 +586,7 @@ body #player-home.mission-cinematic .activity-feed {
   }
 
   .activity-feed__list {
-    max-height: max(220px, calc(100dvh - var(--dock-height, 240px) - 360px));
+    max-height: var(--feed-list-height, max(220px, calc(100dvh - var(--dock-height, 240px) - 360px)));
     gap: 6px;
     scrollbar-color: #8fa3adb3 transparent;
   }

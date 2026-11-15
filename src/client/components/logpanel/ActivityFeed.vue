@@ -1,5 +1,5 @@
 <template>
-  <aside class="activity-feed" :aria-label="$t('Activity feed')" @keydown.esc.stop="dismissPreview">
+  <aside ref="feed" class="activity-feed" :aria-label="$t('Activity feed')" :style="placement" @keydown.esc.stop="dismissPreview">
     <button
       type="button"
       class="activity-feed__toggle"
@@ -13,7 +13,7 @@
         <button v-if="scrolled" type="button" @click="showLatest" v-i18n>Latest activity</button>
       </div>
       <ol :id="listId" ref="list" class="activity-feed__list" tabindex="0" @scroll.passive="updateScroll">
-        <li v-for="entry in entries" :key="entry.key">
+        <li v-for="entry in shownEntries" :key="entry.key">
           <component
             :is="entry.card || entry.targetSpace || entry.deck?.length ? 'button' : 'div'"
             :type="entry.card || entry.targetSpace || entry.deck?.length ? 'button' : undefined"
@@ -78,7 +78,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, nextTick, onBeforeUnmount, ref, shallowRef, useId, watch} from 'vue';
+import {computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, useId, watch} from 'vue';
 import Card from '@/client/components/card/Card.vue';
 import ActivityCardReveal from './ActivityCardReveal.vue';
 import {getCard} from '@/client/cards/ClientCardManifest';
@@ -273,6 +273,45 @@ const previewCards = computed<Array<CardModel>>(() => {
   return cards.slice(0, 4);
 });
 const previewEntry = computed(() => entries.value.find((entry) => entry.key === previewKey.value));
+/** The entries as shown: the oldest at the top, the latest at the bottom. */
+const shownEntries = computed(() => entries.value.toReversed());
+
+/*
+ * Where the feed stands: right below the panel of the players (however many there are), down to
+ * the dock with the hand. Measured, since the panel grows with each player.
+ */
+const feed = ref<HTMLElement>();
+const placement = ref<Record<string, string>>({});
+let placementObserver: ResizeObserver | undefined;
+function placeFeed() {
+  const aside = feed.value;
+  const map = aside?.offsetParent;
+  const players = map?.querySelector<HTMLElement>('.mission-players');
+  if (!aside || !(map instanceof HTMLElement) || !players || players.offsetHeight === 0) {
+    placement.value = {};
+    return;
+  }
+  const mapBox = map.getBoundingClientRect();
+  const top = players.getBoundingClientRect().bottom - mapBox.top + 10;
+  const dock = document.querySelector<HTMLElement>('.mission-dock');
+  const bottom = dock ? dock.getBoundingClientRect().top - mapBox.top - 12 : mapBox.height - 12;
+  // The header of the feed takes about 40px; the list gets the rest, at least 160px.
+  const listHeight = Math.max(160, bottom - top - 44);
+  placement.value = {'inset-block-start': `${top}px`, '--feed-list-height': `${listHeight}px`};
+}
+onMounted(() => {
+  placeFeed();
+  const players = feed.value?.offsetParent?.querySelector('.mission-players');
+  if (players && typeof ResizeObserver !== 'undefined') {
+    placementObserver = new ResizeObserver(placeFeed);
+    placementObserver.observe(players);
+  }
+  window.addEventListener('resize', placeFeed);
+});
+onBeforeUnmount(() => {
+  placementObserver?.disconnect();
+  window.removeEventListener('resize', placeFeed);
+});
 const previewMa = computed(() => {
   const entry = previewEntry.value;
   if (!entry?.subject || (entry.kind !== 'milestone' && entry.kind !== 'award')) {
@@ -332,8 +371,7 @@ async function refresh() {
     const previousKeys = new Set(events.value.map((event) => event.key));
     const addedKeys = result.filter((event) => !previousKeys.has(event.key)).map((event) => event.key);
     const scroller = list.value;
-    const oldTop = scroller?.scrollTop ?? 0;
-    const oldHeight = scroller?.scrollHeight ?? 0;
+    const atLatest = !loaded.value || !scrolled.value;
     if (loaded.value && addedKeys.length > 0) {
       newKeys.value = new Set(addedKeys);
       window.clearTimeout(highlightTimer);
@@ -365,8 +403,8 @@ async function refresh() {
         // Cards drawn by this player and cards revealed or discarded from the deck are shown;
         // cards dealt to choose from and cards bought were already shown in the choice window.
         const deck = event.deck.slice(start).filter((batch) =>
-          batch.kind === 'revealed' || batch.kind === 'discarded' ||
-          (batch.kind === 'drawn' && (batch.player ?? event.player) === props.viewModel.color));
+          (batch.kind === 'revealed' || batch.kind === 'discarded' || batch.kind === 'drawn') &&
+          (batch.player ?? event.player) === props.viewModel.color);
         if (deck.length > 0) {
           queuedReveals.push({...event, key: `${event.key}:${start}`, deck});
         }
@@ -378,11 +416,10 @@ async function refresh() {
     if (previewKey.value && !result.some((event) => event.key === previewKey.value)) {
       closePreview();
     }
-    if (scroller && oldTop > 0) {
+    if (scroller && atLatest) {
       await nextTick();
-      if (!currentRequest.signal.aborted && scroller.scrollTop === oldTop) {
-        scroller.scrollTop = oldTop + scroller.scrollHeight - oldHeight;
-        updateScroll();
+      if (!currentRequest.signal.aborted) {
+        jumpToLatest();
       }
     }
   } catch (error) {
@@ -508,13 +545,15 @@ function inspect(entry: GameActivityModel) {
   }
 }
 
+/** True while reading older entries: scrolled up from the latest one at the bottom. */
 function updateScroll() {
-  scrolled.value = (list.value?.scrollTop ?? 0) > 4;
+  const el = list.value;
+  scrolled.value = el !== undefined && el.scrollHeight - el.clientHeight - el.scrollTop > 4;
 }
 
 function jumpToLatest() {
   if (list.value) {
-    list.value.scrollTop = 0;
+    list.value.scrollTop = list.value.scrollHeight;
   }
   updateScroll();
 }

@@ -14,9 +14,10 @@
       <button type="button" :aria-label="$t('Next cards')" :aria-controls="handId" :disabled="!canScrollForward"
         @click="scrollCards(1)">›</button>
     </div>
-    <div :id="handId" ref="strip" class="mission-hand__strip" @scroll.passive="onScroll" @wheel="onWheel">
-      <TransitionGroup name="mission-draw">
-        <div v-for="(card, index) in cards" :key="card.name" class="mission-hand__slot" :class="{'mission-hand__slot--held': inspected === card.name}" :style="fanStyle(index)">
+    <div :id="handId" ref="strip" class="mission-hand__strip" :class="{'mission-hand__strip--rows': rows.length > 1}" @scroll.passive="onScroll" @wheel="onWheel">
+      <!-- A hand too wide for the screen goes on in a second (third) row, above the first one. -->
+      <TransitionGroup v-for="(row, rowIndex) in rows" :key="rowIndex" name="mission-draw" tag="div" class="mission-hand__row" :style="{zIndex: rows.length - rowIndex}">
+        <div v-for="{card, index, place} in row" :key="card.name" class="mission-hand__slot" :class="{'mission-hand__slot--held': inspected === card.name}" :style="fanStyle(place, row.length)">
           <div
             class="mission-hand__face"
             :class="{'mission-hand__face--raised': raised?.name === card.name && drag?.name !== card.name, 'mission-hand__face--dragged': drag?.name === card.name && drag.moved, 'mission-hand__face--armed': drag?.name === card.name && drag.armed}"
@@ -137,13 +138,28 @@ type Source = 'hover' | 'focus';
 type RaisedCard = {name: CardName, anchor: HTMLElement, source: Source, style: CSSProperties};
 const raised = shallowRef<RaisedCard>();
 
-function fanStyle(index: number): CSSProperties {
-  const middle = (props.cards.length - 1) / 2;
+function fanStyle(index: number, count: number): CSSProperties {
+  const middle = (count - 1) / 2;
   const offset = (index - middle) / Math.max(1, middle);
   // Each card lies on top of the next one, so where cards overlap the right side of every card
   // (its tags) stays visible.
-  return {'--card-tilt': `${offset * 5}deg`, '--card-drop': `${Math.abs(offset) * 6}px`, 'zIndex': props.cards.length - index};
+  return {'--card-tilt': `${offset * 5}deg`, '--card-drop': `${Math.abs(offset) * 6}px`, 'zIndex': count - index};
 }
+
+/** How many rows the hand takes: more cards than fit side by side go on in rows above. */
+const rowCount = ref(1);
+const MAX_ROWS = 3;
+/** The cards by row (first row at the bottom), each with its index in the hand and its place in the row. */
+const rows = computed(() => {
+  const count = rowCount.value;
+  const perRow = Math.ceil(props.cards.length / count);
+  const result: Array<Array<{card: CardModel, index: number, place: number}>> = [];
+  props.cards.forEach((card, index) => {
+    const row = Math.floor(index / perRow);
+    (result[row] ??= []).push({card, index, place: index % perRow});
+  });
+  return result;
+});
 
 function position(anchor: HTMLElement): CSSProperties {
   const slot = anchor.getBoundingClientRect();
@@ -292,17 +308,28 @@ function onWheel(event: WheelEvent) {
 function fitHand() {
   const row = strip.value;
   const slot = row?.querySelector<HTMLElement>('.mission-hand__slot');
-  const count = props.cards.length;
+  const total = props.cards.length;
   let inset = 0;
-  if (row && slot && count > 1) {
+  let rowsNeeded = 1;
+  if (row && slot && total > 1) {
     const style = getComputedStyle(row);
-    const available = row.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    // Never wider than what is left of the screen, even if the dock around the hand is wider.
+    const box = row.getBoundingClientRect();
+    const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+    const visibleWidth = Math.min(row.clientWidth, viewportWidth - Math.max(0, box.left) - 8);
+    const available = visibleWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
     const gap = parseFloat(style.columnGap) || 0;
     const width = slot.getBoundingClientRect().width;
-    const needed = count * width + (count - 1) * gap;
+    const insetFor = (count: number) => count < 2 ? 0 : Math.max(0, (count * width + (count - 1) * gap - available) / (count - 1));
+    // Cards may cover each other up to just over half; beyond that the hand goes on in a row above.
+    const comfortable = width * 0.55;
+    while (rowsNeeded < MAX_ROWS && insetFor(Math.ceil(total / rowsNeeded)) > comfortable) {
+      rowsNeeded++;
+    }
     // Keep a 44px target visible on each card, then scroll the rest of the hand.
-    inset = Math.min(Math.max(0, (needed - available) / (count - 1)), Math.max(0, width + gap - 44));
+    inset = Math.min(insetFor(Math.ceil(total / rowsNeeded)), Math.max(0, width + gap - 44));
   }
+  rowCount.value = rowsNeeded;
   overlap.value = inset;
   void nextTick(updateScrollBounds);
 }
@@ -317,14 +344,20 @@ watch(strip, (row) => {
 }, {flush: 'post'});
 watch(() => props.cards.length, fitHand, {flush: 'post'});
 
+function fitOnResize() {
+  fitHand();
+}
+
 onMounted(() => {
   document.addEventListener('pointerdown', closeOutside);
   window.addEventListener('resize', reposition);
+  window.addEventListener('resize', fitOnResize);
 });
 
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', closeOutside);
   window.removeEventListener('resize', reposition);
+  window.removeEventListener('resize', fitOnResize);
   observer?.disconnect();
 });
 </script>
@@ -370,6 +403,29 @@ onBeforeUnmount(() => {
 
 .mission-hand__slot + .mission-hand__slot {
   margin-left: calc(-1 * var(--hand-overlap, 0px));
+}
+
+// Rows of a big hand: the first row at the bottom, the next ones above it, partly behind it, so
+// the top of every card (name, cost, tags) stays in view.
+.mission-hand__strip--rows {
+  flex-direction: column-reverse;
+  align-items: stretch;
+}
+
+.mission-hand__row {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  gap: inherit;
+
+  .mission-hand__strip--rows > & + & {
+    margin-bottom: calc(-0.5 * 352px * var(--hand-scale));
+  }
+}
+
+// The row with the lifted or dragged card comes in front of the other rows.
+.mission-hand__row:has(.mission-hand__face--raised, .mission-hand__face--dragged) {
+  z-index: 1000 !important;
 }
 
 // While a card is dragged: the zone around the hand where letting go puts it back.
