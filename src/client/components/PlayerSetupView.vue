@@ -285,6 +285,13 @@ export default defineComponent({
   z-index: 1;
 }
 
+// The global heading styles add a blurred drop shadow: not on this page.
+.setup-page h1,
+.setup-page h2 {
+  padding: 0;
+  filter: none;
+}
+
 .setup-hero__kicker {
   margin: 0 0 6px;
   color: var(--setup-gold);
