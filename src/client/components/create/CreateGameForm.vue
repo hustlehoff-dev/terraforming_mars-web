@@ -219,38 +219,31 @@
               <span v-i18n>Show timers</span>
             </label>
 
+            <!-- Time limits in seconds, typed in freely; 0 means no limit. The list suggests common values. -->
             <label for="turn-time-limit" class="create-game-turn-limit">
               <span v-i18n>Turn time limit</span>
-              <select id="turn-time-limit" v-model.number="turnTimeLimit">
-                <option :value="0" v-i18n>Off</option>
-                <option :value="60">1 min</option>
-                <option :value="120">2 min</option>
-                <option :value="180">3 min</option>
-                <option :value="300">5 min</option>
-              </select>
+              <input id="turn-time-limit" v-model.number="turnTimeLimit" type="number" min="0" max="3600" step="1" list="turn-time-limits"
+                :title="$t('Seconds for each turn; when they run out the player passes. 0 = no limit')">
+              <span class="create-game-turn-limit__unit">s</span>
+              <datalist id="turn-time-limits"><option value="0"></option><option value="60"></option><option value="120"></option><option value="180"></option><option value="300"></option></datalist>
             </label>
 
             <label for="draft-time-limit" class="create-game-turn-limit">
               <span v-i18n>Draft time limit</span>
-              <select id="draft-time-limit" v-model.number="draftTimeLimit" :title="$t('Time left for the others once one player has picked a card')">
-                <option :value="0" v-i18n>Off</option>
-                <option :value="10">10 s</option>
-                <option :value="20">20 s</option>
-                <option :value="30">30 s</option>
-              </select>
+              <input id="draft-time-limit" v-model.number="draftTimeLimit" type="number" min="0" max="600" step="1" list="draft-time-limits"
+                :title="$t('Time left for the others once one player has picked a card') + ' (0 = ' + $t('Off') + ')'">
+              <span class="create-game-turn-limit__unit">s</span>
+              <datalist id="draft-time-limits"><option value="0"></option><option value="10"></option><option value="20"></option><option value="30"></option></datalist>
             </label>
 
             <label for="buy-time-limit" class="create-game-turn-limit">
               <span v-i18n>Card buying time limit</span>
-              <select id="buy-time-limit" v-model.number="buyTimeLimit" :title="$t('Time left for the others once one player has bought cards; then they buy nothing')">
-                <option :value="0" v-i18n>Off</option>
-                <option :value="15">15 s</option>
-                <option :value="30">30 s</option>
-                <option :value="45">45 s</option>
-                <option :value="60">1 min</option>
-                <option :value="90">1.5 min</option>
-              </select>
+              <input id="buy-time-limit" v-model.number="buyTimeLimit" type="number" min="0" max="600" step="1" list="buy-time-limits"
+                :title="$t('Time left for the others once one player has bought cards; then they buy nothing') + ' (0 = ' + $t('Off') + ')'">
+              <span class="create-game-turn-limit__unit">s</span>
+              <datalist id="buy-time-limits"><option value="0"></option><option value="15"></option><option value="30"></option><option value="45"></option><option value="60"></option></datalist>
             </label>
+            <p class="create-game-turn-limit__hint" v-i18n>Time limits in seconds; 0 means no limit.</p>
 
             <input type="checkbox" v-model="escapeVelocityMode" id="escapevelocity-checkbox">
             <label for="escapevelocity-checkbox">
@@ -1156,3 +1149,29 @@ export default defineComponent({
 });
 
 </script>
+
+<style lang="less">
+// Time limits: a number field in seconds with suggested values.
+.create-game-turn-limit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  input[type='number'] {
+    width: 84px;
+    padding: 4px 6px;
+    font: inherit;
+    text-align: right;
+  }
+}
+
+.create-game-turn-limit__unit {
+  opacity: 0.75;
+}
+
+.create-game-turn-limit__hint {
+  margin: 2px 0 8px;
+  font-size: 0.85em;
+  opacity: 0.75;
+}
+</style>

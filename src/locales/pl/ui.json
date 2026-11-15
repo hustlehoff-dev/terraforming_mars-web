@@ -466,6 +466,8 @@
   "Card buying time limit": "Limit czasu kupowania kart",
   "Time left for the others once one player has bought cards; then they buy nothing": "Czas dla pozostałych graczy, gdy ktoś już kupił karty; potem nie kupują nic",
   "Time to buy cards": "Czas na kupno kart",
+  "Seconds for each turn; when they run out the player passes. 0 = no limit": "Sekundy na każdą turę; po ich upływie gracz pasuje. 0 = bez limitu",
+  "Time limits in seconds; 0 means no limit.": "Limity czasu w sekundach; 0 oznacza brak limitu.",
   "Bought": "Kupione",
   "You drew a card": "Dobrałeś kartę",
   "You drew ${0} cards": "Dobrałeś ${0} karty",
