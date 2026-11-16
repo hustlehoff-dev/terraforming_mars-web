@@ -1,5 +1,24 @@
 <template>
-  <div v-if="tileChoices" class="decision-options">
+  <!-- One card to pick from (e.g. to discard) or skip: just the cards, then two plain buttons. -->
+  <div v-if="cardPick" class="card-pick">
+    <h2 v-if="showtitle" class="card-pick__title">{{ $t(playerinput.title) }}</h2>
+    <div class="card-pick__cards">
+      <button v-for="card in cardPick.option.cards" :key="card.name" type="button" class="card-pick__card"
+        :class="{'card-pick__card--picked': pickedCard === card.name, 'card-pick__card--other': pickedCard !== undefined && pickedCard !== card.name}"
+        :aria-pressed="pickedCard === card.name" @click="pickedCard = pickedCard === card.name ? undefined : card.name">
+        <Card :card="card" />
+      </button>
+    </div>
+    <div class="card-pick__buttons">
+      <button v-for="skip in cardPick.skips" :key="skip.index" type="button" class="card-pick__button" :disabled="requestInProgress"
+        @click="playerFactorySaved(skip.index)({type: 'option'})">{{ $t(skip.title) }}</button>
+      <button type="button" class="card-pick__button card-pick__button--main" :disabled="pickedCard === undefined || requestInProgress"
+        @click="playerFactorySaved(cardPick.index)({type: 'card', cards: [pickedCard!]})">
+        {{ pickedCard === undefined ? $t('Click a card') : $t(cardPick.option.buttonLabel) + ': ' + $t(pickedCard) }}
+      </button>
+    </div>
+  </div>
+  <div v-else-if="tileChoices" class="decision-options">
     <DecisionTiles :title="tileTitle" :warning="playerinput.warning" :choices="decisionChoices" :busy="requestInProgress"
       :owns-heading="showtitle && showsave" @choose="chooseTile" />
     <PlayerInputFactory v-if="selectedOption && !isImmediateChoice(selectedOption)" :key="selectedIdx"
@@ -41,13 +60,15 @@
 
 import {defineComponent, inject, Ref} from 'vue';
 import AppButton from '@/client/components/common/AppButton.vue';
+import Card from '@/client/components/card/Card.vue';
+import {CardName} from '@/common/cards/CardName';
 import DecisionTiles from '@/client/components/board/DecisionTiles.vue';
 import {DecisionChoice, decisionChoice} from '@/client/components/board/DecisionChoice';
 import {actionMenu} from '@/client/components/board/MissionQuickAction';
 import {vueRoot} from '@/client/components/vueRoot';
 import {isHTMLElement} from '@/client/utils/vueUtils';
 import {PlayerViewModel} from '@/common/models/PlayerModel';
-import {OrOptionsModel, PlayerInputModel} from '@/common/models/PlayerInputModel';
+import {OrOptionsModel, PlayerInputModel, SelectCardModel} from '@/common/models/PlayerInputModel';
 import {getPreferences} from '@/client/utils/PreferencesManager';
 import {InputResponse, OrOptionsResponse} from '@/common/inputs/InputResponse';
 import {isGreeneryChoice, mapPlacementKey} from '@/client/components/board/MapPlacement';
@@ -88,6 +109,7 @@ export default defineComponent({
   },
   components: {
     AppButton,
+    Card,
     DecisionTiles,
   },
   data() {
@@ -101,6 +123,7 @@ export default defineComponent({
       selectedIdx = initialIdx + 1;
     }
     return {
+      pickedCard: undefined as CardName | undefined,
       radioElementName: 'selectOption' + unique++,
       selectedOption: this.defaultOption(displayedOptions[selectedIdx], displayedOptions),
     };
@@ -117,6 +140,27 @@ export default defineComponent({
         return -1;
       }
       return this.displayedOptions.indexOf(this.selectedOption);
+    },
+    /**
+     * In the game's windows: exactly one card to pick (one of a few) and the rest plain options
+     * ("Do nothing"). Shown as the cards and two buttons instead of option tiles.
+     */
+    cardPick(): {index: number, option: SelectCardModel, skips: Array<{index: number, title: PlayerInputModel['title']}>} | undefined {
+      if (!this.showsave || !(this.missionCards || this.cardDialog)) {
+        return undefined;
+      }
+      const options = this.displayedOptions;
+      const cards = options.filter((option) => option.type === 'card');
+      const card = cards[0];
+      if (cards.length !== 1 || card?.type !== 'card' || card.min !== 1 || card.max !== 1 || card.cards.length === 0 ||
+        !options.every((option) => option === card || this.isImmediateChoice(option))) {
+        return undefined;
+      }
+      return {
+        index: options.indexOf(card),
+        option: card,
+        skips: options.flatMap((option, index) => option === card ? [] : [{index, title: option.title}]),
+      };
     },
     worldGovernmentChoice(): boolean {
       return this.showsave && this.showtitle && this.playerinput.title === WORLD_GOVERNMENT_TITLE;
@@ -262,6 +306,101 @@ export default defineComponent({
 </script>
 
 <style scoped lang="less">
+.card-pick {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  padding: 8px 0 4px;
+}
+
+.card-pick__title {
+  margin: 0;
+  padding: 0;
+  color: #f6e2b8;
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-align: center;
+  filter: none;
+}
+
+.card-pick__cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.card-pick__card {
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  cursor: pointer;
+  transition: transform 150ms ease, filter 150ms ease;
+
+  :deep(.card-container) {
+    margin: 0 !important;
+  }
+
+  &:hover {
+    transform: translateY(-4px);
+  }
+
+  &--picked {
+    transform: translateY(-8px);
+
+    :deep(.card-container) {
+      box-shadow: 0 0 0 4px #e2c27f, 0 0 24px #e2c27f99 !important;
+    }
+  }
+
+  &--other {
+    filter: brightness(0.45) saturate(0.6);
+  }
+}
+
+.card-pick__buttons {
+  position: sticky;
+  z-index: 3;
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 0 6px;
+  background: radial-gradient(ellipse 360px 60px at 50% 70%, #0b131be6, transparent);
+}
+
+.card-pick__button {
+  min-width: 180px;
+  min-height: 46px;
+  padding: 0 24px;
+  border: 1px solid #49616d;
+  border-radius: 9px;
+  background: #142630;
+  color: #eef6f8;
+  font: inherit;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: #92dbe5;
+    background: #1d3945;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &--main {
+    border-color: #e2c27f;
+    color: #ffedc6;
+  }
+}
+
 .decision-options__detail {
   width: 100%;
   max-width: 680px;

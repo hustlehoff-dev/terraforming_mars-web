@@ -77,9 +77,7 @@
           :tileView="tileView"
           :players="playerView.players"
           :detailsTarget="cinematic ? '#mission-board-details' : undefined"
-          :trade-input="colonyTradeInput"
           atlas
-          @trade-colonies="tradeWithColony"
           @toggleTileView="cycleTileView()"
         />
         <ActivityFeed v-if="cinematic" :viewModel="playerView" @spaceClicked="jumpToLogSpace" @triggers="showEffectBadges" @cardPlays="showCardPlays" />
@@ -93,7 +91,7 @@
           <MissionParameters :game="game" :solo="playerView.players.length === 1">
             <button type="button" class="mission-hud-ma" :class="{lit: hudMenusState.awards}" @click="hudShow('awards')"><span aria-hidden="true">🏆</span>{{ $t('Awards') }}</button>
             <button type="button" class="mission-hud-ma" :class="{lit: hudMenusState.milestones}" @click="hudShow('milestones')"><span aria-hidden="true">🏅</span>{{ $t('Milestones') }}</button>
-            <MissionColonies ref="colonies" :colonies="game.colonies" :players="playerView.players" :trade-input="colonyTradeInput" @trade="tradeWithColony" />
+            <MissionColonies ref="coloniesWindow" :colonies="game.colonies" :players="playerView.players" :trade-input="colonyTradeInput" @trade="tradeWithColony" />
             <button type="button" :aria-expanded="missionPanel === 'details'" @click="toggleMissionPanel('details')">{{ $t('Game details') }}</button>
             <button type="button" :aria-expanded="missionPanel === 'log'" @click="toggleMissionPanel('log')">{{ $t('Game log') }}</button>
             <button v-if="finalGreenery" type="button" class="primary" :aria-expanded="missionPanel === 'actions'" @click="toggleMissionPanel('actions')">{{ $t('Final greenery placement') }}</button>
@@ -909,7 +907,7 @@ export default defineComponent({
         return;
       }
       if (action.index === this.colonyTradeIndex && this.canTradeColonies) {
-        (this.$refs.colonies as InstanceType<typeof MissionColonies> | undefined)?.openWindow();
+        (this.$refs.coloniesWindow as InstanceType<typeof MissionColonies> | undefined)?.openWindow();
         return;
       }
       // A plain menu entry (no further choice) is done at once, like the other buttons.

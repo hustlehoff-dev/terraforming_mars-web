@@ -31,6 +31,7 @@ import {translateText, translateTextWithParams} from '@/client/directives/i18n';
 import {computed, onBeforeUnmount, onMounted, ref} from 'vue';
 import {DeckActivity, deckLabels} from '@/common/models/GameActivityModel';
 import {Color} from '@/common/Color';
+import {revealOpen} from './revealState';
 
 /*
  * Cards drawn or revealed from the project deck, shown in the centre of the screen in the same
@@ -67,6 +68,7 @@ const groups = computed(() => merged.value.map((batch) => {
 const title = computed(() => groups.value.map((group) => group.title).join(', '));
 
 onMounted(() => {
+  revealOpen.value = true;
   const element = dialog.value;
   if (element && !element.open) {
     try {
@@ -78,6 +80,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  revealOpen.value = false;
   if (dialog.value?.open && typeof dialog.value.close === 'function') {
     dialog.value.close();
   }

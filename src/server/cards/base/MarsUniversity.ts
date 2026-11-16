@@ -3,6 +3,7 @@ import {Tag} from '../../../common/cards/Tag';
 import {Card} from '../Card';
 import {CardType} from '../../../common/cards/CardType';
 import {IPlayer} from '../../IPlayer';
+import {message} from '../../logs/MessageBuilder';
 import {OrOptions} from '../../inputs/OrOptions';
 import {SelectCard} from '../../inputs/SelectCard';
 import {SelectOption} from '../../inputs/SelectOption';
@@ -48,15 +49,15 @@ export class MarsUniversity extends Card implements IProjectCard {
           return undefined;
         }
         return new OrOptions(
-          new SelectCard('Select a card to discard', 'Discard', player.cardsInHand)
+          new SelectCard('Select a card to discard', 'Discard and draw', player.cardsInHand)
             .andThen(([card]) => {
               player.game.log('${0} is using their ${1} effect to draw a card by discarding a card.', (b) => b.player(player).card(this));
               player.discardCardFromHand(card, {log: true});
               player.drawCard();
               return undefined;
             }),
-          new SelectOption('Do nothing'),
-        );
+          new SelectOption('Keep my cards'),
+        ).setTitle(message('${0}: discard a card to draw a new one?', (b) => b.card(this)));
       },
       Priority.DISCARD_AND_DRAW);
     }

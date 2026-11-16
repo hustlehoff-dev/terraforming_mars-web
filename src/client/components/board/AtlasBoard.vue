@@ -46,7 +46,6 @@
     <aside class="atlas-inspector" :aria-label="$t('Board')">
       <div class="atlas-inspector__tools">
         <button type="button" :aria-pressed="showTracks" @click="showTracks = !showTracks" v-i18n>Tracks</button>
-        <MissionColonies :colonies="game.colonies" :players="players" :trade-input="tradeInput" @trade="(response) => $emit('trade-colonies', response)" />
         <button type="button" @click="$emit('toggleTileView')">{{ $t(nextView + ' tiles') }}</button>
       </div>
     </aside>
@@ -111,7 +110,6 @@ import Board from '@/client/components/Board.vue';
 import {sectorName} from '@/client/components/Legends';
 import MarsSurface from '@/client/components/board/MarsSurface.vue';
 import MissionPlacementBanner from '@/client/components/board/MissionPlacementBanner.vue';
-import MissionColonies from '@/client/components/board/MissionColonies.vue';
 import {mapPlacementKey} from '@/client/components/board/MapPlacement';
 import {nextTileView, TileView} from '@/client/components/board/TileView';
 import {spacesById} from '@/client/utils/spacesById';
@@ -125,7 +123,6 @@ import {PublicPlayerModel} from '@/common/models/PlayerModel';
 import {TileType, tileTypeToString} from '@/common/TileType';
 import {getCard} from '@/client/cards/ClientCardManifest';
 import {SpaceId} from '@/common/Types';
-import {PlayerInputModel} from '@/common/models/PlayerInputModel';
 import {SoundManager} from '@/client/utils/SoundManager';
 import {BoardName} from '@/common/boards/BoardName';
 import {getGlobalParameterMaximums} from '@/common/boards/GlobalParameterMaximums';
@@ -159,11 +156,10 @@ function tileImage(tile: TileType | undefined): string {
 
 export default defineComponent({
   name: 'AtlasBoard',
-  components: {Board, MarsSurface, MissionPlacementBanner, MissionColonies},
-  emits: ['toggleTileView', 'trade-colonies'],
+  components: {Board, MarsSurface, MissionPlacementBanner},
+  emits: ['toggleTileView'],
   props: {
     orbitLayout: Boolean,
-    tradeInput: {type: Object as () => PlayerInputModel | undefined, default: undefined},
     players: {type: Array as () => ReadonlyArray<PublicPlayerModel>, default: () => []},
     game: {
       type: Object as () => GameModel,

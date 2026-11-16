@@ -52,6 +52,7 @@ import {InputResponse} from '@/common/inputs/InputResponse';
 import {INVALID_REQUEST_ID, INVALID_RUN_ID, AppErrorResponse} from '@/common/app/AppErrorId';
 import {Color} from '@/common/Color';
 import {gameDocumentTitle} from '../utils/documentTitle';
+import {revealOpen} from '@/client/components/logpanel/revealState';
 import {setFaviconStatus, setFaviconTurnFrame} from '@/client/utils/favicon';
 
 let ui_update_timeout_id: number | undefined;
@@ -120,6 +121,15 @@ export default defineComponent({
   },
   watch: {
     showDeckDialog: {flush: 'post', handler: 'openDeckDialog'},
+    // While the drawn cards are shown, the choice waits behind them (closed, its state kept).
+    revealShowing: {flush: 'post', handler(showing: boolean) {
+      const dialog = this.$refs.inputContainer;
+      if (showing && dialog instanceof HTMLDialogElement && dialog.open && typeof dialog.close === 'function') {
+        dialog.close();
+      } else if (!showing) {
+        this.openDeckDialog();
+      }
+    }},
     playerView() {
       this.inputKey++;
       this.stop();
@@ -129,7 +139,7 @@ export default defineComponent({
   methods: {
     openDeckDialog() {
       const dialog = this.$refs.inputContainer;
-      if (this.showDeckDialog && dialog instanceof HTMLDialogElement && !dialog.open) {
+      if (this.showDeckDialog && !revealOpen.value && dialog instanceof HTMLDialogElement && !dialog.open) {
         dialog.showModal();
       }
     },
@@ -430,6 +440,9 @@ export default defineComponent({
     cardsAllGiven(): boolean {
       const input = this.waitingfor;
       return input?.type === 'card' && input.min === input.cards.length && (input.max ?? input.cards.length) === input.cards.length;
+    },
+    revealShowing(): boolean {
+      return revealOpen.value;
     },
     showDeckDialog(): boolean {
       return this.centerDeckChoice && !this.hideInput && showsCards(this.waitingfor) && !this.draftRepick;

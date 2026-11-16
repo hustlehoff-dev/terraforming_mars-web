@@ -348,10 +348,11 @@ function placeFeed() {
  * published as CSS variables, and the dimmed backdrop of the windows leaves it out
  * (see mission-hud-layout.less, "feed stays visible").
  */
+let dialogObserver: MutationObserver | undefined;
 function publishFeedRect() {
   const root = document.documentElement.style;
-  const body = feed.value?.querySelector<HTMLElement>('.activity-feed__body');
-  const box = body?.getBoundingClientRect();
+  // The whole feed (title and list), measured when it changes and whenever a window opens.
+  const box = feed.value?.getBoundingClientRect();
   if (box === undefined || box.width === 0 || box.height === 0) {
     for (const name of ['--feed-x', '--feed-y', '--feed-w', '--feed-h']) {
       root.removeProperty(name);
@@ -379,10 +380,17 @@ onMounted(() => {
       placementObserver.observe(feed.value);
     }
   }
+  // A window opening (a dialog gets "open"): measure again right then, so the gap is never stale.
+  if (typeof MutationObserver !== 'undefined') {
+    dialogObserver = new MutationObserver(() => publishFeedRect());
+    dialogObserver.observe(document.body, {subtree: true, attributes: true, attributeFilter: ['open']});
+  }
   window.addEventListener('resize', placeAndPublish);
 });
+watch([shownEntries, expanded], () => void nextTick(publishFeedRect), {flush: 'post'});
 onBeforeUnmount(() => {
   placementObserver?.disconnect();
+  dialogObserver?.disconnect();
   window.removeEventListener('resize', placeAndPublish);
   for (const name of ['--feed-x', '--feed-y', '--feed-w', '--feed-h']) {
     document.documentElement.style.removeProperty(name);
