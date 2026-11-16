@@ -73,6 +73,8 @@ export class TerrainState {
   private readonly canvases: Array<HTMLCanvasElement>;
   private readonly texelWidth: number;
   private readonly texelHeight: number;
+  private terrainKey?: string;
+  private cityKey?: string;
 
   constructor(private readonly geometry: BoardGeometry) {
     const {minX, minY, maxX, maxY} = geometry.bounds;
@@ -124,14 +126,21 @@ export class TerrainState {
     const oceans = cells.filter(({space}) => space.tileType !== undefined && OCEAN_TILES.has(space.tileType));
     const greenery = cells.filter(({space}) => space.tileType !== undefined && GREENERY_TILES.has(space.tileType));
     const cities = cells.filter(({space}) => space.tileType !== undefined && CITY_TILES.has(space.tileType));
-    this.domes = cities.flatMap(({cell}) => domesFor(cell));
+    const cityKey = cities.map(({cell}) => cell.id).join(',');
+    const terrainKey = [oceans.map(({cell}) => cell.id).join(','), greenery.map(({cell}) => cell.id).join(','), cityKey].join('|');
+    if (this.terrainKey === terrainKey) {
+      return false;
+    }
 
     const ocean = this.context(0);
     const green = this.context(1);
     const ground = this.context(2);
     const shade = this.context(3);
     if (ocean === null || green === null || ground === null || shade === null) {
-      return;
+      return false;
+    }
+    if (this.cityKey !== cityKey) {
+      this.domes = cities.flatMap(({cell}) => domesFor(cell));
     }
 
     // Oceans: grown hexes blurred together, so neighbouring oceans form one sea with a soft shore.
@@ -177,6 +186,9 @@ export class TerrainState {
       data[i + 3] = channels[3][i];
     }
     this.terrain.needsUpdate = true;
+    this.terrainKey = terrainKey;
+    this.cityKey = cityKey;
+    return true;
   }
 
   public updateCells(spaces: ReadonlyArray<SpaceModel>, legal: ReadonlySet<SpaceId>, inspected: SpaceId | undefined) {

@@ -72,6 +72,8 @@ export class MarsScene {
   private lastFrame = 0;
   private lastRender = 0;
   private dirty = true;
+  private projectionDirty = true;
+  private readonly compactDisplay = window.matchMedia?.('(max-width: 760px) and (pointer: coarse)').matches === true;
   /** Fraction of the device pixel ratio the scene renders at; lowered while frames are slow. */
   private renderScale = 1;
   private slowFrames = 0;
@@ -195,9 +197,13 @@ export class MarsScene {
   /* ---------- Game state ---------- */
 
   public setSpaces(spaces: ReadonlyArray<SpaceModel>) {
-    this.state.update(spaces, this.shadowOffset());
-    this.rebuildBuildings();
-    this.dirty = true;
+    const previousDomes = this.state.domes;
+    if (this.state.update(spaces, this.shadowOffset())) {
+      if (this.state.domes !== previousDomes) {
+        this.rebuildBuildings();
+      }
+      this.dirty = true;
+    }
   }
 
   private climate?: Climate;
@@ -310,6 +316,7 @@ export class MarsScene {
       return {id, position, radius};
     });
     this.dirty = true;
+    this.projectionDirty = true;
   }
 
   private orbitalMesh(kind: string, radius: number, position: Vector3) {
@@ -349,9 +356,14 @@ export class MarsScene {
   }
 
   private rebuildBuildings() {
-    for (const child of [...this.buildings.children]) {
-      (child as Mesh).geometry?.dispose();
-    }
+    const materials = new Set<MeshStandardMaterial>();
+    this.buildings.traverse((object) => {
+      if (object instanceof Mesh) {
+        object.geometry.dispose();
+        materials.add(object.material as MeshStandardMaterial);
+      }
+    });
+    materials.forEach((material) => material.dispose());
     this.buildings.clear();
     this.cityLights.length = 0;
     const up = new Vector3(0, 1, 0);
@@ -544,10 +556,16 @@ export class MarsScene {
   }
 
   public setSize(width: number, height: number, safe: SafeArea) {
+    width = Math.max(1, width);
+    height = Math.max(1, height);
+    if (width === this.width && height === this.height && safe.top === this.safe.top && safe.right === this.safe.right &&
+      safe.bottom === this.safe.bottom && safe.left === this.safe.left) {
+      return;
+    }
     const homeBefore = this.home;
     const atHome = Math.abs(this.target.d - homeBefore.d) < 1e-4 && Math.abs(this.target.x - homeBefore.x) < 0.5 && Math.abs(this.target.y - homeBefore.y) < 0.5;
-    this.width = Math.max(1, width);
-    this.height = Math.max(1, height);
+    this.width = width;
+    this.height = height;
     this.safe = safe;
     this.renderer.setSize(this.width, this.height, false);
     this.computeHome();
@@ -709,10 +727,10 @@ export class MarsScene {
       this.adaptResolution(now, now - this.lastRender);
     }
 
-    // Ambient life (water, lights, shuttle) renders at a calm 15 fps and only in a visible page;
-    // the camera itself never moves on its own.
+    // Keep camera movement responsive, with fewer idle frames on touch phones.
     const pulsing = this.pulseStart > 0 && now - this.pulseStart < PULSE_MS + 100;
-    const ambientDue = !this.reducedMotion && !document.hidden && (pulsing || now - this.lastRender > 66);
+    const ambientInterval = this.compactDisplay ? 125 : 66;
+    const ambientDue = !this.reducedMotion && !document.hidden && (now - this.lastRender > ambientInterval || (pulsing && !this.compactDisplay));
     if (!moving && !this.dirty && !ambientDue) {
       return;
     }
@@ -721,21 +739,22 @@ export class MarsScene {
     const pulse = this.pulseStart > 0 ? Math.max(0, 1 - (now - this.pulseStart) / PULSE_MS) : 0;
     this.planetMaterial.uniforms.pulse.value = pulse;
     this.atmosphereMaterial.uniforms.pulse.value = pulse;
-    if (pulse > 0) {
-      this.dirty = true;
-    }
     this.animateAmbient(seconds);
-    this.place(this.camera, this.current);
+    const projectionChanged = moving || this.projectionDirty;
+    if (projectionChanged) {
+      this.place(this.camera, this.current);
+      this.projectionDirty = false;
+    }
     this.renderer.render(this.scene, this.camera);
     this.lastRender = now;
-    if (moving || this.dirty) {
+    if (projectionChanged) {
       this.onFrame();
     }
     this.dirty = false;
   }
 
   private pixelRatio() {
-    return Math.min(window.devicePixelRatio || 1, 1.5) * this.renderScale;
+    return Math.min(window.devicePixelRatio || 1, this.compactDisplay ? 1 : 1.5) * this.renderScale;
   }
 
   /**
