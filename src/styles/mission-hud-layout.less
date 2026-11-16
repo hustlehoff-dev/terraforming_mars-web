@@ -858,3 +858,19 @@ body #player-home.mission-cinematic .mission-params__buttons .mission-pause-butt
   }
 }
 
+// ---- The activity feed stays visible behind game windows: the dimmed backdrop of every window
+// leaves out the rectangle of the feed (published by ActivityFeed as --feed-*). Without those
+// variables the second mask layer has no size and the whole screen is dimmed as before.
+html body dialog::backdrop {
+  -webkit-mask-image: linear-gradient(#000, #000), linear-gradient(#000, #000);
+  mask-image: linear-gradient(#000, #000), linear-gradient(#000, #000);
+  -webkit-mask-size: 100% 100%, var(--feed-w, 0px) var(--feed-h, 0px);
+  mask-size: 100% 100%, var(--feed-w, 0px) var(--feed-h, 0px);
+  -webkit-mask-position: 0 0, var(--feed-x, 0px) var(--feed-y, 0px);
+  mask-position: 0 0, var(--feed-x, 0px) var(--feed-y, 0px);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+

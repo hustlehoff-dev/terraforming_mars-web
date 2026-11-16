@@ -443,6 +443,7 @@ export class GameLogs {
       const source = changeSource(message);
       if (source !== undefined && source !== current.card) {
         current.triggers = [...(current.triggers ?? []), {player: change.player, card: source, effects: change.text}];
+        continue;
       }
       if (change.player === current.player) {
         own.push(change.text);

@@ -11,6 +11,17 @@
           <li><span aria-hidden="true">👥</span>{{ playerView.players.length }} {{ $t('players') }}</li>
           <li v-for="expansion in expansions" :key="expansion"><span aria-hidden="true">✦</span>{{ $t(expansion) }}</li>
         </ul>
+        <!-- What happens before the first generation, step by step; the current step is lit. -->
+        <ol class="setup-plan" :aria-label="$t('How the game starts')">
+          <li v-for="(step, index) in setupSteps" :key="step.key" class="setup-plan__step"
+            :class="{'setup-plan__step--now': step.key === currentStep, 'setup-plan__step--done': index < currentStepIndex}">
+            <b class="setup-plan__number">{{ index < currentStepIndex ? '✓' : index + 1 }}</b>
+            <span>
+              <strong>{{ $t(step.title) }}</strong>
+              <small>{{ step.text }}</small>
+            </span>
+          </li>
+        </ol>
       </div>
       <img class="setup-hero__dome" src="assets/board/mars-dome.png" alt="">
     </header>
@@ -133,6 +144,7 @@ import {Phase} from '@/common/Phase';
 import {GameModel} from '@/common/models/GameModel';
 import {PlayerViewModel, PublicPlayerModel} from '@/common/models/PlayerModel';
 import {TileView} from './board/TileView';
+import {translateText, translateTextWithParams} from '@/client/directives/i18n';
 
 /** `later`: dealt cards chosen from after the draft, shown smaller. */
 type CardGroup = {key: string, title: string, cards: ReadonlyArray<CardModel>, later?: boolean};
@@ -179,6 +191,46 @@ export default defineComponent({
     },
     isDraftingPhase(): boolean {
       return this.game.phase === Phase.INITIALDRAFTING || this.game.phase === Phase.DRAFTING;
+    },
+    /** The steps before the first generation, with how many cards each one deals. */
+    setupSteps(): Array<{key: string, title: string, text: string}> {
+      const options = this.game.gameOptions;
+      const preludes = options.expansions.prelude;
+      const ceos = options.expansions.ceo;
+      const steps: Array<{key: string, title: string, text: string}> = [];
+      if (options.initialDraftVariant) {
+        steps.push({key: 'projects', title: 'Project card draft', text: translateText('2 rounds: from 5 cards you keep 1 and pass the rest on. You end with 10 cards.')});
+        if (preludes && options.preludeDraftVariant) {
+          steps.push({key: 'preludes', title: 'Prelude draft', text: translateTextWithParams('From ${0} preludes you keep 1 and pass the rest on. You end with ${0}.', [String(options.startingPreludes)])});
+        }
+        if (ceos && options.ceosDraftVariant) {
+          steps.push({key: 'ceos', title: 'CEO draft', text: translateTextWithParams('From ${0} CEOs you keep 1 and pass the rest on. You end with ${0}.', [String(options.startingCeos)])});
+        }
+      }
+      const choice = [translateTextWithParams('corporation: 1 of ${0}', [String(options.startingCorporations)])];
+      if (preludes) {
+        choice.push(translateTextWithParams('preludes: 2 of ${0}', [String(options.startingPreludes)]));
+      }
+      if (ceos) {
+        choice.push(translateTextWithParams('CEO: 1 of ${0}', [String(options.startingCeos)]));
+      }
+      choice.push(translateText('project cards: any of the 10, 3 M€ each'));
+      steps.push({key: 'choice', title: 'Starting choice', text: choice.join(', ') + '.'});
+      steps.push({key: 'start', title: 'Start', text: translateText(preludes ? 'Corporations and preludes are played, then generation 1.' : 'Corporations are played, then generation 1.')});
+      return steps;
+    },
+    currentStep(): string {
+      if (this.game.phase === Phase.INITIALDRAFTING) {
+        return this.game.initialDraftStage ?? 'projects';
+      }
+      if (this.game.phase === Phase.RESEARCH && this.game.generation === 1 &&
+        this.playerView.players.some((player) => !this.isReady(player))) {
+        return 'choice';
+      }
+      return 'start';
+    },
+    currentStepIndex(): number {
+      return Math.max(0, this.setupSteps.findIndex((step) => step.key === this.currentStep));
     },
     expansions(): Array<string> {
       return Object.entries(this.game.gameOptions.expansions)
@@ -795,5 +847,66 @@ export default defineComponent({
   margin: -6px 0 10px;
   color: var(--setup-muted);
   font-size: 0.85rem;
+}
+
+// The setup plan under the heading.
+.setup-plan {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.setup-plan__step {
+  display: flex;
+  max-width: 300px;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #ffffff26;
+  border-radius: 10px;
+  background: #0009;
+  backdrop-filter: blur(6px);
+  opacity: 0.75;
+
+  strong {
+    display: block;
+    font-size: 0.9rem;
+  }
+
+  small {
+    display: block;
+    color: var(--setup-muted);
+    font-size: 0.78rem;
+    line-height: 1.3;
+  }
+
+  &--now {
+    border-color: var(--setup-gold);
+    box-shadow: 0 0 0 1px var(--setup-gold), 0 0 16px #f3c46b44;
+    opacity: 1;
+  }
+
+  &--done {
+    opacity: 0.55;
+  }
+}
+
+.setup-plan__number {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--setup-accent);
+  color: #fff;
+  font-size: 0.8rem;
+
+  .setup-plan__step--done & {
+    background: #2fae6a;
+  }
 }
 </style>

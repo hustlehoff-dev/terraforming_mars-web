@@ -32,6 +32,13 @@
               <span v-if="entry.spent" class="activity-feed__units activity-feed__units--spent" v-html="renderIcons(entry.spent)"></span>
               <span v-if="entry.effects" class="activity-feed__units" v-html="renderIcons(entry.effects)"></span>
               <span v-if="entry.scienceGained !== undefined" class="activity-feed__units" v-html="renderIcons('+' + entry.scienceGained + ':cr:science:')"></span>
+              <!-- Gains from the effect of another card (a passive effect, a corporation), each on its own line. -->
+              <span v-for="trigger in entry.triggerLines" :key="trigger.key" class="activity-feed__trigger">
+                <span aria-hidden="true">✦</span>
+                <span v-if="trigger.name" class="activity-feed__target-name" :class="'player_bg_color_' + trigger.player">{{ trigger.name }}</span>
+                <span>{{ trigger.label }}</span>
+                <span class="activity-feed__units" v-html="renderIcons(trigger.effects)"></span>
+              </span>
               <span v-for="target in entry.targetLines" :key="target.player" class="activity-feed__target">
                 <span aria-hidden="true">→</span>
                 <span class="activity-feed__target-name" :class="'player_bg_color_' + target.player">{{ target.name }}</span>
@@ -218,6 +225,20 @@ const entries = computed(() => mergeDeckRuns(events.value).map((event) => {
     translateTextWithParams(event.buying.discarded !== undefined ? '${0} card(s), discarded ${1}' : '${0} card(s)', [String(event.buying.bought), String(event.buying.discarded ?? 0)]) :
     subject && translateText(subject);
   const targetLines = (event.targets ?? []).map((target) => ({...target, name: players.value.get(target.player)?.name ?? target.player}));
+  const triggerGroups = new Map<string, {key: string, player: Color, card: CardName, effects: Array<string>}>();
+  for (const trigger of event.triggers ?? []) {
+    const key = `${trigger.player}:${trigger.card}`;
+    const group = triggerGroups.get(key) ?? {key, player: trigger.player, card: trigger.card, effects: []};
+    group.effects.push(trigger.effects);
+    triggerGroups.set(key, group);
+  }
+  const triggerLines = Array.from(triggerGroups.values(), (group) => ({
+    key: group.key,
+    player: group.player,
+    name: group.player !== event.player ? players.value.get(group.player)?.name ?? group.player : undefined,
+    label: translateTextWithParams('Effect of ${0}:', [translateText(group.card.split(':')[0])]),
+    effects: group.effects.join(' '),
+  }));
   const stepLines = event.steps?.map((step) => {
     if (step.kind === 'placed' || step.kind === 'removed') {
       const sector = props.viewModel.game.spaces?.find((field) => field.id === step.space)?.a9 ?? step.space;
@@ -249,8 +270,8 @@ const entries = computed(() => mergeDeckRuns(events.value).map((event) => {
   }) ?? deckGroups(event).map((group) => `${group.label}: ${group.cards.length ? group.cards.map(translateText).join(', ') : '—'}`);
   const science = event.scienceGained === undefined ? undefined : `+${event.scienceGained} ${translateText('Science')}`;
   const summary = [actor, action, subjectText].filter(Boolean).join(' ');
-  return {...event, actor, action, subjectText, targetLines, stepLines, groups: event.deck?.length ? deckGroups(event) : [], targetSpace: event.space ?? event.placements?.[0]?.space,
-    text: [summary, ...stepLines, science].filter(Boolean).join(' → ')};
+  return {...event, actor, action, subjectText, targetLines, triggerLines, stepLines, groups: event.deck?.length ? deckGroups(event) : [], targetSpace: event.space ?? event.placements?.[0]?.space,
+    text: [summary, ...stepLines, ...triggerLines.map((line) => [line.name, line.label].filter(Boolean).join(' ')), science].filter(Boolean).join(' → ')};
 }));
 const previewCards = computed<Array<CardModel>>(() => {
   const event = events.value.find((entry) => entry.key === previewKey.value);
@@ -317,18 +338,50 @@ function placeFeed() {
   const listHeight = Math.max(160, bottom - top - 44);
   placement.value = {'inset-block-start': `${top}px`, '--feed-list-height': `${listHeight}px`};
 }
-onMounted(() => {
-  placeFeed();
-  const players = feed.value?.offsetParent?.querySelector('.mission-players');
-  if (players && typeof ResizeObserver !== 'undefined') {
-    placementObserver = new ResizeObserver(placeFeed);
-    placementObserver.observe(players);
+/*
+ * Game windows dim the whole screen behind them; the feed stays readable: its rectangle is
+ * published as CSS variables, and the dimmed backdrop of the windows leaves it out
+ * (see mission-hud-layout.less, "feed stays visible").
+ */
+function publishFeedRect() {
+  const root = document.documentElement.style;
+  const body = feed.value?.querySelector<HTMLElement>('.activity-feed__body');
+  const box = body?.getBoundingClientRect();
+  if (box === undefined || box.width === 0 || box.height === 0) {
+    for (const name of ['--feed-x', '--feed-y', '--feed-w', '--feed-h']) {
+      root.removeProperty(name);
+    }
+    return;
   }
-  window.addEventListener('resize', placeFeed);
+  root.setProperty('--feed-x', `${Math.round(box.left)}px`);
+  root.setProperty('--feed-y', `${Math.round(box.top)}px`);
+  root.setProperty('--feed-w', `${Math.round(box.width)}px`);
+  root.setProperty('--feed-h', `${Math.round(box.height)}px`);
+}
+function placeAndPublish() {
+  placeFeed();
+  void nextTick(publishFeedRect);
+}
+onMounted(() => {
+  placeAndPublish();
+  const players = feed.value?.offsetParent?.querySelector('.mission-players');
+  if (typeof ResizeObserver !== 'undefined') {
+    placementObserver = new ResizeObserver(placeAndPublish);
+    if (players) {
+      placementObserver.observe(players);
+    }
+    if (feed.value) {
+      placementObserver.observe(feed.value);
+    }
+  }
+  window.addEventListener('resize', placeAndPublish);
 });
 onBeforeUnmount(() => {
   placementObserver?.disconnect();
-  window.removeEventListener('resize', placeFeed);
+  window.removeEventListener('resize', placeAndPublish);
+  for (const name of ['--feed-x', '--feed-y', '--feed-w', '--feed-h']) {
+    document.documentElement.style.removeProperty(name);
+  }
 });
 const previewMa = computed(() => {
   const entry = previewEntry.value;
@@ -767,6 +820,16 @@ button.activity-feed__entry {
     height: 14px;
     vertical-align: middle;
   }
+}
+
+.activity-feed__trigger {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  color: #b4ffeb;
+  font-style: italic;
 }
 
 .activity-feed__target {
