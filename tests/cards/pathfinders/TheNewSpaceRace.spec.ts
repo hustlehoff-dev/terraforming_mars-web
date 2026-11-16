@@ -4,7 +4,6 @@ import {IGame} from '../../../src/server/IGame';
 import {OrOptions} from '../../../src/server/inputs/OrOptions';
 import {PartyName} from '../../../src/common/turmoil/PartyName';
 import {doWait, runAllActions, setRulingParty} from '../../TestingUtils';
-import {toName} from '../../../src/common/utils/utils';
 import {testGame} from '../../TestGame';
 import {AlliedBanks} from '../../../src/server/cards/prelude/AlliedBanks';
 import {BiosphereSupport} from '../../../src/server/cards/prelude/BiosphereSupport';
@@ -13,7 +12,7 @@ import {GalileanMining} from '../../../src/server/cards/prelude/GalileanMining';
 import {HugeAsteroid} from '../../../src/server/cards/prelude/HugeAsteroid';
 import {SelectInitialCards} from '../../../src/server/inputs/SelectInitialCards';
 import {TestPlayer} from '../../TestPlayer';
-import {SelectCard} from '../../../src/server/inputs/SelectCard';
+import {SelectSpace} from '../../../src/server/inputs/SelectSpace';
 import {CardName} from '../../../src/common/cards/CardName';
 import {cast} from '../../../src/common/utils/utils';
 
@@ -90,10 +89,11 @@ describe('TheNewSpaceRace', () => {
     cast(player1.getWaitingFor(), undefined);
     cast(player3.getWaitingFor(), undefined);
 
-    // Player2 is up, and will play its other prelude first.
-    const next = cast(player2.getWaitingFor(), SelectCard);
+    // Player2 is up: its other prelude, the last one, is played by itself and asks for its ocean.
+    cast(player2.getWaitingFor(), SelectSpace);
     expect(player2.actionsTakenThisRound).eq(0);
-    expect(next.cards.map(toName)).deep.eq([CardName.AQUIFER_TURBINES]);
+    expect(player2.preludeCardsInHand).is.empty;
+    expect(player2.playedCards.has(CardName.AQUIFER_TURBINES)).is.true;
   });
 
   it('Play during late game (e.g. Karen CEO)', () => {

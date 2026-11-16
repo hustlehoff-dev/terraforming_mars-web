@@ -1491,6 +1491,15 @@ export class Player implements IPlayer {
             this.takeAction();
           });
 
+          // The last prelude is no choice: it is played right away (its own choices, like a tile, still ask).
+          if (this.preludeCardsInHand.length === 1) {
+            try {
+              this.process({type: 'card', cards: [this.preludeCardsInHand[0].name]});
+            } catch (err) {
+              // The choice stays open for the player.
+              console.warn('could not play the last prelude by itself', err);
+            }
+          }
           return;
         }
 

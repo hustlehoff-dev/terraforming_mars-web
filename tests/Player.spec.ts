@@ -537,15 +537,8 @@ describe('Player', () => {
     });
     runAllActions(game);
 
-    expect(game.activePlayer.id).eq(player1.id);
-    expect(player2.getWaitingFor()).is.undefined;
-
-    doWait(player1, SelectCard, (selectCard) => {
-      expect(selectCard.title).eq('Select prelude card to play');
-      selectCard.cb([biofuels]);
-    });
-    runAllActions(game);
-
+    // The last prelude is played by itself.
+    expect(player1.playedCards.has(biofuels.name)).is.true;
     expect(game.activePlayer.id).eq(player2.id);
     expect(player1.getWaitingFor()).is.undefined;
 
@@ -553,16 +546,6 @@ describe('Player', () => {
       expect(firstPrelude!.title).eq('Select prelude card to play');
       firstPrelude.cb([co2Reducers]);
     });
-    runAllActions(game);
-
-    expect(game.activePlayer.id).eq(player2.id);
-    expect(player1.getWaitingFor()).is.undefined;
-
-    doWait(player2, SelectCard, (selectCard) => {
-      expect(selectCard.title).eq('Select prelude card to play');
-      selectCard.cb([donation]);
-    });
-
     runAllActions(game);
 
     expect(game.phase).eq(Phase.ACTION);

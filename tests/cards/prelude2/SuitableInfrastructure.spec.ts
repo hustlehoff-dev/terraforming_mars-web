@@ -140,11 +140,7 @@ describe('SuitableInfrastructure', () => {
     doWait(player, SelectCard, (selectCard) => selectCard.cb([suitableInfrastructure]));
     runAllActions(game);
 
-    expect(player.production.megacredits).eq(-1);
-    expect(player.megaCredits).eq(2);
-
-    doWait(player, SelectCard, (selectCard) => selectCard.cb([spaceLanes]));
-    runAllActions(game);
+    // Space Lanes, the last prelude, was played by itself.
 
     expect(player.production.megacredits).eq(0);
     expect(player.megaCredits).eq(4);
