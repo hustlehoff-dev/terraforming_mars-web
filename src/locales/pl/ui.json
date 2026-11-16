@@ -655,6 +655,8 @@
   "${0}: discard a card to draw a new one?": "${0}: odrzucić kartę i dobrać nową?",
   "Do nothing": "Nic nie rób",
   "Select a card to discard": "Wybierz kartę do odrzucenia",
+  "Also pay with": "Płać też",
+  "Missing": "Brakuje",
   "Bought": "Kupione",
   "You drew a card": "Dobrałeś kartę",
   "You drew ${0} cards": "Dobrałeś ${0} karty",

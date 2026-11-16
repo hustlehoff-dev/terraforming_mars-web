@@ -1,92 +1,62 @@
 <template>
-  <section>
-    <div v-if="compact && cost > 0" class="project-payment">
-      <label v-for="(option, index) in paymentOptions" :key="index" class="project-payment__option">
-        <input v-model="selectedPayment" type="radio" :name="paymentGroup" :value="index">
-        <span>
-          <strong>{{ option.label }}</strong>
-          <small>{{ paymentSummary(option.payment) }}</small>
-          <small v-if="paymentValue(option.payment) > cost">{{ $t('Overpaying') }} +{{ paymentValue(option.payment) - cost }} M€</small>
-        </span>
-      </label>
-    </div>
-    <!-- Fine-tune: change any other resource and M€ is recalculated straight away. -->
-    <div v-if="compact && cost > 0 && adjustableUnits.length > 0" class="project-payment__adjust">
-      <div v-for="unit in adjustableUnits" :key="unit" class="project-payment__unit">
-        <PaymentUnitComponent
-          v-model:count.number="payment[unit]"
-          :unit="unit"
-          :description="descriptions[unit]"
-          :rate="ledger[unit].rate"
-          @plus="adjust(() => addValue(unit))"
-          @minus="adjust(() => reduceValue(unit))"
-          @max="adjust(() => maxValue(unit))" />
-      </div>
-      <p class="project-payment__total" :class="totalSpentClass">
-        <i class="resource_icon resource_icon--megacredits" aria-hidden="true"></i>
-        <strong>{{ payment.megacredits }}</strong>
-        <span>· {{ $t('Total') }} {{ totalSpent }} / {{ cost }} M€</span>
-      </p>
-    </div>
-    <table v-if="!compact" class="payments_table">
-      <tbody>
-        <tr>
-          <td></td>
-          <td><i class="resource_icon payments_type_smallicon resource_icon--megacredits"></i></td>
-        </tr>
-        <template v-for="unit in order" :key="unit">
-          <template v-if="ledger[unit]?.available > 0">
-            <tr>
-              <td>
-                <PaymentUnitComponent
-                  v-model:count.number="payment[unit]"
-                  :unit="unit"
-                  :description="descriptions[unit]"
-                  :rate="ledger[unit].rate"
-                  @plus="addValue(unit)"
-                  @minus="reduceValue(unit)"
-                  @max="maxValue(unit)" />
-                <div v-if="ledger[unit]?.reserved" class="card-warning" v-i18n="$t(unit)">
-                  Some ${0} are reserved and unavailable here.</div>
-              </td>
-              <td class="payments_unit_subtotal" v-if="ledger[unit].rate !== undefined && payment[unit] !== 0">
-                {{ ledger[unit].rate * payment[unit] }}
-              </td>
-            </tr>
-          </template>
+  <!--
+    Every payment in the game looks the same: "Play · 20 M€" pays with M€ alone. When another
+    resource can be used too (steel, titanium, heat...), a second button pays with it, and a
+    small stepper next to it sets how much of it; the M€ part follows by itself.
+  -->
+  <section class="pay">
+    <div v-if="showsave" class="pay__buttons">
+      <button v-if="megacreditsOnly" type="button" class="pay__button" :data-test="usesOtherUnits ? 'save-mc' : 'save'" @click="payWithMegacredits">
+        {{ $t(buttonLabel) }}<b v-if="cost > 0"> · {{ cost }} M€</b>
+      </button>
+      <button v-if="!megacreditsOnly || usesOtherUnits" type="button" class="pay__button pay__button--main" data-test="save"
+        @click="handleSave()">
+        {{ $t(buttonLabel) }}
+        <template v-if="cost > 0">
+          ·
+          <span v-for="unit in usedUnits" :key="unit" class="pay__part">
+            <b>{{ payment[unit] }}</b><i class="resource_icon" :class="iconClass(unit)" :title="$t(descriptions[unit])"></i>
+          </span>
+          <span v-if="payment.megacredits > 0 || usedUnits.length === 0" class="pay__part"><b>{{ payment.megacredits }}</b> M€</span>
         </template>
-        <tr :class="totalSpentClass">
-          <td class="payments_total_heading"></td>
-          <td class="payments_total_value" :title="$t(totalSpentTitle)" :aria-label="$t(totalSpentTitle)">
-            {{ totalSpent }}
-          </td>
-        </tr>
-      </tbody>
-    </table>
-
+      </button>
+    </div>
+    <!-- How much of each other resource goes into the second button. -->
+    <div v-if="cost > 0 && adjustableUnits.length > 0" class="pay__units">
+      <small v-i18n>Also pay with</small>
+      <PaymentUnitComponent
+        v-for="unit in adjustableUnits" :key="unit"
+        v-model:count.number="payment[unit]"
+        :unit="unit"
+        :description="descriptions[unit]"
+        :rate="ledger[unit].rate"
+        @plus="addValue(unit)"
+        @minus="reduceValue(unit)"
+        @max="maxValue(unit)" />
+      <span v-if="ledger.megacredits.available > 0" class="pay__mc" data-test="megacredits">
+        <input :value="payment.megacredits" readonly tabindex="-1" :aria-label="$t('M€')">
+        <span>M€</span>
+      </span>
+      <small v-for="unit in reservedUnits" :key="'reserved-' + unit" class="card-warning" v-i18n="$t(unit)">Some ${0} are reserved and unavailable here.</small>
+      <small v-if="totalSpent < cost" class="pay__short">{{ $t('Missing') }} {{ cost - totalSpent }} M€</small>
+      <small v-else-if="totalSpent > cost" class="pay__over">{{ $t('Overpaying') }} +{{ totalSpent - cost }} M€</small>
+    </div>
     <div v-if="warning !== undefined" class="tm-warning">
       <label class="label label-error">{{ $t(warning) }}</label>
-    </div>
-
-    <div v-if="showsave" class="payments_save">
-      <AppButton size="big" @click="handleSave()" :title="$t(buttonLabel)" data-test="save" />
     </div>
   </section>
 </template>
 
 <script lang="ts">
-import {defineComponent, useId} from 'vue';
+import {defineComponent} from 'vue';
 import {Payment} from '@/common/inputs/Payment';
 import {SpendableResource} from '@/common/inputs/Spendable';
-import {getPreferences} from '@/client/utils/PreferencesManager';
-import AppButton from '@/client/components/common/AppButton.vue';
 import PaymentUnitComponent from '@/client/components/PaymentUnit.vue';
 import {Ledger} from '@/client/components/PaymentLedger';
 import {computeDefaultPayment} from '@/client/components/PaymentDefaults';
 import {sum} from '@/common/utils/utils';
 import {Message} from '@/common/logs/Message';
 import {LogMessageDataType} from '@/common/logs/LogMessageDataType';
-import {translateTextWithParams} from '@/client/directives/i18n';
 
 const DESCRIPTIONS: Record<SpendableResource, string> = {
   steel: 'Steel',
@@ -117,16 +87,20 @@ const IN_SENTENCE_DESCRIPTIONS: Record<SpendableResource, string> = {
 
 type DataModel = {
   payment: Payment;
-  selectedPayment: number;
   warning: string | Message | undefined;
-  /** Overpayment already warned about; pressing again with the same amount pays. */
-  overpayWarned: number | undefined;
+};
+
+const ICONS: Partial<Record<SpendableResource, string>> = {
+  kuiperAsteroids: 'resource_icon--asteroid',
+  lunaArchivesScience: 'resource_icon--science',
+  spireScience: 'resource_icon--science',
+  auroraiData: 'resource_icon--auroraidata',
+  seeds: 'resource_icon--seed',
 };
 
 export default defineComponent({
   name: 'PaymentForm',
   components: {
-    AppButton,
     PaymentUnitComponent,
   },
   props: {
@@ -156,36 +130,26 @@ export default defineComponent({
     },
   },
   emits: ['save', 'change'],
-  setup: () => ({paymentGroup: useId()}),
   data(): DataModel {
     return {
       payment: computeDefaultPayment(this.cost, this.order, this.ledger, /* reserveMegacredits=*/ false),
-      selectedPayment: 0,
       warning: undefined,
-      overpayWarned: undefined,
     };
   },
   computed: {
-    paymentOptions(): Array<{label: string; payment: Payment}> {
-      const suggested = computeDefaultPayment(this.cost, this.order, this.ledger, false);
-      const options = [{label: this.$t('Suggested payment'), payment: suggested}];
-      if (this.ledger.megacredits.available >= this.cost && suggested.megacredits !== this.cost) {
-        options.push({label: this.$t('Pay with M€'), payment: {...Payment.EMPTY, megacredits: this.cost}});
-      }
-      if (this.compact && this.cost > this.ledger.megacredits.available) {
-        for (const unit of this.order) {
-          if (unit === 'megacredits' || suggested[unit] === 0) {
-            continue;
-          }
-          const payment = computeDefaultPayment(this.cost, this.order.filter((resource) => resource !== unit), this.ledger, false);
-          const delta = this.paymentValue(payment) - this.cost;
-          if (delta >= 0 && this.order.every((resource) => payment[resource] === 0 || delta < this.ledger[resource].rate) &&
-            !options.some((option) => this.order.every((resource) => option.payment[resource] === payment[resource]))) {
-            options.push({label: translateTextWithParams('Keep ${0}', [this.$t(IN_SENTENCE_DESCRIPTIONS[unit])]), payment});
-          }
-        }
-      }
-      return options;
+    /** M€ alone cover the cost: the first button pays with them. */
+    megacreditsOnly(): boolean {
+      return this.ledger.megacredits.available >= this.cost;
+    },
+    /** Other resources in the payment, in the order shown. */
+    usedUnits(): Array<SpendableResource> {
+      return this.order.filter((unit) => unit !== 'megacredits' && this.payment[unit] > 0);
+    },
+    reservedUnits(): Array<SpendableResource> {
+      return this.adjustableUnits.filter((unit) => this.ledger[unit]?.reserved);
+    },
+    usesOtherUnits(): boolean {
+      return this.usedUnits.length > 0;
     },
     adjustableUnits(): Array<SpendableResource> {
       return this.order.filter((unit) => unit !== 'megacredits' && (this.ledger[unit]?.available ?? 0) > 0);
@@ -220,17 +184,6 @@ export default defineComponent({
     },
   },
   watch: {
-    selectedPayment(index: number) {
-      if (index >= 0) {
-        this.payment = {...this.paymentOptions[index].payment};
-      }
-    },
-    paymentOptions(options: Array<{payment: Payment}>) {
-      if (this.compact && this.selectedPayment >= 0) {
-        this.selectedPayment = Math.min(this.selectedPayment, options.length - 1);
-        this.payment = {...options[this.selectedPayment].payment};
-      }
-    },
     payment: {
       deep: true,
       immediate: true,
@@ -240,21 +193,18 @@ export default defineComponent({
     },
   },
   mounted() {
-    if (this.compact && this.autoSave && this.paymentOptions.length <= 1) {
+    // Nothing to choose (M€ only): playing a card dropped on the table goes straight through.
+    if (this.autoSave && this.adjustableUnits.length === 0 && this.megacreditsOnly) {
       this.handleSave();
     }
   },
   methods: {
-    /** A manual change: no preset is selected any more. */
-    adjust(change: () => void): void {
-      this.selectedPayment = -1;
-      change();
+    iconClass(unit: SpendableResource): string {
+      return ICONS[unit] ?? 'resource_icon--' + unit;
     },
-    paymentValue(payment: Payment): number {
-      return sum(this.order.map((unit) => payment[unit] * this.ledger[unit].rate));
-    },
-    paymentSummary(payment: Payment): string {
-      return this.order.filter((unit) => payment[unit] > 0).map((unit) => `${payment[unit]} ${this.$t(DESCRIPTIONS[unit])}`).join(' + ');
+    payWithMegacredits(): void {
+      this.payment = {...Payment.EMPTY, megacredits: this.cost};
+      this.handleSave();
     },
     /**
      * Returns the most MC necessary, capped by the cost of the payment.
@@ -336,15 +286,6 @@ export default defineComponent({
             return;
           }
         }
-        // Overpaying needs a second click instead of a browser confirm() popup.
-        if (!this.compact && getPreferences().show_alerts && this.overpayWarned !== delta) {
-          this.overpayWarned = delta;
-          this.warning = {
-            message: 'You are overpaying by ${0} M€. Press again to confirm.',
-            data: [{type: LogMessageDataType.RAW_STRING, value: String(delta)}],
-          };
-          return;
-        }
       }
       this.$emit('save', this.payment);
     },
@@ -353,43 +294,132 @@ export default defineComponent({
 </script>
 
 <style scoped lang="less">
-.project-payment__adjust {
+.pay {
   display: grid;
-  gap: 6px;
-  margin-top: 8px;
-  padding: 8px 10px;
-  border: 1px solid #6f8c98;
-  border-radius: 8px;
-  background: #0d1720e6;
+  justify-items: center;
+  gap: 10px;
 }
 
-.project-payment__total {
+.pay__buttons {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.pay__button {
+  display: inline-flex;
+  min-height: 46px;
   align-items: center;
   gap: 6px;
-  margin: 0;
+  padding: 0 22px;
+  border: 1px solid #49616d;
+  border-radius: 9px;
+  background: #142630;
   color: #eef6f8;
+  font: inherit;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: #92dbe5;
+    background: #1d3945;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &--main {
+    border-color: #e2c27f;
+    color: #ffedc6;
+  }
 
   .resource_icon {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
+    margin: 0;
+    vertical-align: middle;
   }
+}
 
-  strong {
-    font-size: 1.2rem;
+.pay__part {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+
+  & + & {
+    margin-left: 4px;
   }
+}
 
-  span {
-    color: #a9bac2;
+.pay__units {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 12px;
+  color: #cfe0e6;
+
+  > small {
     font-size: 0.8rem;
   }
 
-  &.payments_total_under span {
-    color: #ff9c8a;
-  }
+  // The stepper of a resource: small, icon then − count +.
+  :deep(.payments_type) {
+    display: inline-flex;
+    width: auto;
+    align-items: center;
+    gap: 3px;
+    margin: 0;
 
-  &.payments_total_over span {
-    color: #ffd36b;
+    .payments_type_icon {
+      width: 26px;
+      height: 26px;
+      margin: 0 2px 0 0;
+    }
+
+    .payments_input {
+      width: 38px;
+      min-height: 30px;
+      padding: 2px 4px;
+      text-align: center;
+    }
+
+    .btn {
+      min-width: 28px;
+      height: 30px;
+      padding: 0 6px;
+    }
   }
+}
+
+.pay__mc {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  input {
+    width: 38px;
+    min-height: 30px;
+    padding: 2px 4px;
+    border: 1px solid #6f8c9866;
+    border-radius: 6px;
+    background: #0b141c;
+    color: #ffe36b;
+    font-weight: 800;
+    text-align: center;
+  }
+}
+
+.pay__short {
+  color: #ff9c8a;
+}
+
+.pay__over {
+  color: #ffd36b;
 }
 </style>

@@ -122,8 +122,8 @@ describe('SelectPayment', () => {
     const tester = new PaymentTester(wrapper);
     await tester.nextTick();
 
-    tester.expectAvailablePaymentComponents('megacredits');
-    tester.expectValue('megacredits', 10);
+    // M€ alone: no steppers, just the button.
+    tester.expectAvailablePaymentComponents();
   });
 
   it('max megacredits', async () => {
@@ -139,25 +139,6 @@ describe('SelectPayment', () => {
     await tester.clickMax('heat');
     await tester.nextTick();
     tester.expectPayment({heat: 3, megacredits: 6});
-
-    await tester.clickMax('megacredits');
-    await tester.nextTick();
-    tester.expectPayment({heat: 0, megacredits: 9});
-  });
-
-  it('max megacredits, 2', async () => {
-    const wrapper = setupBill(
-      10,
-      {megacredits: 5, titanium: 4, titaniumValue: 4, heat: 3},
-      {paymentOptions: {titanium: true, heat: true}});
-
-    const tester = new PaymentTester(wrapper);
-    await tester.nextTick();
-    tester.expectPayment({titanium: 2, heat: 0, megacredits: 2});
-
-    await tester.clickMax('megacredits');
-    await tester.nextTick();
-    tester.expectPayment({titanium: 2, heat: 0, megacredits: 5});
   });
 
   it('Stormcraft floaters count for heat', async () => {

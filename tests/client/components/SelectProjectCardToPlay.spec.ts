@@ -164,7 +164,8 @@ describe('SelectProjectCardToPlay', () => {
 
     const tester = new PaymentTester(wrapper);
     await tester.nextTick();
-    tester.expectPayment({megacredits: 12});
+    // M€ alone: no steppers, just the button.
+    tester.expectPayment({});
 
     await tester.clickSave();
     expect(saveResponse.payment).deep.eq(Payment.of({megacredits: 12}));
@@ -243,7 +244,8 @@ describe('SelectProjectCardToPlay', () => {
 
     const tester = new PaymentTester(wrapper);
     await tester.nextTick();
-    tester.expectPayment({megacredits: 6});
+    // M€ alone: no steppers, just the button.
+    tester.expectPayment({});
 
     await tester.clickSave();
     expect(saveResponse.payment).deep.eq(Payment.of({megacredits: 6}));
@@ -522,8 +524,8 @@ describe('SelectProjectCardToPlay', () => {
     const tester = new PaymentTester(wrapper);
     await tester.nextTick();
 
-    tester.expectIsAvailable('steel');
-    tester.expectIsAvailable('titanium');
+    // Nothing to pay here (cost 0), but steel and titanium may be used.
+    expect(wrapper.vm.order).to.include.members(['steel', 'titanium']);
   });
 
   it('Stormcraft floaters count for heat', async () => {
@@ -753,9 +755,8 @@ describe('SelectProjectCardToPlay', () => {
     await wrapper.vm.$nextTick();
 
     const vm = wrapper.vm;
-    const tester = new PaymentTester(wrapper);
     expect(vm.cardName).to.eq(CardName.BIRDS);
-    tester.expectValue('megacredits', 10);
+    expect(vm.payment.megacredits).eq(10);
 
     // Setting cardName simulates what v-model does when the radio changes.
     // The watch fires (pre-flush) before PaymentForm remounts.
@@ -764,7 +765,7 @@ describe('SelectProjectCardToPlay', () => {
     await wrapper.vm.$nextTick();
 
     expect(vm.cardName).to.eq(CardName.ANTS);
-    tester.expectValue('megacredits', 3);
+    expect(vm.payment.megacredits).eq(3);
   });
 
   const setupCardForPurchase = function(

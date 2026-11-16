@@ -89,7 +89,8 @@ const clock = computed(() => {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 });
 
-const usable = computed(() => props.actions.filter((action) => !action.disabled));
+// Standard projects (Build colony too) have their own bar at the top: not repeated here.
+const usable = computed(() => props.actions.filter((action) => !action.disabled && action.card === undefined));
 const available = computed(() => usable.value.length + props.cardActions.length);
 const caption = computed(() => {
   if (!props.active) {

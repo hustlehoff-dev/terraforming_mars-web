@@ -31,19 +31,18 @@ function mountPaymentForm(overrides: {
 }
 
 describe('PaymentForm', () => {
-  it('submits a selected split payment that preserves a resource when credits alone are insufficient', async () => {
-    const wrapper = mountPaymentForm({cost: 7, compact: true, order: ['steel', 'titanium', 'megacredits'], ledger: {
-      steel: {available: 2, rate: 2},
-      titanium: {available: 2, rate: 3},
-      megacredits: {available: 3, rate: 1},
-    }});
+  it('pays with M€ alone from the first button, and with other resources from the second', async () => {
+    const ledger = {
+      steel: {available: 3, rate: 2},
+      megacredits: {available: 20, rate: 1},
+    };
+    const wrapper = mountPaymentForm({cost: 10, order: ['steel', 'megacredits'], ledger});
+    await wrapper.get('[data-test=save-mc]').trigger('click');
+    expect(wrapper.emitted('save')?.[0]).to.deep.eq([{...Payment.EMPTY, megacredits: 10}]);
 
-    expect(wrapper.find('.payments_table').exists()).is.false;
-    const option = wrapper.findAll('label').find((label) => label.text().includes('Keep steel'));
-    expect(option).to.exist;
-    await option!.get('input').setValue(true);
-    await wrapper.get('[data-test=save]').trigger('click');
-    expect(wrapper.emitted('save')?.[0]).to.deep.eq([{...Payment.EMPTY, titanium: 2, megacredits: 1}]);
+    const mixed = mountPaymentForm({cost: 10, order: ['steel', 'megacredits'], ledger});
+    await mixed.get('[data-test=save]').trigger('click');
+    expect(mixed.emitted('save')?.[0]).to.deep.eq([{...Payment.EMPTY, steel: 3, megacredits: 4}]);
   });
   it('renders only resources in spendableResources', async () => {
     const wrapper = mountPaymentForm({
@@ -247,45 +246,6 @@ describe('PaymentForm', () => {
     expect(lp.megacredits).eq(6);
   });
 
-  it('megacredits max caps at cost', async () => {
-    const wrapper = mountPaymentForm({
-      cost: 10,
-      order: ['megacredits'],
-      ledger: {
-        'megacredits': {available: 12, rate: 1},
-      },
-    });
-
-    await wrapper.find('[data-test=megacredits] .btn-max').trigger('click');
-    await wrapper.vm.$nextTick();
-
-    expect(wrapper.vm.payment.megacredits).eq(10);
-  });
-
-  it('megacredits max recalculates other resources to avoid overspend', async () => {
-    // cost=10, MC=8, steel=5 at rate 2
-    // Greedy initial: steel=5 covers all, MC=0
-    // After max MC (MC=8): post-pass reduces steel to 1 (8+2=10 exact)
-    const wrapper = mountPaymentForm({
-      cost: 10,
-      order: ['steel', 'megacredits'],
-      ledger: {
-        'steel': {available: 5, rate: 2},
-        'megacredits': {available: 8, rate: 1},
-      },
-    });
-
-    const lp = wrapper.vm.payment;
-    expect(lp.steel).eq(5);
-    expect(lp.megacredits).eq(0);
-
-    await wrapper.find('[data-test=megacredits] .btn-max').trigger('click');
-    await wrapper.vm.$nextTick();
-
-    expect(wrapper.vm.payment.megacredits).eq(8);
-    expect(wrapper.vm.payment.steel).eq(1);
-  });
-
   it('emits change with initial payment on mount', async () => {
     const wrapper = mountPaymentForm({
       cost: 7,
@@ -303,20 +263,21 @@ describe('PaymentForm', () => {
   it('emits change when a resource amount is adjusted', async () => {
     const wrapper = mountPaymentForm({
       cost: 7,
-      order: ['megacredits'],
+      order: ['heat', 'megacredits'],
       ledger: {
+        'heat': {available: 3, rate: 1},
         'megacredits': {available: 10, rate: 1},
       },
     });
 
-    await wrapper.find('[data-test=megacredits] .btn-minus').trigger('click');
+    await wrapper.find('[data-test=heat] .btn-minus').trigger('click');
     await wrapper.vm.$nextTick();
 
     const emitted = wrapper.emitted('change') as Payment[][];
     const last = emitted[emitted.length - 1][0];
-    expect(last.megacredits).eq(6);
+    expect(last.heat).eq(2);
+    expect(last.megacredits).eq(5);
   });
-
   it('save emits the payment value', async () => {
     const wrapper = mountPaymentForm({
       cost: 7,
@@ -349,35 +310,33 @@ describe('PaymentForm', () => {
       cost: 10,
       order: ['megacredits'],
       ledger: {
-        'megacredits': {available: 10, rate: 1},
+        'megacredits': {available: 5, rate: 1},
       },
     });
-    await wrapper.find('[data-test=megacredits] input').setValue(5);
     await wrapper.find('[data-test=save]').trigger('click');
     await wrapper.vm.$nextTick();
 
     expect(wrapper.emitted('save')).to.not.exist;
     expect(wrapper.find('.tm-warning').exists()).is.true;
   });
-
   it('clicking save shows warning when spending more than available units', async () => {
     // payment claims 8 heat but only 5 are available
     const wrapper = mountPaymentForm({
       cost: 8,
-      order: ['megacredits'],
+      order: ['heat', 'megacredits'],
       ledger: {
+        'heat': {available: 5, rate: 1},
         'megacredits': {available: 10, rate: 1},
       },
     });
 
-    await wrapper.find('[data-test=megacredits] input').setValue(9);
+    await wrapper.find('[data-test=heat] input').setValue(8);
     await wrapper.find('[data-test=save]').trigger('click');
     await wrapper.vm.$nextTick();
 
     expect(wrapper.emitted('save')).to.not.exist;
     expect(wrapper.find('.tm-warning').exists()).is.true;
   });
-
   it('clicking save emits save and clears warning when payment is valid', async () => {
     const wrapper = mountPaymentForm({
       cost: 10,
