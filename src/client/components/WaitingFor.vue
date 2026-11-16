@@ -297,6 +297,10 @@ export default defineComponent({
           if (xhr.status === statusCode.ok) {
             const result = xhr.response as WaitingForModel;
             this.playersWaitingFor = result.waitingFor;
+            if (result.online !== undefined) {
+              // eslint-disable-next-line vue/require-explicit-emits -- see the note above `provide`.
+              vueApp.$emit('onlinePlayers', result.online);
+            }
             if (result.result === 'WAIT') {
               // eslint-disable-next-line vue/require-explicit-emits -- see the note above `provide`.
               vueApp.$emit('waitingPlayers', result.waitingFor);

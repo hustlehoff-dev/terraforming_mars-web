@@ -20,4 +20,6 @@ type SimplePlayerModel = {
     color: Color;
     id: PlayerId;
     name: string;
+    /** How long ago the player last had their game page open (ms); missing when never. */
+    seenAgoMs?: number;
 }

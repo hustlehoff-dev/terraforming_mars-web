@@ -8,6 +8,7 @@ import {IGame} from '../IGame';
 import {isSpectatorId} from '../../common/Types';
 import {Request} from '../Request';
 import {Response} from '../Response';
+import {Color} from '../../common/Color';
 import {RouteError} from './RouteError';
 
 export class ApiWaitingFor extends Handler {
@@ -46,6 +47,10 @@ export class ApiWaitingFor extends Handler {
     return {result: 'WAIT', waitingFor: inputs};
   }
 
+  private onlinePlayers(game: IGame): Array<Color> {
+    return game.players.filter((player) => game.isOnline(player)).map((player) => player.color);
+  }
+
   private getSpectatorWaitingForModel(game: IGame, gameAge: number, undoCount: number): WaitingForModel {
     const inputs = this.playersWithRequiredInputs(game);
 
@@ -66,7 +71,7 @@ export class ApiWaitingFor extends Handler {
     }
 
     if (isSpectatorId(id)) {
-      responses.writeJson(res, ctx, this.getSpectatorWaitingForModel(game, gameAge, undoCount));
+      responses.writeJson(res, ctx, {...this.getSpectatorWaitingForModel(game, gameAge, undoCount), online: this.onlinePlayers(game)});
       return;
     }
 
@@ -83,6 +88,7 @@ export class ApiWaitingFor extends Handler {
       throw RouteError.forbidden();
     }
     ctx.ipTracker.addParticipant(id, ctx.ip);
-    responses.writeJson(res, ctx, this.getPlayerWaitingForModel(player, game, gameAge, undoCount));
+    game.markSeen(player);
+    responses.writeJson(res, ctx, {...this.getPlayerWaitingForModel(player, game, gameAge, undoCount), online: this.onlinePlayers(game)});
   }
 }

@@ -11,4 +11,7 @@ export type WaitingForModel = {
 
   /** List of players waiting for. */
   waitingFor: Array<Color>,
+
+  /** Players who have their game page open now. */
+  online?: Array<Color>,
 }

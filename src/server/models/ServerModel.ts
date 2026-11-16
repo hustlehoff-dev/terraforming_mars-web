@@ -36,11 +36,15 @@ export class Server {
       id: game.id,
       name: game.name,
       phase: game.phase,
-      players: game.playersInGenerationOrder.map((player) => ({
-        color: player.color,
-        id: player.id,
-        name: player.name,
-      })),
+      players: game.playersInGenerationOrder.map((player) => {
+        const seen = game.lastSeen.get(player.id);
+        return {
+          color: player.color,
+          id: player.id,
+          name: player.name,
+          seenAgoMs: seen === undefined ? undefined : Math.max(0, Date.now() - seen),
+        };
+      }),
       spectatorId: game.spectatorId,
       gameOptions: this.getGameOptionsAsModel(game.gameOptions),
       lastSoloGeneration: game.lastSoloGeneration(),
@@ -271,6 +275,7 @@ export class Server {
       megacredits: player.megaCredits,
       megacreditProduction: player.production.megacredits,
       name: player.name,
+      online: game.isOnline(player),
       needsToDraft: player.needsToDraft,
       // The first research (corporation, preludes, cards) is done once the corporation is picked.
       needsToResearch: game.phase === Phase.RESEARCH && game.generation === 1 && player.dealtCorporationCards.length > 0 ?

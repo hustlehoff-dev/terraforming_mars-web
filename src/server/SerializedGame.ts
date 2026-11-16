@@ -45,6 +45,7 @@ export type SerializedGame = {
     activityAction?: LogMessage['action'];
     paused?: {by: Color, at: number};
     endedEarly?: {by: Color, kind: 'surrender' | 'ended'};
+    lastSeen?: Array<[PlayerId, number]>;
     playOn?: boolean;
     playOnVotes?: Array<PlayerId>;
     gameOptions: GameOptions;

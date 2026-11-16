@@ -52,7 +52,7 @@ describe('ApiWaitingFor', () => {
     scaffolding.url = '/api/waitingfor?id=' + player.id + '&gameAge=50&undoCount=0';
     await scaffolding.get(ApiWaitingFor.INSTANCE, res);
     expect(res.statusCode).eq(statusCode.ok);
-    expect(res.content).eq('{"result":"GO","waitingFor":["black"]}');
+    expect(res.content).eq('{"result":"GO","waitingFor":["black"],"online":["black"]}');
   });
 
   it('fails when spectator not found', async () => {
@@ -76,6 +76,6 @@ describe('ApiWaitingFor', () => {
     scaffolding.url = '/api/waitingfor?id=' + game.spectatorId + '&gameAge=50&undoCount=0';
     await scaffolding.get(ApiWaitingFor.INSTANCE, res);
     expect(res.statusCode).eq(statusCode.ok);
-    expect(res.content).eq('{"result":"WAIT","waitingFor":["black","red"]}');
+    expect(res.content).eq('{"result":"WAIT","waitingFor":["black","red"],"online":[]}');
   });
 });

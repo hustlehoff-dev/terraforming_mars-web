@@ -318,6 +318,11 @@ export interface IGame extends Logger {
   resume(player: IPlayer): void;
   /** Set when the game ended before Mars was terraformed: who ended it and how. */
   endedEarly: {by: Color, kind: 'surrender' | 'ended'} | undefined;
+  /** When each player last had their game page open (ms since epoch). */
+  lastSeen: Map<PlayerId, number>;
+  markSeen(player: IPlayer): void;
+  /** The player has their game page open now. */
+  isOnline(player: IPlayer): boolean;
   /** The player who created the game (the first player of the create game form). */
   isCreator(player: IPlayer): boolean;
   /** Ends the game now: a player surrenders, or the creator ends it with the score as it stands. */

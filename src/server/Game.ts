@@ -223,6 +223,8 @@ export class Game implements IGame, Logger {
 
   /** Set when the game ended before Mars was terraformed: who ended it and how. */
   public endedEarly: {by: Color, kind: 'surrender' | 'ended'} | undefined = undefined;
+  /** When each player last opened their link (or their game page asked the server for news). */
+  public lastSeen = new Map<PlayerId, number>();
   /**
    * Optional play-on phase: after the end, every player agreed to keep playing until the map is
    * full (no free land space left). The game then ends at the end of the generation that fills it.
@@ -634,6 +636,7 @@ export class Game implements IGame, Logger {
       activityAction: this.activityAction,
       paused: this.paused,
       endedEarly: this.endedEarly,
+      lastSeen: Array.from(this.lastSeen),
       playOn: this.playOn,
       playOnVotes: Array.from(this.playOnVotes),
       gameOptions: this.gameOptions,
@@ -926,6 +929,22 @@ export class Game implements IGame, Logger {
     }
     return this.marsIsTerraformed();
   }
+
+  /** A player has their game page open: the game room shows who already joined. */
+  public markSeen(player: IPlayer): void {
+    this.lastSeen.set(player.id, Date.now());
+  }
+
+  /**
+   * A player has their game page open now: it asks the server for news every second or so,
+   * so nothing for a while means the page was closed.
+   */
+  public isOnline(player: IPlayer): boolean {
+    const seen = this.lastSeen.get(player.id);
+    return seen !== undefined && Date.now() - seen < Game.ONLINE_MS;
+  }
+
+  public static readonly ONLINE_MS = 20_000;
 
   /** No player can put a tile on any land space of Mars any more. */
   public mapIsFull(): boolean {
@@ -2065,6 +2084,7 @@ export class Game implements IGame, Logger {
     game.activityAction = d.activityAction;
     game.paused = d.paused;
     game.endedEarly = d.endedEarly;
+    game.lastSeen = new Map(d.lastSeen ?? []);
     game.playOn = d.playOn ?? false;
     game.playOnVotes = new Set(d.playOnVotes ?? []);
     game.generation = d.generation;

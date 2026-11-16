@@ -664,6 +664,7 @@
   "The game cannot go on": "Gry nie można kontynuować",
   "${0} wants to play on until the map is full": "${0} chce grać dalej do zapełnienia mapy",
   "Everyone agreed: the game goes on until the map is full": "Wszyscy się zgodzili: gramy dalej do zapełnienia mapy",
+  "Not in the game now": "Gra nie jest teraz otwarta",
   "Bought": "Kupione",
   "You drew a card": "Dobrałeś kartę",
   "You drew ${0} cards": "Dobrałeś ${0} karty",

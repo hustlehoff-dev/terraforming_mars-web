@@ -61,6 +61,8 @@ export type PublicPlayerModel = {
   megacredits: number;
   megacreditProduction: number;
   name: string;
+  /** The player has their game page open now. */
+  online?: boolean;
   needsToDraft: boolean | undefined;
   needsToResearch: boolean | undefined;
   noTagsCount: number;

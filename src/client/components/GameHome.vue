@@ -16,7 +16,8 @@
       <div v-for="(player, index) in (game === undefined ? [] : game.players)" :key="player.color" class="game-room__player"
         :class="'game-room__player--' + player.color">
         <span class="game-room__order" :title="$t('Turn order')">{{ index + 1 }}</span>
-        <span :class="'game-room__color ' + getPlayerCubeColorClass(player.color)">{{ playerSymbol(player.color) }}</span>
+        <span :class="['game-room__color', getPlayerCubeColorClass(player.color), {'game-room__color--away': !isOnline(player)}]"
+          :title="isOnline(player) ? undefined : $t('Not in the game now')">{{ playerSymbol(player.color) }}</span>
         <strong class="game-room__name">{{ player.name }}</strong>
         <button type="button" class="game-room__copy" :class="{'game-room__copy--done': isPlayerUrlCopied(player.id)}" @click="copyUrl(player.id)">
           {{ isPlayerUrlCopied(player.id) ? $t('Copied!') : $t('Copy link') }}
@@ -58,6 +59,7 @@ import {ParticipantId} from '@/common/Types';
 import {Color} from '@/common/Color';
 import {playerSymbol} from '@/client/utils/playerSymbol';
 import {setDocumentTitle} from '../utils/documentTitle';
+import {paths} from '@/common/app/paths';
 
 // taken from https://stackoverflow.com/a/46215202/83336
 // The solution to copying to the clipboard in this case is
@@ -104,6 +106,9 @@ export default defineComponent({
       urlCopiedPlayerId: DEFAULT_COPIED_PLAYER_ID,
       allCopied: false,
       previousViewport: '',
+      // The latest "last seen" of every player, refreshed while this page is open.
+      seenAgo: {} as Partial<Record<Color, number>>,
+      refreshTimer: undefined as number | undefined,
     };
   },
   computed: {
@@ -112,6 +117,28 @@ export default defineComponent({
     },
   },
   methods: {
+    /** The player has their game page open now (it asks the server for news every second or so). */
+    isOnline(player: {color: Color, seenAgoMs?: number}): boolean {
+      const ago = this.seenAgo[player.color] ?? player.seenAgoMs;
+      return ago !== undefined && ago >= 0 && ago < 20_000;
+    },
+    async refreshSeen(): Promise<void> {
+      try {
+        const response = await fetch(`${paths.API_GAME}?id=${this.game.id}`);
+        if (!response.ok) {
+          return;
+        }
+        const model: SimpleGameModel = await response.json();
+        const seen: Partial<Record<Color, number>> = {};
+        for (const player of model.players) {
+          // -1: never seen (the first answer of the page may be older).
+          seen[player.color] = player.seenAgoMs ?? -1;
+        }
+        this.seenAgo = seen;
+      } catch {
+        // Next time.
+      }
+    },
     getTurnOrder(index: number): string {
       if (index === 0) {
         return '1st';
@@ -166,6 +193,7 @@ export default defineComponent({
   mounted() {
     // Reset the copied player id after 3 seconds to hide the "copied" message
     setInterval(this.setCopiedIdToDefault, 3000);
+    this.refreshTimer = window.setInterval(() => void this.refreshSeen(), 5000);
     setDocumentTitle(this.game.name);
     // Set the viewport width to width=device-width on the create game form so mobile browsers use their actual CSS viewport width.
     // The current global viewport is width=1260, which prevents the create game form from using the device width on phones.
@@ -181,6 +209,7 @@ export default defineComponent({
     }
   },
   beforeUnmount() {
+    window.clearInterval(this.refreshTimer);
     document
       .querySelector('meta[name="viewport"]')
       ?.setAttribute('content', this.previousViewport);
@@ -292,6 +321,12 @@ export default defineComponent({
   border-radius: 6px;
   color: #fff;
   font-weight: 800;
+
+  // Not in the game now: the link was never opened, or the page was closed.
+  &--away {
+    filter: grayscale(1);
+    opacity: 0.35;
+  }
 }
 
 .game-room__name {

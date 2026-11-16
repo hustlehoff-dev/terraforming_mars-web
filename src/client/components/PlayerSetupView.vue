@@ -34,7 +34,8 @@
             <li v-for="(player, index) in playerView.players" :key="player.color" class="setup-crew__player"
               :class="['setup-crew__player--' + player.color, {'setup-crew__player--me': player.color === thisPlayer.color, 'setup-crew__player--ready': isReady(player)}]">
               <span class="setup-crew__order">{{ index + 1 }}</span>
-              <span class="setup-crew__swatch" :class="'player_bg_color_' + player.color" aria-hidden="true"></span>
+              <span class="setup-crew__swatch" :class="['player_bg_color_' + player.color, {'setup-crew__swatch--away': isAway(player)}]"
+                :title="isAway(player) ? $t('Not in the game now') : undefined"></span>
               <span class="setup-crew__name">
                 <strong>{{ player.name }}</strong>
                 <small v-if="player.color === thisPlayer.color" v-i18n>(you)</small>
@@ -73,7 +74,7 @@
         <!-- Always mounted: it also keeps the page up to date while waiting for the other players. -->
         <section v-show="playerView.waitingFor !== undefined" class="setup-section setup-section--input">
           <WaitingFor v-if="game.phase !== 'end'" :playerView="playerView" :waitingfor="playerView.waitingFor" :requestId="playerView.requestId"
-            show-locked-draft :show-waiting-status="!showsWaiting" @waiting-players="liveWaitingPlayers = $event" />
+            show-locked-draft :show-waiting-status="!showsWaiting" @waiting-players="liveWaitingPlayers = $event" @online-players="liveOnline = $event" />
         </section>
 
         <section v-if="isDraftingPhase && playerView.draftedCards.length" class="setup-section">
@@ -168,8 +169,8 @@ export default defineComponent({
     },
   },
   emits: ['toggleTileView'],
-  data(): {boardOpen: boolean, infoOpen: boolean, liveWaitingPlayers: ReadonlyArray<Color> | undefined} {
-    return {boardOpen: false, infoOpen: false, liveWaitingPlayers: undefined};
+  data(): {boardOpen: boolean, infoOpen: boolean, liveWaitingPlayers: ReadonlyArray<Color> | undefined, liveOnline: ReadonlyArray<Color> | undefined} {
+    return {boardOpen: false, infoOpen: false, liveWaitingPlayers: undefined, liveOnline: undefined};
   },
   watch: {
     playerView() {
@@ -325,6 +326,16 @@ export default defineComponent({
         return 'Selected';
       }
       return 'Ready';
+    },
+    /** The player does not have the game open (never opened the link, or left): greyed. */
+    isAway(player: PublicPlayerModel): boolean {
+      if (player.color === this.thisPlayer.color) {
+        return false;
+      }
+      if (this.liveOnline !== undefined) {
+        return !this.liveOnline.includes(player.color);
+      }
+      return player.online === false;
     },
     isReady(player: PublicPlayerModel): boolean {
       if (player.color === this.thisPlayer.color) {
@@ -517,6 +528,12 @@ export default defineComponent({
   height: 34px;
   flex: none;
   border-radius: 4px;
+
+  // Not in the game now: the link was never opened, or the page was closed.
+  &--away {
+    filter: grayscale(1);
+    opacity: 0.35;
+  }
 }
 
 .setup-crew__name {
