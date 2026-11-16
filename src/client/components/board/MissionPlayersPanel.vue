@@ -8,7 +8,7 @@
         <span class="mission-players__who">
           <span class="mission-players__corp">{{ player.corporation ? $t(player.corporation) : '—' }}</span>
           <strong class="mission-players__name">
-            <span class="mission-players__nick">{{ player.name }}</span>
+            <span class="mission-players__nick" :title="player.name">{{ player.name }}</span>
             <span v-if="player.color === activeColor" class="mission-players__turn">{{ player.color === myColor ? $t('Your turn') : $t('Turn') }}</span>
             <span v-if="player.color === activeColor && player.color !== myColor && turnSeconds !== undefined" class="mission-players__clock"
               :class="{'mission-players__clock--warn': turnSeconds <= 20}" role="timer" :aria-label="$t('Turn time left')">⏱ {{ turnClock }}</span>
@@ -299,7 +299,8 @@ function productionClass(value: number): string {
   display: grid;
   min-width: 0;
   grid-area: who;
-  justify-items: start;
+  // Stretch: a long nick is cut to the column, so "Turn" and the clock never slide under TR.
+  justify-items: stretch;
   gap: 1px;
 }
 
@@ -317,7 +318,9 @@ function productionClass(value: number): string {
 
 .mission-players__name {
   display: flex;
+  min-width: 0;
   max-width: 100%;
+  overflow: hidden;
   align-items: center;
   gap: 8px;
   font-size: 1.2rem;
@@ -326,7 +329,8 @@ function productionClass(value: number): string {
 }
 
 .mission-players__nick {
-  min-width: 0;
+  flex: 0 1 auto;
+  min-width: 2ch;
   overflow: hidden;
   text-overflow: ellipsis;
 }
