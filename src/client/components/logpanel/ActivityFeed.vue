@@ -96,6 +96,10 @@
     <!-- Trade or new colony: the colony tile as it is now (track, colonies, ships). -->
     <div v-else-if="previewColony" ref="preview" class="activity-feed__preview activity-feed__preview--colony" :style="previewStyle" aria-hidden="true">
       <ColonyTile :colony="previewColony" :active="previewColony.isActive" />
+      <!-- The cards that got resources from it (e.g. floaters from Titan onto Stormcraft). -->
+      <div v-if="previewCards.length" class="activity-feed__group-cards">
+        <Card v-for="card in previewCards" :key="card.name" :card="card" />
+      </div>
     </div>
     <!-- Milestone or award: its tile, name and what it asks for. -->
     <div v-else-if="previewMa" ref="preview" class="activity-feed__preview" :style="previewStyle" aria-hidden="true">
@@ -138,6 +142,7 @@ import {deckLabels, GameActivityKind, GameActivityModel} from '@/common/models/G
 import {PlayedCardLogModel} from '@/common/models/PlayedCardLogModel';
 import {ViewModel} from '@/common/models/PlayerModel';
 import {isPlayerId, SpaceId} from '@/common/Types';
+import {cardResourceCSS} from '@/client/components/common/cardResources';
 import {CHAT_MESSAGE_MAX_LENGTH, ChatMessageModel} from '@/common/models/ChatMessageModel';
 
 const labels: Record<GameActivityKind, string> = {
@@ -276,8 +281,12 @@ const entries = computed(() => mergeDeckRuns(events.value).map((event) => {
     }
     if (step.kind === 'resource') {
       const otherPlayer = step.player && step.player !== event.player ? players.value.get(step.player)?.name : undefined;
-      const text = translateTextWithParams(step.count > 0 ? 'Added ${0} ${1} to ${2}' : 'Removed ${0} ${1} from ${2}',
-        [String(Math.abs(step.count)), translateText(step.resource), translateText(step.card.split(':')[0])]);
+      // "+4 [floater icon] Stormcraft Incorporated": the resource as an icon, then the card it went to.
+      const icon = resourceIcon(step.resource);
+      const text = icon !== undefined ?
+        `${step.count > 0 ? '+' : '-'}${Math.abs(step.count)} ${icon} ${translateText(step.card.split(':')[0])}` :
+        translateTextWithParams(step.count > 0 ? 'Added ${0} ${1} to ${2}' : 'Removed ${0} ${1} from ${2}',
+          [String(Math.abs(step.count)), translateText(step.resource), translateText(step.card.split(':')[0])]);
       return [otherPlayer, text].filter(Boolean).join(': ');
     }
     if (step.kind === 'event' && (step.event === 'temperature' || step.event === 'oxygen' || step.event === 'venus') && step.subject) {
@@ -570,6 +579,12 @@ onBeforeUnmount(() => {
     document.documentElement.style.removeProperty(name);
   }
 });
+/** The icon shortcode of a card resource (Floater, Microbe...), when there is one. */
+function resourceIcon(resource: string): string | undefined {
+  const css: string | undefined = (cardResourceCSS as Record<string, string>)[resource];
+  return css === undefined ? undefined : `:cr:${css.replace(/^card-resource-/, '')}:`;
+}
+
 const previewColony = computed(() => {
   const entry = previewEntry.value;
   if (!entry?.subject || (entry.kind !== 'trade' && entry.kind !== 'colony')) {
@@ -1310,6 +1325,12 @@ button.activity-feed__entry {
   .activity-feed__body {
     background: none;
   }
+}
+
+.activity-feed__preview--colony {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
 }
 
 .activity-feed__preview--colony .colony-card {
