@@ -194,6 +194,11 @@ function toActivity(message: LogMessage): Activity | undefined {
       return {kind: 'award', player, subject: detail.value};
     }
     break;
+  case '${0} production: ${1}':
+    if (detail?.type === LogMessageDataType.MARKDOWN) {
+      return {kind: 'production', player, effects: String(detail.value)};
+    }
+    break;
   case '${0} built a colony on ${1}':
     if (detail?.type === LogMessageDataType.COLONY) {
       return {kind: 'colony', player, subject: detail.value};

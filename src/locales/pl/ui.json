@@ -680,6 +680,8 @@
   "Standard project (17 M€): your marker on the first free space, you get what is drawn there. From then on, every trade with this moon, by anyone, gives you its BONUS.": "Projekt standardowy (17 M€): twój znacznik na pierwszym wolnym polu, dostajesz to, co na nim narysowano. Od teraz każdy handel z tym księżycem, czyjkolwiek, daje ci jego BONUS.",
   "Grey moon": "Szary księżyc",
   "Not active yet: it opens when someone plays a card that holds its resource.": "Jeszcze nieaktywny: otwiera się, gdy ktoś zagra kartę, która zbiera jego zasób.",
+  "${0} production: ${1}": "Produkcja ${0}: ${1}",
+  "production:": "produkcja:",
   "Bought": "Kupione",
   "You drew a card": "Dobrałeś kartę",
   "You drew ${0} cards": "Dobrałeś ${0} karty",

@@ -164,6 +164,7 @@ const labels: Record<GameActivityKind, string> = {
   bought: 'bought',
   sold: 'sold',
   fizzled: 'discarded the unplayable prelude',
+  production: 'production:',
   copied: 'copied the direct effect of',
   deck: 'Project deck',
 };

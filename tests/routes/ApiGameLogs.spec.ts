@@ -245,6 +245,25 @@ describe('ApiGameLogs', () => {
     expect(entry?.effects).is.not.empty;
   });
 
+  it('shows what each player got in the production phase', async () => {
+    const [game, player, player2] = testGame(2);
+    await scaffolding.ctx.gameLoader.add(game);
+    game.gameLog.length = 0;
+    player.production.add(Resource.STEEL, 2);
+    player.energy = 3;
+    player.production.add(Resource.HEAT, 1);
+    player.runProductionPhase();
+    player2.runProductionPhase();
+
+    scaffolding.url = '/api/game/logs?id=' + player.id + '&view=activity';
+    await scaffolding.get(ApiGameLogs.INSTANCE, res);
+    const production = JSON.parse(res.content).filter((event: {kind: string}) => event.kind === 'production');
+    expect(production.map((event: {player: string}) => event.player)).has.members([player.color, player2.color]);
+    const mine = production.find((event: {player: string}) => event.player === player.color);
+    // TR 20 as M€, steel production, and heat: 1 produced + 3 energy turned into heat.
+    expect(mine.effects).eq('+20:r:mc: +2:r:steel: +4:r:heat:');
+  });
+
   it('shows the sold cards to every player', async () => {
     const [game, player, rival] = testGame(2);
     await scaffolding.ctx.gameLoader.add(game);

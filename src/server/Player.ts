@@ -622,13 +622,32 @@ export class Player implements IPlayer {
     if (this.playedCards.has(CardName.SUPERCAPACITORS)) {
       Supercapacitors.onProduction(this);
     } else {
+      this.energyTurnedToHeat = this.energy;
       this.heat += this.energy;
       this.energy = 0;
       this.finishProductionPhase();
     }
   }
 
+  /** Energy left at the end of the generation, turned into heat by this production phase. */
+  private energyTurnedToHeat = 0;
+
   public finishProductionPhase() {
+    // What the player gets this production phase, for the log and the activity feed.
+    const gains: Array<[number, string]> = [
+      [this.production.megacredits + this.terraformRating, ':r:mc:'],
+      [this.production.steel, ':r:steel:'],
+      [this.production.titanium, ':r:titanium:'],
+      [this.production.plants, ':r:plants:'],
+      [this.production.energy, ':r:energy:'],
+      [this.production.heat + this.energyTurnedToHeat, ':r:heat:'],
+    ];
+    this.energyTurnedToHeat = 0;
+    const gained = gains.filter(([amount]) => amount !== 0).map(([amount, icon]) => `${amount > 0 ? '+' : ''}${amount}${icon}`).join(' ');
+    if (gained !== '') {
+      this.game.log('${0} production: ${1}', (b) => b.player(this).markdown(gained));
+    }
+
     this.megaCredits += this.production.megacredits + this.terraformRating;
     this.steel += this.production.steel;
     this.titanium += this.production.titanium;

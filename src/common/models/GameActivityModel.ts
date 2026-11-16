@@ -9,7 +9,9 @@ export type GameActivityKind =
   /** A prelude that could not be played: discarded for 15 M€. */
   'fizzled' |
   /** Double Down copying the direct effect of the other prelude. */
-  'copied';
+  'copied' |
+  /** What a player got in the production phase. */
+  'production';
 
 export type DeckActivity = {
   /**
