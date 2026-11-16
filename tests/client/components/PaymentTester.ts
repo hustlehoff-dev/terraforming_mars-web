@@ -35,6 +35,14 @@ export class PaymentTester {
   }
 
   public getValue(unit: SpendableResource): number {
+    // M€ follow by themselves: their amount is shown in the pay button.
+    if (unit === 'megacredits') {
+      const amount = this.wrapper.find(PaymentTester.selector(unit));
+      if (!amount.exists()) {
+        throw new Error('Cannot find the amount of M€');
+      }
+      return Number.parseInt(amount.text());
+    }
     const found = this.wrapper.find(PaymentTester.selector(unit) + ' input');
     if (!found.exists()) {
       throw new Error('Cannot find text box for ' + unit);
@@ -65,6 +73,9 @@ export class PaymentTester {
    * Returns true when the text box for `resource` is visible.
    */
   private isAvailable(resource: SpendableResource): boolean {
+    if (resource === 'megacredits') {
+      return this.wrapper.find(PaymentTester.selector(resource)).exists();
+    }
     return this.wrapper.find(PaymentTester.selector(resource) + ' input').exists();
   }
 

@@ -55,7 +55,7 @@ describe('PaymentForm', () => {
     });
 
     expect(wrapper.find('[data-test=heat] input').exists()).is.true;
-    expect(wrapper.find('[data-test=megacredits] input').exists()).is.true;
+    expect(wrapper.get('[data-test=save]').text()).contains('M€');
     expect(wrapper.find('[data-test=steel] input').exists()).is.false;
   });
 
@@ -111,7 +111,6 @@ describe('PaymentForm', () => {
       },
     });
 
-    await wrapper.find('[data-test=megacredits] input').setValue(8);
     await wrapper.find('[data-test=heat] input').setValue(2);
     await wrapper.find('[data-test=heat] .btn-plus').trigger('click');
     await wrapper.vm.$nextTick();
@@ -131,7 +130,6 @@ describe('PaymentForm', () => {
       },
     });
 
-    await wrapper.find('[data-test=megacredits] input').setValue(8);
     await wrapper.find('[data-test=heat] input').setValue(2);
     await wrapper.find('[data-test=heat] .btn-minus').trigger('click');
     await wrapper.vm.$nextTick();

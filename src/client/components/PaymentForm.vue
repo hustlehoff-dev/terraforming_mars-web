@@ -1,46 +1,41 @@
 <template>
   <!--
-    Every payment in the game looks the same: "Play · 20 M€" pays with M€ alone. When another
-    resource can be used too (steel, titanium, heat...), a second button pays with it, and a
-    small stepper next to it sets how much of it; the M€ part follows by itself.
+    Every payment in the game, on one line:
+      [Play · 20 M€]   [Play · 12 M€ + 4 heat]  − 4 +  = 8 M€
+    The first button pays with M€ alone. The second pays M€ plus another resource (heat,
+    steel, floaters...): the stepper next to it sets how much of it, and says what it is worth.
   -->
   <section class="pay">
-    <div v-if="showsave" class="pay__buttons">
-      <button v-if="megacreditsOnly" type="button" class="pay__button" :data-test="usesOtherUnits ? 'save-mc' : 'save'" @click="payWithMegacredits">
+    <div class="pay__row">
+      <button v-if="showsave && megacreditsOnly" type="button" class="pay__button" :data-test="adjustableUnits.length > 0 && cost > 0 ? 'save-mc' : 'save'" @click="payWithMegacredits">
         {{ $t(buttonLabel) }}<b v-if="cost > 0"> · {{ cost }} M€</b>
       </button>
-      <button v-if="!megacreditsOnly || usesOtherUnits" type="button" class="pay__button pay__button--main" data-test="save"
-        @click="handleSave()">
-        {{ $t(buttonLabel) }}
-        <template v-if="cost > 0">
-          ·
-          <span v-for="unit in usedUnits" :key="unit" class="pay__part">
-            <b>{{ payment[unit] }}</b><i class="resource_icon" :class="iconClass(unit)" :title="$t(descriptions[unit])"></i>
+      <div v-if="cost > 0 && adjustableUnits.length > 0" class="pay__mix">
+        <button v-if="showsave" type="button" class="pay__button pay__button--main" data-test="save" :disabled="totalSpent < cost" @click="handleSave()">
+          {{ $t(buttonLabel) }} ·
+          <span v-if="showsMegacredits" class="pay__part"><b data-test="megacredits">{{ payment.megacredits }}</b> M€</span>
+          <span v-for="(unit, index) in usedUnits" :key="unit" class="pay__part">
+            <template v-if="showsMegacredits || index > 0">+ </template><b>{{ payment[unit] }}</b><i class="resource_icon" :class="iconClass(unit)" :title="$t(descriptions[unit])"></i>
           </span>
-          <span v-if="payment.megacredits > 0 || usedUnits.length === 0" class="pay__part"><b>{{ payment.megacredits }}</b> M€</span>
-        </template>
+        </button>
+        <span v-for="unit in adjustableUnits" :key="unit" class="pay__unit" :title="worthTitle(unit)">
+          <PaymentUnitComponent
+            v-model:count.number="payment[unit]"
+            :unit="unit"
+            :description="descriptions[unit]"
+            @plus="addValue(unit)"
+            @minus="reduceValue(unit)"
+            @max="maxValue(unit)" />
+          <small class="pay__worth">= {{ payment[unit] * ledger[unit].rate }} M€<template v-if="ledger[unit].rate !== 1"> ({{ worthLabel(unit) }})</template></small>
+        </span>
+        <small v-if="totalSpent < cost" class="pay__short">{{ $t('Missing') }} {{ cost - totalSpent }} M€</small>
+        <small v-else-if="totalSpent > cost" class="pay__over">{{ $t('Overpaying') }} +{{ totalSpent - cost }} M€</small>
+      </div>
+      <button v-else-if="showsave && !megacreditsOnly" type="button" class="pay__button pay__button--main" data-test="save" @click="handleSave()">
+        {{ $t(buttonLabel) }}<b v-if="cost > 0"> · {{ payment.megacredits }} M€</b>
       </button>
     </div>
-    <!-- How much of each other resource goes into the second button. -->
-    <div v-if="cost > 0 && adjustableUnits.length > 0" class="pay__units">
-      <small v-i18n>Also pay with</small>
-      <PaymentUnitComponent
-        v-for="unit in adjustableUnits" :key="unit"
-        v-model:count.number="payment[unit]"
-        :unit="unit"
-        :description="descriptions[unit]"
-        :rate="ledger[unit].rate"
-        @plus="addValue(unit)"
-        @minus="reduceValue(unit)"
-        @max="maxValue(unit)" />
-      <span v-if="ledger.megacredits.available > 0" class="pay__mc" data-test="megacredits">
-        <input :value="payment.megacredits" readonly tabindex="-1" :aria-label="$t('M€')">
-        <span>M€</span>
-      </span>
-      <small v-for="unit in reservedUnits" :key="'reserved-' + unit" class="card-warning" v-i18n="$t(unit)">Some ${0} are reserved and unavailable here.</small>
-      <small v-if="totalSpent < cost" class="pay__short">{{ $t('Missing') }} {{ cost - totalSpent }} M€</small>
-      <small v-else-if="totalSpent > cost" class="pay__over">{{ $t('Overpaying') }} +{{ totalSpent - cost }} M€</small>
-    </div>
+    <small v-for="unit in reservedUnits" :key="'reserved-' + unit" class="card-warning" v-i18n="$t(unit)">Some ${0} are reserved and unavailable here.</small>
     <div v-if="warning !== undefined" class="tm-warning">
       <label class="label label-error">{{ $t(warning) }}</label>
     </div>
@@ -141,6 +136,10 @@ export default defineComponent({
     megacreditsOnly(): boolean {
       return this.ledger.megacredits.available >= this.cost;
     },
+    /** The M€ part of the mixed payment, in its button (also when 0, if the player has M€). */
+    showsMegacredits(): boolean {
+      return this.ledger.megacredits.available > 0 || this.usedUnits.length === 0;
+    },
     /** Other resources in the payment, in the order shown. */
     usedUnits(): Array<SpendableResource> {
       return this.order.filter((unit) => unit !== 'megacredits' && this.payment[unit] > 0);
@@ -199,6 +198,13 @@ export default defineComponent({
     }
   },
   methods: {
+    /** "1 = 2 M€": what one unit of the resource is worth here. */
+    worthLabel(unit: SpendableResource): string {
+      return `1 = ${this.ledger[unit].rate} M€`;
+    },
+    worthTitle(unit: SpendableResource): string {
+      return `${this.$t(this.descriptions[unit])}: ${this.worthLabel(unit)}`;
+    },
     iconClass(unit: SpendableResource): string {
       return ICONS[unit] ?? 'resource_icon--' + unit;
     },
@@ -297,12 +303,14 @@ export default defineComponent({
 .pay {
   display: grid;
   justify-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
-.pay__buttons {
+// Everything on one line (it wraps only when the window is too narrow).
+.pay__row {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
   gap: 10px;
 }
@@ -312,7 +320,7 @@ export default defineComponent({
   min-height: 46px;
   align-items: center;
   gap: 6px;
-  padding: 0 22px;
+  padding: 0 20px;
   border: 1px solid #49616d;
   border-radius: 9px;
   background: #142630;
@@ -321,6 +329,7 @@ export default defineComponent({
   font-weight: 800;
   letter-spacing: 0.02em;
   text-transform: uppercase;
+  white-space: nowrap;
   cursor: pointer;
 
   &:hover:not(:disabled) {
@@ -349,26 +358,28 @@ export default defineComponent({
 .pay__part {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-
-  & + & {
-    margin-left: 4px;
-  }
+  gap: 3px;
 }
 
-.pay__units {
-  display: flex;
+// The second button and how much of the other resource goes into it, as one block.
+.pay__mix {
+  display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  gap: 6px 12px;
+  gap: 6px 10px;
+  padding: 4px 10px 4px 4px;
+  border: 1px solid #e2c27f55;
+  border-radius: 12px;
+  background: #0b141c99;
   color: #cfe0e6;
+}
 
-  > small {
-    font-size: 0.8rem;
-  }
+.pay__unit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 
-  // The stepper of a resource: small, icon then − count +.
+  // The stepper of a resource: icon, then − count +.
   :deep(.payments_type) {
     display: inline-flex;
     width: auto;
@@ -397,22 +408,11 @@ export default defineComponent({
   }
 }
 
-.pay__mc {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-
-  input {
-    width: 38px;
-    min-height: 30px;
-    padding: 2px 4px;
-    border: 1px solid #6f8c9866;
-    border-radius: 6px;
-    background: #0b141c;
-    color: #ffe36b;
-    font-weight: 800;
-    text-align: center;
-  }
+.pay__worth {
+  color: #ffe36b;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .pay__short {
