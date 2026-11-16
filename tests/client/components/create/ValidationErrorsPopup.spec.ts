@@ -4,7 +4,6 @@ import {globalConfig} from '../getLocalVue';
 import ValidationErrorsPopup from '@/client/components/create/ValidationErrorsPopup.vue';
 import {ValidationErrors} from '@/common/game/validateNewGameConfig';
 import {CardName} from '@/common/cards/CardName';
-import {WIKI_URLS} from '@/client/utils/WikiLinks';
 
 const NO_ERRORS: ValidationErrors = {
   negativeEscapeVelocity: false,
@@ -52,13 +51,11 @@ describe('ValidationErrorsPopup', () => {
     expect(icons[1].attributes('title')).eq('Warning');
   });
 
-  it('links to the wiki for more details', () => {
+  it('has no links to outside pages', () => {
     const wrapper = mount(ValidationErrorsPopup, {
       ...globalConfig,
       props: {errors: {...NO_ERRORS, maybeNotEnoughPreludes: [CardName.VALLEY_TRUST]}},
     });
-    const link = wrapper.find('a');
-    expect(link.text()).eq('Learn more');
-    expect(link.attributes('href')).eq(WIKI_URLS.customPreludes);
+    expect(wrapper.find('a').exists()).is.false;
   });
 });

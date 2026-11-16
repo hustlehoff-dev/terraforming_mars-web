@@ -59,7 +59,7 @@ All the multiplayer rules apply, plus those of any chosen expansions, except as 
   - Standard Mode (:tag:mars:): play 1 more generation.
   - 63 TR Mode (:i:tr:): no changes.
 
-Adapted from [Terraforming Mars: solo rules summary](https://github.com/MartianZoo/player-resources/blob/main/solo-rules-summary.md)
+Adapted from Terraforming Mars: solo rules summary.
 `;
 
 export default defineComponent({

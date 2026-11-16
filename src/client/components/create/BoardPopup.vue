@@ -21,7 +21,6 @@
               <span class="create-game-board-hexagon" :class="boardColorClass(boardName)">&#x2B22;</span>
               <span class="capitalized" v-i18n>{{ boardName }}</span>
               <template v-if="boardName === BoardName.AMAZONIS_PLANITIA">&nbsp;<span title="In development">(α)</span></template>
-              &nbsp;<a :href="boardHref(boardName)" class="tooltip" v-i18n data-tooltip="Link opens in a new tab/window" target="_blank">&#9432;</a>
             </label>
           </div>
         </div>
@@ -31,7 +30,7 @@
     <div class="create-game-board-shuffle">
       <input type="checkbox" :checked="shuffleMap" @change="$emit('update:shuffleMap', ($event.target as HTMLInputElement).checked)" id="shuffleMap-checkbox">
       <label for="shuffleMap-checkbox">
-        <span v-i18n>Randomize board tiles</span>&nbsp;<a :href="WIKI_URLS.randomizeBoardTiles" class="tooltip" v-i18n data-tooltip="Link opens in a new tab/window" target="_blank">&#9432;</a>
+        <span v-i18n>Randomize board tiles</span>
       </label>
       <button class="create-game-board-button create-game-board-clear" @click="clear" v-i18n>Clear</button>
     </div>
@@ -43,7 +42,6 @@ import {ref} from 'vue';
 import PopupPanel from '@/client/components/common/PopupPanel.vue';
 import {BoardName} from '@/common/boards/BoardName';
 import {boardColorClass} from '@/client/components/create/boardOptions';
-import {WIKI, WIKI_URLS} from '@/client/utils/WikiLinks';
 import {inplaceRemove} from '@/common/utils/utils';
 import {RandomBoardOption} from '@/common/boards/RandomBoardOption';
 import {boardOptions} from '@/common/boards/randomBoardOptions';
@@ -54,22 +52,6 @@ type BoardGroup = {
   randomTitle: string;
   /** Boards selected by this group's random button. */
   randomBoards: ReadonlyArray<BoardName>;
-};
-
-/** Anchor on the wiki's Maps page for each board. */
-const WIKI_ANCHORS: Record<BoardName, string> = {
-  [BoardName.THARSIS]: 'tharsis',
-  [BoardName.HELLAS]: 'hellas',
-  [BoardName.ELYSIUM]: 'elysium',
-  [BoardName.ARABIA_TERRA]: 'arabia-terra',
-  [BoardName.UTOPIA_PLANITIA]: 'utopia-planitia',
-  [BoardName.VASTITAS_BOREALIS_NOVA]: 'vastitas-borealis-nova',
-  [BoardName.VASTITAS_BOREALIS]: 'vastitas-borealis',
-  [BoardName.AMAZONIS]: 'amazonis-p',
-  [BoardName.TERRA_CIMMERIA]: 'terra-cimmeria',
-  [BoardName.TERRA_CIMMERIA_NOVA]: 'terra-cimmeria-nova',
-  [BoardName.HOLLANDIA]: 'hollandia',
-  [BoardName.AMAZONIS_PLANITIA]: 'amazonis-planitia',
 };
 
 const props = defineProps<{
@@ -130,11 +112,6 @@ const groups: ReadonlyArray<BoardGroup> = [
     randomBoards: [...OFFICIAL_GROUP_BOARDS, ...FAN_GROUP_BOARDS],
   },
 ] as const;
-
-/** The wiki URL describing `boardName`. */
-function boardHref(boardName: BoardName): string {
-  return `${WIKI}/Maps#${WIKI_ANCHORS[boardName]}`;
-}
 
 function select(boardName: BoardName, event: Event) {
   if (!multiple.value) {

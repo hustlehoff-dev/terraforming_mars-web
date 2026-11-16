@@ -2,21 +2,21 @@
   <div id="game-setup-detail" class="game-setup-detail-container">
     <ul>
       <li><div class="setup-item" v-i18n>Expansion:</div>
-        <a v-if="gameOptions.expansions.venus" :href="rulebookUrls.venus" class="tooltip" data-tooltip="Venus Next rulebook" target="_blank"><div class="create-game-expansion-icon expansion-icon-venus"></div></a>
-        <a v-if="gameOptions.expansions.prelude" :href="rulebookUrls.prelude" class="tooltip" data-tooltip="Prelude rulebook" target="_blank"><div class="create-game-expansion-icon expansion-icon-prelude"></div></a>
-        <a v-if="gameOptions.expansions.prelude2" :href="rulebookUrls.prelude2" class="tooltip" data-tooltip="Prelude 2 rules" target="_blank"><div class="create-game-expansion-icon expansion-icon-prelude2"></div></a>
-        <a v-if="gameOptions.expansions.colonies" :href="rulebookUrls.colonies" class="tooltip" data-tooltip="Colonies rulebook" target="_blank"><div class="create-game-expansion-icon expansion-icon-colony"></div></a>
-        <a v-if="gameOptions.expansions.turmoil" :href="rulebookUrls.turmoil" class="tooltip" data-tooltip="Turmoil rulebook" target="_blank"><div class="create-game-expansion-icon expansion-icon-turmoil"></div></a>
-        <a v-if="gameOptions.expansions.promo" :href="rulebookUrls.promo" class="tooltip" data-tooltip="Promo cards rules" target="_blank"><div class="create-game-expansion-icon expansion-icon-promo"></div></a>
-        <a v-if="gameOptions.expansions.ares" :href="rulebookUrls.ares" class="tooltip" data-tooltip="Ares rules" target="_blank"><div class="create-game-expansion-icon expansion-icon-ares"></div></a>
-        <a v-if="gameOptions.expansions.moon" :href="rulebookUrls.moon" class="tooltip" data-tooltip="The Moon rules" target="_blank"><div class="create-game-expansion-icon expansion-icon-themoon"></div></a>
-        <a v-if="gameOptions.expansions.pathfinders" :href="rulebookUrls.pathfinders" class="tooltip" data-tooltip="Pathfinders rules" target="_blank"><div class="create-game-expansion-icon expansion-icon-pathfinders"></div></a>
-        <a v-if="gameOptions.expansions.community" :href="rulebookUrls.community" class="tooltip" data-tooltip="Community rules" target="_blank"><div class="create-game-expansion-icon expansion-icon-community"></div></a>
+        <span v-if="gameOptions.expansions.venus" class="tooltip" data-tooltip="Venus Next rulebook"><div class="create-game-expansion-icon expansion-icon-venus"></div></span>
+        <span v-if="gameOptions.expansions.prelude" class="tooltip" data-tooltip="Prelude rulebook"><div class="create-game-expansion-icon expansion-icon-prelude"></div></span>
+        <span v-if="gameOptions.expansions.prelude2" class="tooltip" data-tooltip="Prelude 2 rules"><div class="create-game-expansion-icon expansion-icon-prelude2"></div></span>
+        <span v-if="gameOptions.expansions.colonies" class="tooltip" data-tooltip="Colonies rulebook"><div class="create-game-expansion-icon expansion-icon-colony"></div></span>
+        <span v-if="gameOptions.expansions.turmoil" class="tooltip" data-tooltip="Turmoil rulebook"><div class="create-game-expansion-icon expansion-icon-turmoil"></div></span>
+        <span v-if="gameOptions.expansions.promo" class="tooltip" data-tooltip="Promo cards rules"><div class="create-game-expansion-icon expansion-icon-promo"></div></span>
+        <span v-if="gameOptions.expansions.ares" class="tooltip" data-tooltip="Ares rules"><div class="create-game-expansion-icon expansion-icon-ares"></div></span>
+        <span v-if="gameOptions.expansions.moon" class="tooltip" data-tooltip="The Moon rules"><div class="create-game-expansion-icon expansion-icon-themoon"></div></span>
+        <span v-if="gameOptions.expansions.pathfinders" class="tooltip" data-tooltip="Pathfinders rules"><div class="create-game-expansion-icon expansion-icon-pathfinders"></div></span>
+        <span v-if="gameOptions.expansions.community" class="tooltip" data-tooltip="Community rules"><div class="create-game-expansion-icon expansion-icon-community"></div></span>
         <div v-if="isPoliticalAgendasOn" class="create-game-expansion-icon expansion-icon-agendas"></div>
-        <a v-if="gameOptions.expansions.ceo" :href="rulebookUrls.ceo" class="tooltip" data-tooltip="CEOs rules" target="_blank"><div class="create-game-expansion-icon expansion-icon-ceo"></div></a>
-        <a v-if="gameOptions.expansions.underworld" :href="rulebookUrls.underworld" class="tooltip" data-tooltip="Underworld rules" target="_blank"><div class="create-game-expansion-icon expansion-icon-underworld"></div></a>
-        <a v-if="gameOptions.expansions.starwars" :href="rulebookUrls.starwars" class="tooltip" data-tooltip="Star Wars rules" target="_blank"><div class="create-game-expansion-icon expansion-icon-starwars"></div></a>
-        <a v-if="gameOptions.expansions.deltaProject" :href="rulebookUrls.deltaProject" class="tooltip" data-tooltip="Delta Project rules" target="_blank"><div class="create-game-expansion-icon expansion-icon-deltaProject"></div></a>
+        <span v-if="gameOptions.expansions.ceo" class="tooltip" data-tooltip="CEOs rules"><div class="create-game-expansion-icon expansion-icon-ceo"></div></span>
+        <span v-if="gameOptions.expansions.underworld" class="tooltip" data-tooltip="Underworld rules"><div class="create-game-expansion-icon expansion-icon-underworld"></div></span>
+        <span v-if="gameOptions.expansions.starwars" class="tooltip" data-tooltip="Star Wars rules"><div class="create-game-expansion-icon expansion-icon-starwars"></div></span>
+        <span v-if="gameOptions.expansions.deltaProject" class="tooltip" data-tooltip="Delta Project rules"><div class="create-game-expansion-icon expansion-icon-deltaProject"></div></span>
       </li>
 
       <li><div class="setup-item" v-i18n>Board:</div>
@@ -88,7 +88,6 @@ import {GameOptionsModel} from '@/common/models/GameOptionsModel';
 import {BoardName} from '@/common/boards/BoardName';
 import {RandomMAOptionType} from '@/common/ma/RandomMAOptionType';
 import {translateTextWithParams} from '@/client/directives/i18n';
-import {RULEBOOK_URLS} from '@/client/utils/WikiLinks';
 
 const boardColorClass: Record<BoardName, string> = {
   [BoardName.THARSIS]: 'game-config board-tharsis map',
@@ -122,9 +121,6 @@ export default defineComponent({
     },
   },
   computed: {
-    rulebookUrls(): typeof RULEBOOK_URLS {
-      return RULEBOOK_URLS;
-    },
     isPoliticalAgendasOn(): boolean {
       return (this.gameOptions.politicalAgendasExtension !== 'Standard');
     },
