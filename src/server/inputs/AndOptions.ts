@@ -6,6 +6,9 @@ import {OptionsInput} from './OptionsPlayerInput';
 import {InputError} from './InputError';
 
 export class AndOptions extends OptionsInput<undefined> {
+  /** Heat paid with heat and Stormcraft floaters: the client shows one heat calculator. */
+  public heatPayment: {target: number} | undefined = undefined;
+
   constructor(...options: Array<PlayerInput>) {
     super('and', '', options);
   }
@@ -16,6 +19,7 @@ export class AndOptions extends OptionsInput<undefined> {
       buttonLabel: this.buttonLabel,
       type: 'and',
       options: this.options.map((option) => option.toModel(player)),
+      ...(this.heatPayment !== undefined ? {heatPayment: this.heatPayment} : {}),
     };
   }
 

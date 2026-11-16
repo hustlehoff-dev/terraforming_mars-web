@@ -36,6 +36,13 @@ describe('StormCraftIncorporated', () => {
     expect(floaterOption.max).to.eq(constants.HEAT_FOR_TEMPERATURE / 2);
   });
 
+  it('is shown as one heat calculator', () => {
+    player.heat = 7;
+    card.resourceCount = 3;
+    const model = card.spendHeat(player, constants.HEAT_FOR_TEMPERATURE).toModel(player);
+    expect(model.heatPayment).deep.eq({target: constants.HEAT_FOR_TEMPERATURE});
+  });
+
   it('Validates inputs', () => {
     player.heat = 10;
     card.resourceCount = 10;

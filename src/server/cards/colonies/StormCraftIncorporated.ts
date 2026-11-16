@@ -49,7 +49,7 @@ export class StormCraftIncorporated extends ActiveCorporationCard {
     let heatAmount: number;
     let floaterAmount: number;
 
-    return new AndOptions(
+    const input = new AndOptions(
       new SelectAmount('Heat', 'Spend heat', 0, Math.min(player.heat, targetAmount))
         .andThen((amount) => {
           heatAmount = amount;
@@ -74,5 +74,7 @@ export class StormCraftIncorporated extends ActiveCorporationCard {
       player.stock.deduct(Resource.HEAT, heatAmount);
       return cb();
     }).setTitle(message('Select how to spend ${0} heat', (b) => b.number(targetAmount)));
+    input.heatPayment = {target: targetAmount};
+    return input;
   }
 }

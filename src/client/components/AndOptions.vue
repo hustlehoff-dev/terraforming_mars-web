@@ -1,5 +1,7 @@
 <template>
-  <div class="wf-options">
+  <!-- Heat with Stormcraft floaters: one calculator instead of two amount boxes. -->
+  <HeatPayment v-if="playerinput.heatPayment" :playerinput="playerinput" :onsave="onsave" />
+  <div v-else class="wf-options">
     <div v-if="showtitle" class="wf-title">{{ $t(playerinput.title) }}</div>
     <PlayerInputFactory v-for="(option, idx) in (playerinput.options || [])"
       :key="idx"
@@ -21,6 +23,7 @@ import {defineComponent} from 'vue';
 import {PlayerViewModel} from '@/common/models/PlayerModel';
 import {AndOptionsModel} from '@/common/models/PlayerInputModel';
 import AppButton from '@/client/components/common/AppButton.vue';
+import HeatPayment from '@/client/components/HeatPayment.vue';
 import {AndOptionsResponse, InputResponse} from '@/common/inputs/InputResponse';
 
 interface DataModel {
@@ -51,6 +54,7 @@ export default defineComponent({
   },
   components: {
     AppButton,
+    HeatPayment,
   },
   data(): DataModel {
     return {

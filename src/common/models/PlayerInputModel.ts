@@ -22,6 +22,11 @@ export type BaseInputModel = {
 export type AndOptionsModel = BaseInputModel & {
   type: 'and';
   options: Array<PlayerInputModel>;
+  /**
+   * Paying heat with Stormcraft Incorporated floaters (2 heat each): the options are the heat
+   * and the floaters to spend. Shown as one heat calculator.
+   */
+  heatPayment?: {target: number};
 }
 
 export type OrOptionsModel = BaseInputModel & {
