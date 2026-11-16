@@ -322,6 +322,13 @@ export interface IGame extends Logger {
   isCreator(player: IPlayer): boolean;
   /** Ends the game now: a player surrenders, or the creator ends it with the score as it stands. */
   endEarly(player: IPlayer, kind: 'surrender' | 'ended'): Promise<void>;
+  /** Optional play-on phase after the end: the game goes on until the map is full. */
+  playOn: boolean;
+  /** Players who agreed on the end screen to play on. */
+  playOnVotes: Set<PlayerId>;
+  mapIsFull(): boolean;
+  canPlayOn(): boolean;
+  votePlayOn(player: IPlayer): Promise<void>;
   getPlayerAfter(player: IPlayer): IPlayer;
   getPlayerBefore(player: IPlayer): IPlayer;
 

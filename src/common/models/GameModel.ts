@@ -44,6 +44,11 @@ export type GameModel = {
   paused?: {by: Color, at: number};
   /** The game ended before Mars was terraformed: a player surrendered, or the creator ended it. */
   endedEarly?: {by: Color, kind: 'surrender' | 'ended'};
+  /**
+   * Playing on until the map is full: offered on the end screen (each player agrees), and whether
+   * that phase is running or was played.
+   */
+  playOn?: {offered: boolean, active: boolean, votes: Array<Color>};
   /** During the initial draft: which cards are drafted now (two rounds of projects, then preludes, then CEOs). */
   initialDraftStage?: 'projects' | 'preludes' | 'ceos';
   gameOptions: GameOptionsModel;

@@ -223,6 +223,13 @@ export class Game implements IGame, Logger {
 
   /** Set when the game ended before Mars was terraformed: who ended it and how. */
   public endedEarly: {by: Color, kind: 'surrender' | 'ended'} | undefined = undefined;
+  /**
+   * Optional play-on phase: after the end, every player agreed to keep playing until the map is
+   * full (no free land space left). The game then ends at the end of the generation that fills it.
+   */
+  public playOn = false;
+  /** Players who agreed on the end screen to play on (all of them start the play-on phase). */
+  public playOnVotes = new Set<PlayerId>();
 
   /** The player who created the game: the first player of the create game form. */
   public isCreator(player: IPlayer): boolean {
@@ -627,6 +634,8 @@ export class Game implements IGame, Logger {
       activityAction: this.activityAction,
       paused: this.paused,
       endedEarly: this.endedEarly,
+      playOn: this.playOn,
+      playOnVotes: Array.from(this.playOnVotes),
       gameOptions: this.gameOptions,
       generation: this.generation,
       turn: this.turn,
@@ -908,11 +917,51 @@ export class Game implements IGame, Logger {
   }
 
   public gameIsOver(): boolean {
+    if (this.playOn) {
+      return this.mapIsFull();
+    }
     if (this.isSoloMode()) {
       // Solo games continue until the designated generation end even if Mars is already terraformed
       return this.generation === this.lastSoloGeneration();
     }
     return this.marsIsTerraformed();
+  }
+
+  /** No player can put a tile on any land space of Mars any more. */
+  public mapIsFull(): boolean {
+    return this.players.every((player) => this.board.getAvailableSpacesOnLand(player).length === 0);
+  }
+
+  /** The end screen offers to play on: the game ended normally and the map still has room. */
+  public canPlayOn(): boolean {
+    return this.phase === Phase.END && this.endedEarly === undefined && !this.mapIsFull();
+  }
+
+  /**
+   * A player agrees on the end screen to play on until the map is full. When every player has
+   * agreed, the game goes on with the next generation.
+   */
+  public async votePlayOn(player: IPlayer): Promise<void> {
+    if (!this.canPlayOn()) {
+      throw new Error('The game cannot go on');
+    }
+    if (this.playOnVotes.has(player.id)) {
+      return;
+    }
+    this.playOnVotes.add(player.id);
+    this.log('${0} wants to play on until the map is full', (b) => b.player(player));
+    if (this.players.some((other) => !this.playOnVotes.has(other.id))) {
+      await GameLoader.getInstance().saveGame(this);
+      return;
+    }
+    this.playOn = true;
+    this.playOnVotes.clear();
+    this.donePlayers.clear();
+    this.log('Everyone agreed: the game goes on until the map is full', (b) => b.forNotice());
+    this.players.forEach((other) => other.colonies.returnTradeFleets());
+    this.phase = Phase.SOLAR;
+    this.finishSolarPhase();
+    await GameLoader.getInstance().saveGame(this);
   }
 
   public isDoneWithFinalProduction(): boolean {
@@ -1301,7 +1350,10 @@ export class Game implements IGame, Logger {
       scores.push({corporation: corporation, playerScore: vpb.total});
     });
 
-    Database.getInstance().saveGameResults(this.id, this.players.length, this.generation, this.gameOptions, scores);
+    // After the play-on phase the results of the first end are already recorded.
+    if (!this.playOn) {
+      Database.getInstance().saveGameResults(this.id, this.players.length, this.generation, this.gameOptions, scores);
+    }
     this.phase = Phase.END;
     const gameLoader = GameLoader.getInstance();
     await gameLoader.saveGame(this);
@@ -2013,6 +2065,8 @@ export class Game implements IGame, Logger {
     game.activityAction = d.activityAction;
     game.paused = d.paused;
     game.endedEarly = d.endedEarly;
+    game.playOn = d.playOn ?? false;
+    game.playOnVotes = new Set(d.playOnVotes ?? []);
     game.generation = d.generation;
     game.turn = d.turn ?? (d.phase === Phase.ACTION ? 1 : 0);
     game.turnStarted = d.turnStarted ?? d.phase === Phase.ACTION;

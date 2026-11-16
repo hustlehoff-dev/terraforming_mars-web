@@ -33,6 +33,24 @@
       <p>{{ $t(game.isSoloModeWin ? 'But it isn\'t the reason to stop making Mars better.' : 'Next time you will get more luck!') }}</p>
     </section>
 
+    <!-- Optional play-on phase: every player agrees, then the game goes on until the map is full. -->
+    <section v-if="playOn.offered && isPlayer" class="recap-panel recap-playon">
+      <div>
+        <h2 v-i18n>Play on until the map is full?</h2>
+        <p v-i18n>The game goes on, generation by generation, until no land space is left. Then it is scored again.</p>
+        <p v-if="!isSoloGame" class="recap-playon__votes">
+          <span v-for="player in participant.players" :key="player.color" class="recap-playon__vote"
+            :class="{'recap-playon__vote--yes': playOn.votes.includes(player.color)}">
+            <span aria-hidden="true">{{ playOn.votes.includes(player.color) ? '✓' : '…' }}</span>{{ player.name }}
+          </span>
+        </p>
+      </div>
+      <button type="button" class="recap-playon__button" :disabled="playOnBusy || iAgreed" @click="agreeToPlayOn">
+        {{ $t(iAgreed ? 'Waiting for the others' : 'Play on') }}
+      </button>
+      <p v-if="playOnError" class="recap-playon__error">{{ playOnError }}</p>
+    </section>
+
     <section v-if="!isSoloGame || game.isSoloModeWin" class="recap-top">
       <div class="recap-winner">
         <div class="recap-winner__crown" aria-hidden="true">👑</div>
@@ -354,16 +372,20 @@ function totalProduction(p: PublicPlayerModel): number {
 
 export default defineComponent({
   name: 'GameEnd',
+  setup: () => ({playOnTimer: undefined as number | undefined}),
   props: {
     participant: {
       type: Object as () => ViewModel,
       required: true,
     },
   },
-  data(): {tileView: TileView, boardOpen: boolean} {
+  data(): {tileView: TileView, boardOpen: boolean, playOnVotes: Array<Color> | undefined, playOnBusy: boolean, playOnError: string | undefined} {
     return {
       tileView: 'show',
       boardOpen: false,
+      playOnVotes: undefined,
+      playOnBusy: false,
+      playOnError: undefined,
     };
   },
   computed: {
@@ -406,6 +428,18 @@ export default defineComponent({
       }
       return this.playersInPlace.filter((p) => p.color !== this.surrenderedColor &&
         p.victoryPointsBreakdown.total === first.victoryPointsBreakdown.total && p.megacredits === first.megacredits);
+    },
+    /** Play-on offer: votes so far (the latest known, also from polling). */
+    playOn(): {offered: boolean, votes: Array<Color>} {
+      const state = this.game.playOn;
+      return {offered: state?.offered === true, votes: this.playOnVotes ?? state?.votes ?? []};
+    },
+    isPlayer(): boolean {
+      return 'thisPlayer' in this.participant && this.participant.thisPlayer !== undefined;
+    },
+    iAgreed(): boolean {
+      const me = 'thisPlayer' in this.participant ? this.participant.thisPlayer?.color : undefined;
+      return me !== undefined && this.playOn.votes.includes(me);
     },
     isSoloGame(): boolean {
       return this.participant.players.length === 1;
@@ -570,13 +604,57 @@ export default defineComponent({
     GameEndScore,
     MissionCardZoom,
   },
+  beforeUnmount() {
+    window.clearInterval(this.playOnTimer);
+  },
   mounted() {
+    // While the play-on offer is open, follow the others' votes; when all agreed, back to the game.
+    if (this.playOn.offered && this.isPlayer) {
+      this.playOnTimer = window.setInterval(() => void this.refreshPlayOn(), 3000);
+    }
     setDocumentTitle('🏁 | ' + this.game.name);
     if (getPreferences().experimental_ui) {
       setFaviconStatus('ended');
     }
   },
   methods: {
+    /** The game goes on: open the game screen. */
+    backToGame(): void {
+      window.location.href = `${paths.PLAYER}?id=${this.participant.id}`;
+    },
+    followPlayOn(model: {game: GameModel}): void {
+      if (model.game.phase !== 'end') {
+        this.backToGame();
+        return;
+      }
+      this.playOnVotes = model.game.playOn?.votes ?? [];
+    },
+    async refreshPlayOn(): Promise<void> {
+      try {
+        const response = await fetch(`${paths.API_PLAYER}?id=${this.participant.id}`);
+        if (response.ok) {
+          this.followPlayOn(await response.json());
+        }
+      } catch {
+        // Next time.
+      }
+    },
+    async agreeToPlayOn(): Promise<void> {
+      this.playOnBusy = true;
+      this.playOnError = undefined;
+      try {
+        const response = await fetch(`${paths.API_PLAY_ON}?id=${this.participant.id}`);
+        if (!response.ok) {
+          this.playOnError = translateText('The game cannot go on');
+          return;
+        }
+        this.followPlayOn(await response.json());
+      } catch {
+        this.playOnError = translateText('The game cannot go on');
+      } finally {
+        this.playOnBusy = false;
+      }
+    },
     cycleTileView(): void {
       this.tileView = nextTileView(this.tileView);
     },
@@ -887,6 +965,71 @@ body:has(#game-end.recap) {
   border-radius: 50%;
   vertical-align: -1px;
   box-shadow: 0 0 0 2px #fff, 0 0 0 3px #0003;
+}
+
+.recap-playon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+
+  h2 {
+    margin: 0 0 4px;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.recap-playon__votes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px !important;
+}
+
+.recap-playon__vote {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border: 1px solid #c9b8a6;
+  border-radius: 999px;
+  opacity: 0.7;
+
+  &--yes {
+    border-color: #2e8b57;
+    color: #2e8b57;
+    font-weight: 700;
+    opacity: 1;
+  }
+}
+
+.recap-playon__button {
+  min-width: 200px;
+  min-height: 48px;
+  padding: 0 26px;
+  border: 0;
+  border-radius: 10px;
+  background: #2e8b57;
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+.recap-playon__error {
+  flex-basis: 100%;
+  color: #c0392b;
 }
 
 .recap-solo {
@@ -1210,6 +1353,15 @@ body:has(#game-end.recap) {
 
   .recap-label {
     color: #fff;
+  }
+
+  // The chart fills its panel: the old summary page gave it a fixed 950px, cut off here.
+  .victory-point-chart-container {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    height: clamp(260px, 32vw, 400px);
+    margin: 0;
   }
 }
 

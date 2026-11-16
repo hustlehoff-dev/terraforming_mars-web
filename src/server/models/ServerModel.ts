@@ -77,6 +77,11 @@ export class Server {
       draftDeadline: game.draftDeadline,
       paused: game.paused,
       endedEarly: game.endedEarly,
+      playOn: {
+        offered: game.canPlayOn(),
+        active: game.playOn,
+        votes: game.players.filter((player) => game.playOnVotes.has(player.id)).map((player) => player.color),
+      },
       initialDraftStage: game.phase !== Phase.INITIALDRAFTING ? undefined :
         game.initialDraftIteration <= 2 ? 'projects' : game.initialDraftIteration === 3 ? 'preludes' : 'ceos',
       gameOptions: this.getGameOptionsAsModel(game.gameOptions),
