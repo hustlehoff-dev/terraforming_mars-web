@@ -7,6 +7,15 @@
       <h2 v-i18n>Colonies</h2>
       <small v-if="tradeable.size" class="mission-colonies__hint" v-i18n>Click a colony to trade with, then choose how to pay.</small>
     </header>
+    <!-- How colonies work, in three lines (open until the player folds it). -->
+    <details class="mission-colonies__legend" :open="legendOpen" @toggle="rememberLegend">
+      <summary v-i18n>How do colonies work?</summary>
+      <ul>
+        <li><b v-i18n>Ship</b> <span v-i18n>Once per generation per ship: pay 9 M€, 3 energy or 3 titanium and get the trade income, the number under the white cube. The cube then moves back and climbs again each generation.</span></li>
+        <li><b v-i18n>Colony</b> <span v-i18n>Standard project (17 M€): your marker on the first free space, you get what is drawn there. From then on, every trade with this moon, by anyone, gives you its BONUS.</span></li>
+        <li><b v-i18n>Grey moon</b> <span v-i18n>Not active yet: it opens when someone plays a card that holds its resource.</span></li>
+      </ul>
+    </details>
     <!-- Trade fleets still free this generation, per player. -->
     <ul v-if="players.length" class="mission-colonies__fleets" :aria-label="$t('Trade fleets')">
       <li v-for="player in players" :key="player.color">
@@ -57,6 +66,25 @@ import {translateMessage, translateTextWithParams} from '@/client/directives/i18
  * the trade fleets each player still has this generation. When the player can trade, the open
  * colonies are lit: click one, then "Trade: 9 M€" (or another way to pay) at the bottom.
  */
+const LEGEND_KEY = 'colonies-legend-folded';
+function legendFolded(): boolean {
+  try {
+    return window.localStorage.getItem(LEGEND_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+const legendOpen = ref(!legendFolded());
+function rememberLegend(event: Event) {
+  const open = (event.target as HTMLDetailsElement).open;
+  legendOpen.value = open;
+  try {
+    window.localStorage.setItem(LEGEND_KEY, open ? '0' : '1');
+  } catch {
+    // Only for this page.
+  }
+}
+
 const props = defineProps<{
   colonies: ReadonlyArray<ColonyModel>,
   players: ReadonlyArray<PublicPlayerModel>,
@@ -233,6 +261,34 @@ defineExpose({openWindow});
 .mission-colonies__hint {
   color: #cfe0e6;
   font-size: 0.85rem;
+}
+
+.mission-colonies__legend {
+  margin: 0;
+  padding: 8px 18px;
+  border-bottom: 1px solid #ffffff14;
+  color: #cfe0e6;
+  font-size: 0.85rem;
+
+  summary {
+    color: #f6e2b8;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  ul {
+    display: grid;
+    gap: 4px;
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  b {
+    display: inline-block;
+    min-width: 92px;
+    color: #a2eeff;
+  }
 }
 
 .mission-colonies__fleets {
