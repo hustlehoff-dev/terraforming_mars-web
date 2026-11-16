@@ -178,7 +178,7 @@ function productionClass(value: number): string {
   top: clamp(12px, 2dvh, 20px);
   left: clamp(10px, 2vw, 30px);
   display: grid;
-  width: min(440px, 36vw);
+  width: min(500px, 38vw);
   justify-items: start;
   gap: 6px;
 }
@@ -187,7 +187,7 @@ function productionClass(value: number): string {
   --player: #9aa4ab;
 
   display: grid;
-  width: 92%;
+  width: 100%;
   grid-template-columns: 5px minmax(0, 1fr) auto;
   grid-template-areas:
     'strip who facts'
@@ -459,12 +459,15 @@ function productionClass(value: number): string {
   padding: 0;
   list-style: none;
 
+  // Icon, amount and production side by side, never under one another.
   li {
     display: flex;
+    min-width: 0;
     align-items: center;
     justify-content: center;
     gap: 3px;
-    padding: 3px 2px;
+    padding: 3px 4px;
+    white-space: nowrap;
     border-radius: 5px;
     background: #ffffff0d;
     font-variant-numeric: tabular-nums;
@@ -473,6 +476,7 @@ function productionClass(value: number): string {
   img {
     width: 20px;
     height: 20px;
+    flex: none;
     object-fit: contain;
   }
 
