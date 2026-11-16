@@ -133,6 +133,21 @@ function deckActivity(message: LogMessage): DeckActivity | undefined {
   return cards.length ? {kind, cards} : undefined;
 }
 
+/**
+ * How a trade was paid for: the template, where the colony is in its data and the payment as icons.
+ * The gains that follow (trade income, colony bonuses) are folded into the trade like any action.
+ */
+const tradeMessages = new Map<string, {colony: number, spent?: (data: LogMessage['data']) => string}>([
+  ['${0} spent ${1}:r:mc: to trade with ${2}', {colony: 2, spent: (data) => `-${data[1]?.value}:r:mc:`}],
+  ['${0} spent ${1}:r:energy: to trade with ${2}', {colony: 2, spent: (data) => `-${data[1]?.value}:r:energy:`}],
+  ['${0} spent ${1}:r:titanium: to trade with ${2}', {colony: 2, spent: (data) => `-${data[1]?.value}:r:titanium:`}],
+  ['${0} spent 1:cr:floater: to trade with ${1}', {colony: 1, spent: () => '-1:cr:floater:'}],
+  ['${0} spent ${1}:cr:data: from ${2} to trade with ${3}', {colony: 3, spent: (data) => `-${data[1]?.value}:cr:data:`}],
+  ['${0} spent ${1} ${2} from ${3} to trade with ${4}', {colony: 4}],
+  ['${0} used ${1} action to trade with ${2}', {colony: 2}],
+  ['${0} traded with ${1}', {colony: 1}],
+]);
+
 function toActivity(message: LogMessage): Activity | undefined {
   const [actor, detail, extra, location] = message.data;
   if (message.message === '${0} fizzled. ${1} gains 15:r:mc:' && actor?.type === LogMessageDataType.CARD && detail?.type === LogMessageDataType.PLAYER) {
@@ -150,6 +165,11 @@ function toActivity(message: LogMessage): Activity | undefined {
     // '${0} played ${1} [ ${2} ]' carries the payment, e.g. `-13:r:mc: -2:r:steel:`.
     const spent = cardKind === 'played' && extra?.type === LogMessageDataType.MARKDOWN && extra.value !== '0' ? String(extra.value) : undefined;
     return {kind: cardKind, player, card: detail.value, ...(spent !== undefined ? {spent} : {})};
+  }
+  const trade = tradeMessages.get(message.message);
+  const tradeColony = trade !== undefined ? message.data[trade.colony] : undefined;
+  if (trade !== undefined && tradeColony?.type === LogMessageDataType.COLONY) {
+    return {kind: 'trade', player, subject: tradeColony.value, ...(trade.spent ? {spent: trade.spent(message.data)} : {})};
   }
   switch (message.message) {
   case '${0} ${1} ${2} at ${3}':
@@ -175,9 +195,8 @@ function toActivity(message: LogMessage): Activity | undefined {
     }
     break;
   case '${0} built a colony on ${1}':
-  case '${0} traded with ${1}':
     if (detail?.type === LogMessageDataType.COLONY) {
-      return {kind: message.message.includes('traded') ? 'trade' : 'colony', player, subject: detail.value};
+      return {kind: 'colony', player, subject: detail.value};
     }
     break;
   case '${0} raised the temperature ${1} step(s)':
@@ -318,7 +337,9 @@ export class GameLogs {
         }
       } else if (message.action && current && activity) {
         if (current.kind === 'action' && !current.card && (activity.card || !current.steps?.length)) {
-          Object.assign(current, activity, {player: message.action.player});
+          // A trade paid with M€ or titanium already logged the payment: not twice.
+          const {spent: _spent, ...rest} = activity;
+          Object.assign(current, spentSeen ? rest : activity, {player: message.action.player});
         } else if ((activity.kind === 'placed' || activity.kind === 'removed') && activity.space && activity.subject) {
           addStep(current, {kind: activity.kind, space: activity.space, subject: activity.subject});
           if (activity.kind === 'placed') {

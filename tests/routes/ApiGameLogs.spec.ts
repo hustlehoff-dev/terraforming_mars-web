@@ -19,8 +19,10 @@ import {PermafrostExtraction} from '@/server/cards/base/PermafrostExtraction';
 import {CupolaCity} from '@/server/cards/base/CupolaCity';
 import {Birds} from '@/server/cards/base/Birds';
 import {Fish} from '@/server/cards/base/Fish';
+import {Ganymede} from '@/server/colonies/Ganymede';
 import {SellPatentsStandardProject} from '@/server/cards/base/standardProjects/SellPatentsStandardProject';
 import {OrOptions} from '@/server/inputs/OrOptions';
+import {AndOptions} from '@/server/inputs/AndOptions';
 import {SelectProjectCardToPlay} from '@/server/inputs/SelectProjectCardToPlay';
 import {SelectSpace} from '@/server/inputs/SelectSpace';
 import {SelectStandardProjectToPlay} from '@/server/inputs/SelectStandardProjectToPlay';
@@ -194,6 +196,53 @@ describe('ApiGameLogs', () => {
         targets: [{player: rival.color, effects: '-2:p:plants:'}],
       },
     ]);
+  });
+
+  it('shows a trade as the colony, what it cost and what it gave', async () => {
+    const [game, player, rival] = testGame(2);
+    await scaffolding.ctx.gameLoader.add(game);
+    game.gameLog.length = 0;
+    const ganymede = new Ganymede();
+    game.log('${0} spent ${1}:r:energy: to trade with ${2}', (b) => b.player(player).number(3).colony(ganymede));
+    player.stock.add(Resource.PLANTS, 2, {log: true});
+    rival.stock.add(Resource.PLANTS, 1, {log: true});
+    game.log('${0} passed', (b) => b.player(rival));
+
+    scaffolding.url = '/api/game/logs?id=' + player.id + '&view=activity';
+    await scaffolding.get(ApiGameLogs.INSTANCE, res);
+    const history = JSON.parse(res.content);
+    expect(history.map(({key: _key, ...event}: {key: string}) => event)).deep.eq([
+      {kind: 'passed', player: rival.color},
+      {kind: 'trade', player: player.color, subject: 'Ganymede', spent: '-3:r:energy:', effects: '+2:r:plants:',
+        targets: [{player: rival.color, effects: '+1:r:plants:'}]},
+    ]);
+  });
+
+  it('shows a real trade paid with titanium once, under the colony', async () => {
+    const [game, player] = testGame(2, {coloniesExtension: true});
+    await scaffolding.ctx.gameLoader.add(game);
+    game.gameLog.length = 0;
+    player.titanium = 3;
+    player.takeAction();
+    const options = cast(player.getWaitingFor(), OrOptions);
+    const index = options.options.findIndex((option) => option instanceof AndOptions);
+    const trade = cast(options.options[index], AndOptions);
+    const pay = cast(trade.options[0], OrOptions);
+    const titanium = pay.options.findIndex((option) => String(option.title).includes('titanium') ||
+      JSON.stringify(option.title).includes('titanium'));
+    const colony = game.colonies.find((candidate) => candidate.isActive)!;
+    player.process({type: 'or', index, response: {type: 'and', responses: [
+      {type: 'or', index: titanium, response: {type: 'option'}}, {type: 'colony', colonyName: colony.name}]}});
+    game.deferredActions.runAll(() => {});
+
+    scaffolding.url = '/api/game/logs?id=' + player.id + '&view=activity';
+    await scaffolding.get(ApiGameLogs.INSTANCE, res);
+    const history = JSON.parse(res.content);
+    const entry = history.find((event: {kind: string}) => event.kind === 'trade');
+    expect(entry?.subject).eq(colony.name);
+    expect(entry?.spent).eq('-3:r:titanium:');
+    expect(entry?.effects ?? '').not.contains('titanium');
+    expect(entry?.effects).is.not.empty;
   });
 
   it('shows the sold cards to every player', async () => {

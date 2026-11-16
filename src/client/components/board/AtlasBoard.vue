@@ -46,7 +46,7 @@
     <aside class="atlas-inspector" :aria-label="$t('Board')">
       <div class="atlas-inspector__tools">
         <button type="button" :aria-pressed="showTracks" @click="showTracks = !showTracks" v-i18n>Tracks</button>
-        <MissionColonies :colonies="game.colonies" :players="players" :can-trade="canTradeColonies" :trade-costs="tradeCosts" :my-color="myColor" @trade="$emit('trade-colonies')" />
+        <MissionColonies :colonies="game.colonies" :players="players" :trade-input="tradeInput" @trade="(response) => $emit('trade-colonies', response)" />
         <button type="button" @click="$emit('toggleTileView')">{{ $t(nextView + ' tiles') }}</button>
       </div>
     </aside>
@@ -125,8 +125,7 @@ import {PublicPlayerModel} from '@/common/models/PlayerModel';
 import {TileType, tileTypeToString} from '@/common/TileType';
 import {getCard} from '@/client/cards/ClientCardManifest';
 import {SpaceId} from '@/common/Types';
-import {Message} from '@/common/logs/Message';
-import {Color} from '@/common/Color';
+import {PlayerInputModel} from '@/common/models/PlayerInputModel';
 import {SoundManager} from '@/client/utils/SoundManager';
 import {BoardName} from '@/common/boards/BoardName';
 import {getGlobalParameterMaximums} from '@/common/boards/GlobalParameterMaximums';
@@ -164,9 +163,7 @@ export default defineComponent({
   emits: ['toggleTileView', 'trade-colonies'],
   props: {
     orbitLayout: Boolean,
-    canTradeColonies: Boolean,
-    tradeCosts: {type: Array as () => ReadonlyArray<string | Message>, default: () => []},
-    myColor: {type: String as () => Color, default: undefined},
+    tradeInput: {type: Object as () => PlayerInputModel | undefined, default: undefined},
     players: {type: Array as () => ReadonlyArray<PublicPlayerModel>, default: () => []},
     game: {
       type: Object as () => GameModel,

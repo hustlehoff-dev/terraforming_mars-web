@@ -5,6 +5,7 @@
   <dialog v-if="colonies.length" ref="dialog" class="mission-colonies" :aria-label="$t('Colonies')" @click.self="closeWindow">
     <header>
       <h2 v-i18n>Colonies</h2>
+      <small v-if="tradeable.size" class="mission-colonies__hint" v-i18n>Click a colony to trade with, then choose how to pay.</small>
     </header>
     <!-- Trade fleets still free this generation, per player. -->
     <ul v-if="players.length" class="mission-colonies__fleets" :aria-label="$t('Trade fleets')">
@@ -17,77 +18,80 @@
         <small>{{ freeFleets(player) }} / {{ player.fleetSize }}</small>
       </li>
     </ul>
-    <!-- Trading: what sending a ship costs, and why it cannot be done right now. -->
-    <div class="mission-colonies__trade-bar">
-      <span class="mission-colonies__trade-title"><span aria-hidden="true">🚀</span>{{ $t('Send a trade ship') }}</span>
-      <span class="mission-colonies__costs">
-        <template v-for="(cost, index) in costs" :key="index">
-          <span v-if="index > 0" class="mission-colonies__or" v-i18n>or</span>
-          <span class="mission-colonies__cost">{{ cost }}</span>
-        </template>
-      </span>
-      <button v-if="canTrade" type="button" class="mission-close mission-colonies__trade" @click="trade" v-i18n>Send a ship</button>
-      <small v-else class="mission-colonies__why">{{ $t(whyNot) }}</small>
-    </div>
+    <!-- While trading is possible: colonies open for trade are lit and chosen with a click. -->
     <div class="mission-colonies__tiles">
-      <div v-for="colony in colonies" :key="colony.name" class="mission-colonies__tile" :class="{'mission-colonies__tile--inactive': !colony.isActive}">
+      <component :is="tradeable.has(colony.name) ? 'button' : 'div'" v-for="colony in colonies" :key="colony.name"
+        :type="tradeable.has(colony.name) ? 'button' : undefined" class="mission-colonies__tile"
+        :class="{
+          'mission-colonies__tile--inactive': !colony.isActive,
+          'mission-colonies__tile--open': tradeable.has(colony.name),
+          'mission-colonies__tile--closed': tradeable.size > 0 && !tradeable.has(colony.name),
+          'mission-colonies__tile--picked': picked === colony.name,
+        }"
+        :aria-pressed="tradeable.has(colony.name) ? picked === colony.name : undefined"
+        @click="tradeable.has(colony.name) && (picked = colony.name)">
         <Colony :colony="colony" :active="colony.isActive" />
-      </div>
+      </component>
     </div>
     <footer class="mission-window-footer">
       <button type="button" class="mission-close" @click="closeWindow" v-i18n>Close</button>
+      <button v-for="pay in payments" :key="pay.index" type="button" class="mission-close mission-colonies__trade"
+        :disabled="picked === undefined" @click="trade(pay.index)">{{ pay.label }}</button>
     </footer>
   </dialog>
 </template>
 
 <script setup lang="ts">
-import {computed, ref} from 'vue';
+import {computed, ref, watch} from 'vue';
 import Colony from '@/client/components/colonies/Colony.vue';
 import {ColonyModel} from '@/common/models/ColonyModel';
+import {ColonyName} from '@/common/colonies/ColonyName';
 import {PublicPlayerModel} from '@/common/models/PlayerModel';
-import {Color} from '@/common/Color';
-import {Message} from '@/common/logs/Message';
-import {ENERGY_TRADE_COST, MC_TRADE_COST, TITANIUM_TRADE_COST} from '@/common/constants';
+import {PlayerInputModel} from '@/common/models/PlayerInputModel';
+import {InputResponse} from '@/common/inputs/InputResponse';
 import {translateMessage, translateTextWithParams} from '@/client/directives/i18n';
 
 /*
  * The colony tiles of the Colonies expansion (they lie next to the board, not on Mars): a button
  * that opens a window with every tile, its track, its colonies and the ships trading there, and
- * the trade fleets each player still has this generation.
+ * the trade fleets each player still has this generation. When the player can trade, the open
+ * colonies are lit: click one, then "Trade: 9 M€" (or another way to pay) at the bottom.
  */
 const props = defineProps<{
   colonies: ReadonlyArray<ColonyModel>,
   players: ReadonlyArray<PublicPlayerModel>,
-  canTrade?: boolean,
-  /** The ways to pay for a trade offered right now (with the player's discounts), from the action menu. */
-  tradeCosts?: ReadonlyArray<string | Message>,
-  myColor?: Color,
+  /** "Trade with a colony tile" from the action menu (how to pay, then which colony), when it can be done now. */
+  tradeInput?: PlayerInputModel,
 }>();
-const emit = defineEmits<{trade: []}>();
+const emit = defineEmits<{trade: [response: InputResponse]}>();
 const dialog = ref<HTMLDialogElement>();
+const picked = ref<ColonyName>();
 
 function freeFleets(player: PublicPlayerModel): number {
   return Math.max(0, player.fleetSize - player.tradesThisGeneration);
 }
 
-/** "Pay 9 M€" -> "9 M€": the offered ways to pay, or the standard costs when trading is not offered. */
-const costs = computed(() => {
-  if (props.tradeCosts?.length) {
-    return props.tradeCosts.map((cost) => (typeof cost === 'string' ? cost : translateMessage(cost)).replace(/^(Pay|Wydaj|Zapłać)\s*:?\s*/i, ''));
+const payInput = computed(() => props.tradeInput?.type === 'and' ? props.tradeInput.options[0] : undefined);
+const colonyInput = computed(() => props.tradeInput?.type === 'and' ? props.tradeInput.options[1] : undefined);
+const tradeable = computed(() => new Set(colonyInput.value?.type === 'colony' ? colonyInput.value.coloniesModel.map((colony) => colony.name) : []));
+
+/** One button per way to pay, e.g. "Trade: 9 M€", "Trade: 3 energy". */
+const payments = computed(() => {
+  const pay = payInput.value;
+  if (pay?.type !== 'or' || tradeable.value.size === 0) {
+    return [];
   }
-  return [
-    translateTextWithParams('${0} M€', [String(MC_TRADE_COST)]),
-    translateTextWithParams('${0} energy', [String(ENERGY_TRADE_COST)]),
-    translateTextWithParams('${0} titanium', [String(TITANIUM_TRADE_COST)]),
-  ];
+  return pay.options.map((option, index) => {
+    const title = typeof option.title === 'string' ? translateTextWithParams(option.title, []) : translateMessage(option.title);
+    return {index, label: translateTextWithParams('Trade: ${0}', [title.replace(/^(Pay|Wydaj|Zapłać)\s*:?\s*/i, '')])};
+  });
 });
 
-const whyNot = computed(() => {
-  const me = props.players.find((player) => player.color === props.myColor);
-  if (me !== undefined && freeFleets(me) === 0) {
-    return 'No free trade ship this generation';
+// A colony that is no longer open (or the end of trading) clears the choice.
+watch(tradeable, (open) => {
+  if (picked.value !== undefined && !open.has(picked.value)) {
+    picked.value = undefined;
   }
-  return 'You can trade as an action on your turn';
 });
 
 function openWindow() {
@@ -98,15 +102,22 @@ function openWindow() {
 }
 
 function closeWindow() {
+  picked.value = undefined;
   if (typeof dialog.value?.close === 'function') {
     dialog.value.close();
   }
 }
 
-function trade() {
+function trade(payIndex: number) {
+  const colonyName = picked.value;
+  if (colonyName === undefined) {
+    return;
+  }
   closeWindow();
-  emit('trade');
+  emit('trade', {type: 'and', responses: [{type: 'or', index: payIndex, response: {type: 'option'}}, {type: 'colony', colonyName}]});
 }
+
+defineExpose({openWindow});
 
 </script>
 
@@ -167,9 +178,6 @@ function trade() {
   }
 
   header {
-    position: sticky;
-    z-index: 2;
-    top: 0;
     display: flex;
     align-items: center;
     gap: 14px;
@@ -203,69 +211,27 @@ function trade() {
 }
 
 .mission-colonies .mission-window-footer {
+  flex-wrap: wrap;
+
   .mission-close {
     min-width: 0;
-    flex: 0 1 160px;
+    flex: 0 1 200px;
     padding-inline: 12px;
   }
 
   .mission-colonies__trade {
     border-color: #e2c27f;
     color: #ffedc6;
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
   }
 }
 
-.mission-colonies__trade-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 14px;
-  padding: 10px 18px;
-  border-bottom: 1px solid #ffffff14;
-  background: #e2c27f14;
-
-  .mission-colonies__trade {
-    min-width: 0;
-    min-height: 36px;
-    margin-left: auto;
-    padding-inline: 18px;
-    border-color: #e2c27f;
-    color: #ffedc6;
-  }
-}
-
-.mission-colonies__trade-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: #f6e2b8;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.mission-colonies__costs {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.mission-colonies__cost {
-  padding: 3px 9px;
-  border: 1px solid #6f8c98;
-  border-radius: 999px;
-  background: #0b141c;
-  font-weight: 700;
-}
-
-.mission-colonies__or {
-  color: #9fb8c2;
-  font-size: 0.85rem;
-}
-
-.mission-colonies__why {
-  margin-left: auto;
-  color: #9fb8c2;
+.mission-colonies__hint {
+  color: #cfe0e6;
   font-size: 0.85rem;
 }
 
@@ -315,6 +281,33 @@ function trade() {
 }
 
 .mission-colonies__tile {
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  font: inherit;
+
+  &--open {
+    cursor: pointer;
+
+    .colony-card {
+      box-shadow: 0 0 0 2px #e2c27f, 0 10px 24px #000a;
+    }
+
+    &:hover .colony-card {
+      box-shadow: 0 0 0 3px #ffe9bd, 0 0 18px #e2c27f88;
+    }
+  }
+
+  &--picked .colony-card,
+  &--picked:hover .colony-card {
+    box-shadow: 0 0 0 4px #b4ffeb, 0 0 24px #b4ffeb99;
+  }
+
+  &--closed {
+    opacity: 0.4;
+  }
+
   .colony-card {
     margin: 0;
     border-radius: 10px;

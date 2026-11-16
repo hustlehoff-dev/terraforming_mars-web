@@ -72,6 +72,10 @@
         </div>
       </div>
     </div>
+    <!-- Trade or new colony: the colony tile as it is now (track, colonies, ships). -->
+    <div v-else-if="previewColony" ref="preview" class="activity-feed__preview activity-feed__preview--colony" :style="previewStyle" aria-hidden="true">
+      <ColonyTile :colony="previewColony" :active="previewColony.isActive" />
+    </div>
     <!-- Milestone or award: its tile, name and what it asks for. -->
     <div v-else-if="previewMa" ref="preview" class="activity-feed__preview" :style="previewStyle" aria-hidden="true">
       <div class="activity-feed__ma">
@@ -95,6 +99,7 @@
 <script setup lang="ts">
 import {computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, useId, watch} from 'vue';
 import Card from '@/client/components/card/Card.vue';
+import ColonyTile from '@/client/components/colonies/Colony.vue';
 import ActivityCardReveal from './ActivityCardReveal.vue';
 import {getCard} from '@/client/cards/ClientCardManifest';
 import {CardType} from '@/common/cards/CardType';
@@ -383,6 +388,13 @@ onBeforeUnmount(() => {
     document.documentElement.style.removeProperty(name);
   }
 });
+const previewColony = computed(() => {
+  const entry = previewEntry.value;
+  if (!entry?.subject || (entry.kind !== 'trade' && entry.kind !== 'colony')) {
+    return undefined;
+  }
+  return props.viewModel.game.colonies.find((colony) => colony.name === entry.subject);
+});
 const previewMa = computed(() => {
   const entry = previewEntry.value;
   if (!entry?.subject || (entry.kind !== 'milestone' && entry.kind !== 'award')) {
@@ -584,7 +596,7 @@ function placePreview() {
 }
 
 function hoverEntry(entry: GameActivityModel, event?: Event) {
-  if ((entry.card || entry.steps?.length || entry.deck?.length || entry.kind === 'milestone' || entry.kind === 'award') && !previewPinned) {
+  if ((entry.card || entry.steps?.length || entry.deck?.length || ['milestone', 'award', 'trade', 'colony'].includes(entry.kind)) && !previewPinned) {
     previewAnchor = event?.currentTarget instanceof HTMLElement ? event.currentTarget : undefined;
     previewKey.value = entry.key;
     placePreview();
@@ -1009,6 +1021,13 @@ button.activity-feed__entry {
   .activity-feed__body {
     background: none;
   }
+}
+
+.activity-feed__preview--colony .colony-card {
+  margin: 0;
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px #e2c27f, 0 12px 28px #000c;
+  zoom: 0.8;
 }
 
 .activity-feed__ma {

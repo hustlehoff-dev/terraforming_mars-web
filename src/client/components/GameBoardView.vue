@@ -1,7 +1,8 @@
 <!-- Common widgets between player and spectator views -->
 <template>
   <a name="board" class="player_home_anchor hotkey-target"></a>
-  <AtlasBoard v-if="atlas" ref="atlasBoard" :game="game" :players="players" :tileView="tileView" :orbitLayout="detailsTarget !== undefined" @toggleTileView="$emit('toggleTileView')" />
+  <AtlasBoard v-if="atlas" ref="atlasBoard" :game="game" :players="players" :tileView="tileView" :orbitLayout="detailsTarget !== undefined"
+    :trade-input="tradeInput" @trade-colonies="(response) => $emit('trade-colonies', response)" @toggleTileView="$emit('toggleTileView')" />
   <Board
     v-else
     :spaces="game.spaces"
@@ -45,6 +46,7 @@
 </template>
 
 <script lang="ts">
+import {PlayerInputModel} from '@/common/models/PlayerInputModel';
 import {defineComponent, PropType} from 'vue';
 
 import {GameModel} from '@/common/models/GameModel';
@@ -77,9 +79,10 @@ export default defineComponent({
       required: true,
     },
     atlas: Boolean,
+    tradeInput: {type: Object as () => PlayerInputModel | undefined, default: undefined},
     detailsTarget: String,
   },
-  emits: ['toggleTileView'],
+  emits: ['toggleTileView', 'trade-colonies'],
   components: {
     AtlasBoard,
     Board,
