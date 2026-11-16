@@ -29,8 +29,12 @@ export class IoSulphurResearch extends Card implements IProjectCard {
     });
   }
 
+  public strongerEffect(player: IPlayer): boolean {
+    return player.tags.count(Tag.VENUS) >= 3;
+  }
+
   public override bespokePlay(player: IPlayer) {
-    player.drawCard(player.tags.count(Tag.VENUS) >= 3 ? 3 : 1);
+    player.drawCard(this.strongerEffect(player) ? 3 : 1);
     return undefined;
   }
 }

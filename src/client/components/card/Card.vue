@@ -165,6 +165,10 @@ export default defineComponent({
       const classes = [];
       classes.push('card-' + this.card.name.toLowerCase().replaceAll(' ', '-'));
 
+      // The stronger effect of the card is ready: it glows.
+      if (this.card.strongerEffect && !this.card.isDisabled) {
+        classes.push('card-stronger-effect');
+      }
       if (this.card.isDisabled) {
         classes.push('card-unavailable');
       } else if (!getPreferences().experimental_ui && this.actionUsed) {

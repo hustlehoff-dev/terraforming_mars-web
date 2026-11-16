@@ -35,8 +35,12 @@ export class NitrogenRichAsteroid extends Card implements IProjectCard {
     });
   }
 
+  public strongerEffect(player: IPlayer): boolean {
+    return player.tags.count(Tag.PLANT) >= 3;
+  }
+
   public override bespokePlay(player: IPlayer) {
-    if (player.tags.count(Tag.PLANT) < 3) {
+    if (!this.strongerEffect(player)) {
       player.production.add(Resource.PLANTS, 1, {log: true});
     } else {
       player.production.add(Resource.PLANTS, 4, {log: true});

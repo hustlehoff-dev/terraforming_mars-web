@@ -93,6 +93,9 @@ export function cardsToModel(
         model.countedEffects = counted;
       }
     }
+    if (options.showCalculatedCost && isIProjectCard(card) && card.strongerEffect?.(player) === true) {
+      model.strongerEffect = true;
+    }
     if (card.isDisabled) {
       model.isDisabled = true;
     } else if (options.enabled?.[index] === false) {

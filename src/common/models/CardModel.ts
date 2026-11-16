@@ -22,5 +22,7 @@ export interface CardModel {
      * What a card in hand would give right now when its amount depends on the game, e.g. Satellites:
      * M€ production for each space tag. Only amounts that are counted are listed.
      */
+    /** Played now, the card gives its stronger effect (e.g. 3 plant tags for Nitrogen-Rich Asteroid). */
+    strongerEffect?: boolean;
     countedEffects?: ReadonlyArray<{kind: 'production' | 'stock', resource: keyof Units, amount: number}>;
 }

@@ -27,6 +27,13 @@ export interface IProjectCard extends ICard {
   bonusResource?: Array<Resource>;
 
   /**
+   * For a card with a weaker and a stronger effect (e.g. Nitrogen-Rich Asteroid: 1 plant
+   * production, or 4 with 3 plant tags): true when playing it now gives the stronger one.
+   * The card then glows in the hand.
+   */
+  strongerEffect?(player: IPlayer): boolean;
+
+  /**
    * Resources held in reserve when paying for a card.
    *
    * Cards that require a unit of steel while playing, for instance.
