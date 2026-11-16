@@ -17,6 +17,18 @@
         <small>{{ freeFleets(player) }} / {{ player.fleetSize }}</small>
       </li>
     </ul>
+    <!-- Trading: what sending a ship costs, and why it cannot be done right now. -->
+    <div class="mission-colonies__trade-bar">
+      <span class="mission-colonies__trade-title"><span aria-hidden="true">🚀</span>{{ $t('Send a trade ship') }}</span>
+      <span class="mission-colonies__costs">
+        <template v-for="(cost, index) in costs" :key="index">
+          <span v-if="index > 0" class="mission-colonies__or" v-i18n>or</span>
+          <span class="mission-colonies__cost">{{ cost }}</span>
+        </template>
+      </span>
+      <button v-if="canTrade" type="button" class="mission-close mission-colonies__trade" @click="trade" v-i18n>Send a ship</button>
+      <small v-else class="mission-colonies__why">{{ $t(whyNot) }}</small>
+    </div>
     <div class="mission-colonies__tiles">
       <div v-for="colony in colonies" :key="colony.name" class="mission-colonies__tile" :class="{'mission-colonies__tile--inactive': !colony.isActive}">
         <Colony :colony="colony" :active="colony.isActive" />
@@ -29,22 +41,54 @@
 </template>
 
 <script setup lang="ts">
-import {ref} from 'vue';
+import {computed, ref} from 'vue';
 import Colony from '@/client/components/colonies/Colony.vue';
 import {ColonyModel} from '@/common/models/ColonyModel';
 import {PublicPlayerModel} from '@/common/models/PlayerModel';
+import {Color} from '@/common/Color';
+import {Message} from '@/common/logs/Message';
+import {ENERGY_TRADE_COST, MC_TRADE_COST, TITANIUM_TRADE_COST} from '@/common/constants';
+import {translateMessage, translateTextWithParams} from '@/client/directives/i18n';
 
 /*
  * The colony tiles of the Colonies expansion (they lie next to the board, not on Mars): a button
  * that opens a window with every tile, its track, its colonies and the ships trading there, and
  * the trade fleets each player still has this generation.
  */
-const props = defineProps<{colonies: ReadonlyArray<ColonyModel>, players: ReadonlyArray<PublicPlayerModel>}>();
+const props = defineProps<{
+  colonies: ReadonlyArray<ColonyModel>,
+  players: ReadonlyArray<PublicPlayerModel>,
+  canTrade?: boolean,
+  /** The ways to pay for a trade offered right now (with the player's discounts), from the action menu. */
+  tradeCosts?: ReadonlyArray<string | Message>,
+  myColor?: Color,
+}>();
+const emit = defineEmits<{trade: []}>();
 const dialog = ref<HTMLDialogElement>();
 
 function freeFleets(player: PublicPlayerModel): number {
   return Math.max(0, player.fleetSize - player.tradesThisGeneration);
 }
+
+/** "Pay 9 M€" -> "9 M€": the offered ways to pay, or the standard costs when trading is not offered. */
+const costs = computed(() => {
+  if (props.tradeCosts?.length) {
+    return props.tradeCosts.map((cost) => (typeof cost === 'string' ? cost : translateMessage(cost)).replace(/^(Pay|Wydaj|Zapłać)\s*:?\s*/i, ''));
+  }
+  return [
+    translateTextWithParams('${0} M€', [String(MC_TRADE_COST)]),
+    translateTextWithParams('${0} energy', [String(ENERGY_TRADE_COST)]),
+    translateTextWithParams('${0} titanium', [String(TITANIUM_TRADE_COST)]),
+  ];
+});
+
+const whyNot = computed(() => {
+  const me = props.players.find((player) => player.color === props.myColor);
+  if (me !== undefined && freeFleets(me) === 0) {
+    return 'No free trade ship this generation';
+  }
+  return 'You can trade as an action on your turn';
+});
 
 function openWindow() {
   const window = dialog.value;
@@ -57,6 +101,11 @@ function closeWindow() {
   if (typeof dialog.value?.close === 'function') {
     dialog.value.close();
   }
+}
+
+function trade() {
+  closeWindow();
+  emit('trade');
 }
 
 </script>
@@ -151,6 +200,73 @@ function closeWindow() {
   color: #eef6f8;
   font-size: 1.4rem;
   cursor: pointer;
+}
+
+.mission-colonies .mission-window-footer {
+  .mission-close {
+    min-width: 0;
+    flex: 0 1 160px;
+    padding-inline: 12px;
+  }
+
+  .mission-colonies__trade {
+    border-color: #e2c27f;
+    color: #ffedc6;
+  }
+}
+
+.mission-colonies__trade-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 10px 18px;
+  border-bottom: 1px solid #ffffff14;
+  background: #e2c27f14;
+
+  .mission-colonies__trade {
+    min-width: 0;
+    min-height: 36px;
+    margin-left: auto;
+    padding-inline: 18px;
+    border-color: #e2c27f;
+    color: #ffedc6;
+  }
+}
+
+.mission-colonies__trade-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #f6e2b8;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.mission-colonies__costs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.mission-colonies__cost {
+  padding: 3px 9px;
+  border: 1px solid #6f8c98;
+  border-radius: 999px;
+  background: #0b141c;
+  font-weight: 700;
+}
+
+.mission-colonies__or {
+  color: #9fb8c2;
+  font-size: 0.85rem;
+}
+
+.mission-colonies__why {
+  margin-left: auto;
+  color: #9fb8c2;
+  font-size: 0.85rem;
 }
 
 .mission-colonies__fleets {

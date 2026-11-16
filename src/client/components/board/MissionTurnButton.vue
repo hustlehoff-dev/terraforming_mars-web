@@ -16,7 +16,7 @@
             </span>
           </span>
           <ResourceIcon v-else-if="action.icon" :resource="action.icon" />
-          <span>{{ $t(action.label) }}</span>
+          <span>{{ $t(action.title ?? action.label) }}</span>
           <span v-if="action.cost !== undefined" class="mission-turn__cost">{{ action.cost }}</span>
         </button>
       </li>

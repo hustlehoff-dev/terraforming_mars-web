@@ -77,7 +77,11 @@
           :tileView="tileView"
           :players="playerView.players"
           :detailsTarget="cinematic ? '#mission-board-details' : undefined"
+          :can-trade-colonies="canTradeColonies"
+          :trade-costs="colonyTradeCosts"
+          :my-color="thisPlayer.color"
           atlas
+          @trade-colonies="openColonyTrade"
           @toggleTileView="cycleTileView()"
         />
         <ActivityFeed v-if="cinematic" :viewModel="playerView" @spaceClicked="jumpToLogSpace" @triggers="showEffectBadges" @cardPlays="showCardPlays" />
@@ -91,10 +95,11 @@
           <MissionParameters :game="game" :solo="playerView.players.length === 1">
             <button type="button" class="mission-hud-ma" :class="{lit: hudMenusState.awards}" @click="hudShow('awards')"><span aria-hidden="true">🏆</span>{{ $t('Awards') }}</button>
             <button type="button" class="mission-hud-ma" :class="{lit: hudMenusState.milestones}" @click="hudShow('milestones')"><span aria-hidden="true">🏅</span>{{ $t('Milestones') }}</button>
-            <MissionColonies :colonies="game.colonies" :players="playerView.players" />
+            <MissionColonies :colonies="game.colonies" :players="playerView.players" :can-trade="canTradeColonies"
+              :trade-costs="colonyTradeCosts" :my-color="thisPlayer.color" @trade="openColonyTrade" />
             <button type="button" :aria-expanded="missionPanel === 'details'" @click="toggleMissionPanel('details')">{{ $t('Game details') }}</button>
             <button type="button" :aria-expanded="missionPanel === 'log'" @click="toggleMissionPanel('log')">{{ $t('Game log') }}</button>
-            <button type="button" class="primary" :aria-expanded="missionPanel === 'actions'" @click="openActions">{{ $t(finalGreenery ? 'Final greenery placement' : 'Actions') }}</button>
+            <button v-if="finalGreenery" type="button" class="primary" :aria-expanded="missionPanel === 'actions'" @click="toggleMissionPanel('actions')">{{ $t('Final greenery placement') }}</button>
             <button type="button" class="mission-pause-button" :disabled="pausing" @click="setPaused(true)"><span aria-hidden="true">⏸</span>{{ $t('Pause the game') }}</button>
           </MissionParameters>
           <MissionTurnButton v-if="!mapPlacement" :actions="quickActions" :cardActions="cardActions?.cards ?? []"
@@ -362,6 +367,7 @@ import {CardName} from '@/common/cards/CardName';
 import MissionParameters from '@/client/components/board/MissionParameters.vue';
 import MissionPlayersPanel from '@/client/components/board/MissionPlayersPanel.vue';
 import {PlayedCardLogModel} from '@/common/models/PlayedCardLogModel';
+import {Message} from '@/common/logs/Message';
 import {actionMenu, cardActionOption, getMissionQuickActions, MaxedParameters, MissionQuickAction, passOptionIndex, showsCards} from '@/client/components/board/MissionQuickAction';
 import MissionCardStage from '@/client/components/board/MissionCardStage.vue';
 import {SoundManager} from '@/client/utils/SoundManager';
@@ -575,6 +581,19 @@ export default defineComponent({
     },
     quickActions(): MissionQuickAction[] {
       return this.activeTurnColor === this.thisPlayer.color ? getMissionQuickActions(this.playerView.waitingFor, this.maxedParameters) : [];
+    },
+    colonyTradeIndex(): number {
+      const options = actionMenu(this.playerView.waitingFor)?.options;
+      return options?.findIndex((option) => option.type === 'and' && option.title === 'Trade with a colony tile') ?? -1;
+    },
+    /** The ways to pay for a trade offered now, e.g. "Pay 9 M€", "Pay 3 energy". */
+    colonyTradeCosts(): ReadonlyArray<string | Message> {
+      const trade = actionMenu(this.playerView.waitingFor)?.options[this.colonyTradeIndex];
+      const pay = trade?.type === 'and' ? trade.options[0] : undefined;
+      return pay?.type === 'or' ? pay.options.map((option) => option.title) : [];
+    },
+    canTradeColonies(): boolean {
+      return this.activeTurnColor === this.thisPlayer.color && !this.mapPlacement && this.colonyTradeIndex !== -1;
     },
     quickInput(): PlayerInputModel | undefined {
       const input = this.playerView.waitingFor;
@@ -884,10 +903,20 @@ export default defineComponent({
     SoundManager.stopMissionAmbience();
   },
   methods: {
+    openColonyTrade() {
+      if (this.canTradeColonies) {
+        this.openQuickAction({id: 'menu:' + this.colonyTradeIndex, index: this.colonyTradeIndex, label: 'Trade'});
+      }
+    },
     openQuickAction(action: MissionQuickAction) {
       const option = actionMenu(this.playerView.waitingFor)?.options[action.index] ?? (this.playerView.waitingFor?.type === 'or' ? this.playerView.waitingFor.options[action.index] : undefined);
       if (action.id === 'sell') {
         this.hudShow('sell');
+        return;
+      }
+      // A plain menu entry (no further choice) is done at once, like the other buttons.
+      if (action.id.startsWith('menu:') && option?.type === 'option' && option.title !== '${0} (Turmoil ${1})') {
+        this.respondToMenu({type: 'or', index: action.index, response: {type: 'option'}});
         return;
       }
       if (action.id === 'heat') {
@@ -912,12 +941,12 @@ export default defineComponent({
           return;
         }
       }
-      this.quickAction = action;
       // Placing a tile (e.g. greenery from plants) happens on the map: no window, only the
       // "Current action" banner and Cancel. Other choices open the decision window.
       if (this.quickInput?.type !== 'space') {
         this.showMissionPanel('actions');
       }
+      this.quickAction = action;
     },
     stageCardAction(card: CardModel, origin?: DOMRect) {
       this.closeProjectPreview();
@@ -942,16 +971,7 @@ export default defineComponent({
       }
       this.stagedAction = undefined;
     },
-    /** "Actions": the decision waiting for the player, or else everything that can be done now. */
-    openActions() {
-      const input = this.playerView.waitingFor;
-      if (input !== undefined && actionMenu(input) === undefined && !showsCards(input)) {
-        this.toggleMissionPanel('actions');
-      } else {
-        this.hudShow('all');
-      }
-    },
-    hudShow(menu: 'all' | 'awards' | 'milestones' | 'actions' | 'sell') {
+    hudShow(menu: 'awards' | 'milestones' | 'actions' | 'sell') {
       (this.$refs.hudMenus as InstanceType<typeof MissionHudMenus> | undefined)?.show(menu);
     },
     showPlayerCards(color: Color) {

@@ -2,6 +2,7 @@ import {CardName} from '@/common/cards/CardName';
 import {CardModel} from '@/common/models/CardModel';
 import {PlayerInputModel} from '@/common/models/PlayerInputModel';
 import {Resource} from '@/common/Resource';
+import {Message} from '@/common/logs/Message';
 
 /** One element of what an action gives: an icon image, optional text before it, and whether it is production. */
 export type ActionEffect = {img: string, text?: string, production?: boolean};
@@ -18,6 +19,8 @@ export type MissionQuickAction = {
   cost?: number;
   /** Shown but not usable now. */
   disabled?: boolean;
+  /** The menu entry's own title (may need parameters), for entries without a short label. */
+  title?: string | Message;
 };
 
 const ACTION_MENU_TITLES = new Set(['Take your first action', 'Take your next action']);
@@ -104,6 +107,26 @@ const MAXED_PROJECTS: Partial<Record<CardName, keyof MaxedParameters>> = {
   [CardName.AIR_SCRAPPING_STANDARD_PROJECT]: 'venus',
 };
 
+/**
+ * Action menu entries with a place of their own on screen: the turn button (pass, end turn), the
+ * hand, card actions, standard projects, the resource tiles, awards and milestones.
+ */
+const COVERED_TITLES = new Set([
+  'Pass for this generation', 'End Turn', 'Play project card', 'Perform an action from a played card',
+  'Standard projects', 'Sell patents', 'Convert ${0} plants into greenery',
+]);
+function covered(option: PlayerInputModel): boolean {
+  const title = titleOf(option);
+  return COVERED_TITLES.has(title) || option.buttonLabel === 'Convert heat' ||
+    title.startsWith('Fund an award') || title.startsWith('Claim a milestone') ||
+    (option.type === 'card' && option.selectBlueCardAction === true);
+}
+
+/** Short labels for the other entries (colony trade, Turmoil...); others show their own title. */
+const OTHER_LABELS: Record<string, string> = {
+  'Trade with a colony tile': 'Trade with a colony',
+};
+
 export function getMissionQuickActions(input: PlayerInputModel | undefined, maxed: MaxedParameters = {}): MissionQuickAction[] {
   if (input?.type !== 'or' || input.optional) {
     return [];
@@ -134,6 +157,10 @@ export function getMissionQuickActions(input: PlayerInputModel | undefined, maxe
           disabled: card.isDisabled === true || pointless(card) || maxed[MAXED_PROJECTS[card.name] ?? 'none' as keyof MaxedParameters] === true,
         });
       }
+    }
+    // Everything else the menu offers (colony trade, Turmoil delegate, expansion actions).
+    if (actionMenu(input) !== undefined && !covered(option)) {
+      actions.push({id: 'menu:' + index, index, label: OTHER_LABELS[title] ?? title, title: OTHER_LABELS[title] ?? option.title});
     }
   });
   return actions;

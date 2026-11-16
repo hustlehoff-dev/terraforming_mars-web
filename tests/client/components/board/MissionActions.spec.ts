@@ -35,4 +35,30 @@ describe('Mission actions', () => {
       {label: 'City', cost: 25, disabled: true, index: 2},
     ]);
   });
+
+  it('lists every menu entry without a place on screen (colonies, Turmoil, CEO, delegates, undo)', () => {
+    const turmoil = {message: '${0} (Turmoil ${1})', data: []};
+    const full = {...menu, options: [
+      ...(menu as {options: Array<PlayerInputModel>}).options,
+      {type: 'or', title: 'Claim a milestone', options: []},
+      {type: 'or', title: {message: 'Fund an award (${0} M€)', data: []}, options: []},
+      {type: 'space', title: {message: 'Convert ${0} plants into greenery', data: []}},
+      {type: 'option', title: 'Convert 8 heat into temperature', buttonLabel: 'Convert heat'},
+      {type: 'card', title: 'Sell patents', cards: []},
+      {type: 'and', title: 'Trade with a colony tile', options: []},
+      {type: 'option', title: turmoil, buttonLabel: 'Pay'},
+      {type: 'card', title: 'Use CEO once per game action', cards: []},
+      {type: 'party', title: 'Send a delegate in an area (5 M€)'},
+      {type: 'option', title: 'Undo last action', buttonLabel: 'Undo'},
+      {type: 'option', title: 'End Turn'},
+    ]} as unknown as PlayerInputModel;
+    const others = getMissionQuickActions(full).filter((action) => action.id.startsWith('menu:'));
+    expect(others.map(({index, title}) => ({index, title}))).deep.eq([
+      {index: 9, title: 'Trade with a colony'},
+      {index: 10, title: turmoil},
+      {index: 11, title: 'Use CEO once per game action'},
+      {index: 12, title: 'Send a delegate in an area (5 M€)'},
+      {index: 13, title: 'Undo last action'},
+    ]);
+  });
 });
