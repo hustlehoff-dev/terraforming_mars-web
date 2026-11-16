@@ -1,3 +1,4 @@
+import {ChatMessageModel} from '../common/models/ChatMessageModel';
 import {Color} from '../common/Color';
 import {Phase} from '../common/Phase';
 import {SerializedClaimedMilestone} from './milestones/ClaimedMilestone';
@@ -46,6 +47,7 @@ export type SerializedGame = {
     paused?: {by: Color, at: number};
     endedEarly?: {by: Color, kind: 'surrender' | 'ended'};
     lastSeen?: Array<[PlayerId, number]>;
+    chat?: Array<ChatMessageModel>;
     playOn?: boolean;
     playOnVotes?: Array<PlayerId>;
     gameOptions: GameOptions;

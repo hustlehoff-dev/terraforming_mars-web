@@ -9,50 +9,71 @@
       v-i18n>Activity feed</button>
     <div class="activity-feed__body" :class="{'activity-feed__body--expanded': expanded}">
       <ol :id="listId" ref="list" class="activity-feed__list" tabindex="0" @scroll.passive="updateScroll">
-        <li v-for="entry in shownEntries" :key="entry.key">
-          <component
-            :is="entry.card || entry.targetSpace || entry.deck?.length ? 'button' : 'div'"
-            :type="entry.card || entry.targetSpace || entry.deck?.length ? 'button' : undefined"
-            class="activity-feed__entry"
-            :class="{'activity-feed__entry--new': newKeys.has(entry.key)}"
-            :aria-label="entry.card || entry.targetSpace || entry.deck?.length ? entry.text : undefined"
-            :aria-expanded="entry.deck?.length ? reveal?.key === entry.key : entry.card ? previewKey === entry.key : undefined"
-            @click="inspect(entry)"
-            @pointerenter="hoverEntry(entry, $event)"
-            @pointerleave="unhoverEntry(entry)"
-            @focus="hoverEntry(entry, $event)"
-            @blur="unhoverEntry(entry)">
-            <span v-if="entry.player" class="activity-feed__marker" :class="'player_bg_color_' + entry.player" aria-hidden="true"></span>
-            <span class="activity-feed__line">
-              <strong v-if="entry.actor">{{ entry.actor + ' ' }}</strong>
-              <span v-if="isCardAction(entry)" class="activity-feed__action-tag"><span aria-hidden="true">➜</span>{{ $t('Card action') }}</span>
-              <span v-else class="activity-feed__verb">{{ entry.action + ' ' }}</span>
-              <b v-if="entry.subjectText">{{ entry.subjectText }}</b>
-              <span v-for="(step, index) in entry.stepLines" :key="index" class="activity-feed__reveal" v-html="'→ ' + renderIcons(step)"></span>
-              <span v-if="entry.spent" class="activity-feed__units activity-feed__units--spent" v-html="renderIcons(entry.spent)"></span>
-              <span v-if="entry.effects" class="activity-feed__units" v-html="renderIcons(entry.effects)"></span>
-              <span v-if="entry.scienceGained !== undefined" class="activity-feed__units" v-html="renderIcons('+' + entry.scienceGained + ':cr:science:')"></span>
-              <!-- Gains from the effect of another card (a passive effect, a corporation), each on its own line. -->
-              <span v-for="trigger in entry.triggerLines" :key="trigger.key" class="activity-feed__trigger">
-                <span aria-hidden="true">✦</span>
-                <span v-if="trigger.name" class="activity-feed__target-name" :class="'player_bg_color_' + trigger.player">{{ trigger.name }}</span>
-                <span>{{ trigger.label }}</span>
-                <span class="activity-feed__units" v-html="renderIcons(trigger.effects)"></span>
-              </span>
-              <span v-for="target in entry.targetLines" :key="target.player" class="activity-feed__target">
-                <span aria-hidden="true">→</span>
-                <span class="activity-feed__target-name" :class="'player_bg_color_' + target.player">{{ target.name }}</span>
-                <span class="activity-feed__units" v-html="renderIcons(target.effects)"></span>
-              </span>
+        <template v-for="item in feedItems" :key="item.key">
+          <li v-if="item.chat" class="activity-feed__chat" :class="{'activity-feed__chat--mine': item.chat.player === viewModel.color}">
+            <span class="activity-feed__marker" :class="'player_bg_color_' + item.chat.player" aria-hidden="true"></span>
+            <span class="activity-feed__chat-line">
+              <strong>{{ playerName(item.chat.player) }}</strong>
+              <span>{{ item.chat.text }}</span>
             </span>
-          </component>
-        </li>
+          </li>
+          <li v-for="entry in item.entries" :key="entry.key">
+            <component
+              :is="entry.card || entry.targetSpace || entry.deck?.length ? 'button' : 'div'"
+              :type="entry.card || entry.targetSpace || entry.deck?.length ? 'button' : undefined"
+              class="activity-feed__entry"
+              :class="{'activity-feed__entry--new': newKeys.has(entry.key)}"
+              :aria-label="entry.card || entry.targetSpace || entry.deck?.length ? entry.text : undefined"
+              :aria-expanded="entry.deck?.length ? reveal?.key === entry.key : entry.card ? previewKey === entry.key : undefined"
+              @click="inspect(entry)"
+              @pointerenter="hoverEntry(entry, $event)"
+              @pointerleave="unhoverEntry(entry)"
+              @focus="hoverEntry(entry, $event)"
+              @blur="unhoverEntry(entry)">
+              <span v-if="entry.player" class="activity-feed__marker" :class="'player_bg_color_' + entry.player" aria-hidden="true"></span>
+              <span class="activity-feed__line">
+                <strong v-if="entry.actor">{{ entry.actor + ' ' }}</strong>
+                <span v-if="isCardAction(entry)" class="activity-feed__action-tag"><span aria-hidden="true">➜</span>{{ $t('Card action') }}</span>
+                <span v-else class="activity-feed__verb">{{ entry.action + ' ' }}</span>
+                <b v-if="entry.subjectText">{{ entry.subjectText }}</b>
+                <span v-for="(step, index) in entry.stepLines" :key="index" class="activity-feed__reveal" v-html="'→ ' + renderIcons(step)"></span>
+                <span v-if="entry.spent" class="activity-feed__units activity-feed__units--spent" v-html="renderIcons(entry.spent)"></span>
+                <span v-if="entry.effects" class="activity-feed__units" v-html="renderIcons(entry.effects)"></span>
+                <span v-if="entry.scienceGained !== undefined" class="activity-feed__units" v-html="renderIcons('+' + entry.scienceGained + ':cr:science:')"></span>
+                <!-- Gains from the effect of another card (a passive effect, a corporation), each on its own line. -->
+                <span v-for="trigger in entry.triggerLines" :key="trigger.key" class="activity-feed__trigger">
+                  <span aria-hidden="true">✦</span>
+                  <span v-if="trigger.name" class="activity-feed__target-name" :class="'player_bg_color_' + trigger.player">{{ trigger.name }}</span>
+                  <span>{{ trigger.label }}</span>
+                  <span class="activity-feed__units" v-html="renderIcons(trigger.effects)"></span>
+                </span>
+                <span v-for="target in entry.targetLines" :key="target.player" class="activity-feed__target">
+                  <span aria-hidden="true">→</span>
+                  <span class="activity-feed__target-name" :class="'player_bg_color_' + target.player">{{ target.name }}</span>
+                  <span class="activity-feed__units" v-html="renderIcons(target.effects)"></span>
+                </span>
+              </span>
+            </component>
+          </li>
+        </template>
       </ol>
-      <p v-if="loaded && entries.length === 0" class="activity-feed__empty" v-i18n>No activity yet</p>
+      <p v-if="loaded && feedItems.length === 0" class="activity-feed__empty">{{ $t(filter === 'chat' ? 'No messages yet' : 'No activity yet') }}</p>
+      <!-- Chat: players write here; the messages show in the feed. -->
+      <form v-if="canChat && filter !== 'game'" class="activity-feed__write" @submit.prevent="sendChat">
+        <input v-model="draft" type="text" :maxlength="CHAT_MESSAGE_MAX_LENGTH" :placeholder="$t('Write a message')" :aria-label="$t('Write a message')"
+          enterkeyhint="send" autocomplete="off" @keydown.stop>
+        <button type="submit" :disabled="sending || draft.trim() === ''" :title="$t('Send')" :aria-label="$t('Send')">➤</button>
+      </form>
       <!-- Under the list, next to the latest entry: the title and the way back to the latest. -->
       <div class="activity-feed__header">
         <h2 v-i18n>Activity feed</h2>
         <button v-if="scrolled" type="button" @click="showLatest" v-i18n>Latest activity</button>
+        <!-- What the feed shows: everything, only the game, only the chat. -->
+        <span class="activity-feed__filter" role="group" :aria-label="$t('Show')">
+          <button v-for="option in FILTERS" :key="option.value" type="button" :aria-pressed="filter === option.value" @click="setFilter(option.value)">
+            {{ $t(option.label) }}<b v-if="option.value === 'chat' && unread > 0" class="activity-feed__unread">{{ unread }}</b>
+          </button>
+        </span>
       </div>
     </div>
     <div v-if="previewEntry?.groups.length" ref="preview" class="activity-feed__preview activity-feed__preview--deck" :style="previewStyle" aria-hidden="true">
@@ -117,6 +138,7 @@ import {deckLabels, GameActivityKind, GameActivityModel} from '@/common/models/G
 import {PlayedCardLogModel} from '@/common/models/PlayedCardLogModel';
 import {ViewModel} from '@/common/models/PlayerModel';
 import {isPlayerId, SpaceId} from '@/common/Types';
+import {CHAT_MESSAGE_MAX_LENGTH, ChatMessageModel} from '@/common/models/ChatMessageModel';
 
 const labels: Record<GameActivityKind, string> = {
   played: 'played',
@@ -321,6 +343,158 @@ function isCardAction(entry: GameActivityModel): boolean {
 const shownEntries = computed(() => entries.value.toReversed());
 
 /*
+ * The game chat, in the same list: each message right after the entry its sender saw last.
+ * A switch shows everything, only the game or only the chat.
+ */
+type FeedFilter = 'all' | 'game' | 'chat';
+const FILTERS: ReadonlyArray<{value: FeedFilter, label: string}> = [
+  {value: 'all', label: 'All'},
+  {value: 'game', label: 'Game'},
+  {value: 'chat', label: 'Chat'},
+];
+const FILTER_KEY = 'activity-feed-filter';
+function savedFilter(): FeedFilter {
+  try {
+    const value = window.localStorage.getItem(FILTER_KEY);
+    return value === 'game' || value === 'chat' ? value : 'all';
+  } catch {
+    return 'all';
+  }
+}
+const filter = ref<FeedFilter>(savedFilter());
+const chat = shallowRef<ReadonlyArray<ChatMessageModel>>([]);
+const draft = ref('');
+const sending = ref(false);
+/** Messages from the others that came while the chat was hidden. */
+const unread = ref(0);
+const canChat = computed(() => isPlayerId(props.viewModel.id));
+
+type FeedItem = {key: string, chat?: ChatMessageModel, entries: ReadonlyArray<(typeof shownEntries.value)[number]>};
+const feedItems = computed((): Array<FeedItem> => {
+  const showGame = filter.value !== 'chat';
+  const showChat = filter.value !== 'game';
+  const messages = showChat ? chat.value : [];
+  const known = new Set(shownEntries.value.map((entry) => entry.key));
+  const byAfter = new Map<string, Array<ChatMessageModel>>();
+  const before: Array<ChatMessageModel> = [];
+  const atEnd: Array<ChatMessageModel> = [];
+  for (const message of messages) {
+    if (message.after === undefined) {
+      before.push(message);
+    } else if (known.has(message.after)) {
+      byAfter.set(message.after, [...(byAfter.get(message.after) ?? []), message]);
+    } else {
+      atEnd.push(message);
+    }
+  }
+  const asItem = (message: ChatMessageModel): FeedItem => ({key: 'chat:' + message.id, chat: message, entries: []});
+  const items: Array<FeedItem> = before.map(asItem);
+  for (const entry of shownEntries.value) {
+    if (showGame) {
+      items.push({key: entry.key, entries: [entry]});
+    }
+    items.push(...(byAfter.get(entry.key) ?? []).map(asItem));
+  }
+  items.push(...atEnd.map(asItem));
+  return items;
+});
+
+function playerName(color: Color): string {
+  return players.value.get(color)?.name ?? color;
+}
+
+function setFilter(value: FeedFilter) {
+  filter.value = value;
+  if (value !== 'game') {
+    unread.value = 0;
+  }
+  try {
+    window.localStorage.setItem(FILTER_KEY, value);
+  } catch {
+    // Only remembered for this page.
+  }
+  void nextTick(jumpToLatest);
+}
+
+function takeChat(messages: ReadonlyArray<ChatMessageModel>) {
+  const last = chat.value[chat.value.length - 1]?.id ?? 0;
+  const fresh = messages.filter((message) => message.id > last);
+  if (fresh.length === 0) {
+    return;
+  }
+  const atLatest = !scrolled.value;
+  chat.value = [...chat.value, ...fresh].slice(-300);
+  if (filter.value === 'game') {
+    unread.value += fresh.filter((message) => message.player !== props.viewModel.color).length;
+  } else if (atLatest) {
+    void nextTick(jumpToLatest);
+  }
+}
+
+let chatRequest: AbortController | undefined;
+async function refreshChat() {
+  if (chatRequest !== undefined) {
+    return;
+  }
+  const current = new AbortController();
+  chatRequest = current;
+  const since = String(chat.value[chat.value.length - 1]?.id ?? 0);
+  try {
+    const response = await fetch(`${paths.API_CHAT}?${new URLSearchParams({id: props.viewModel.id, since})}`, {signal: current.signal});
+    if (response.ok) {
+      takeChat((await response.json()).messages ?? []);
+    }
+  } catch {
+    // Next time.
+  } finally {
+    if (chatRequest === current) {
+      chatRequest = undefined;
+    }
+  }
+}
+
+async function sendChat() {
+  const text = draft.value.trim();
+  if (text === '' || sending.value) {
+    return;
+  }
+  sending.value = true;
+  const since = String(chat.value[chat.value.length - 1]?.id ?? 0);
+  const after = shownEntries.value[shownEntries.value.length - 1]?.key;
+  try {
+    const response = await fetch(`${paths.API_CHAT}?${new URLSearchParams({id: props.viewModel.id, since})}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({text, after}),
+    });
+    if (response.ok) {
+      draft.value = '';
+      takeChat((await response.json()).messages ?? []);
+      void nextTick(jumpToLatest);
+    }
+  } catch {
+    // The text stays in the box: send again.
+  } finally {
+    sending.value = false;
+  }
+}
+
+let chatTimer: number | undefined;
+onMounted(() => {
+  void refreshChat();
+  chatTimer = window.setInterval(() => void refreshChat(), 2500);
+});
+onBeforeUnmount(() => {
+  window.clearInterval(chatTimer);
+  chatRequest?.abort();
+});
+watch(() => props.viewModel.id, () => {
+  chat.value = [];
+  unread.value = 0;
+  void refreshChat();
+});
+
+/*
  * Where the feed stands: right below the panel of the players (however many there are), down to
  * the dock with the hand. Measured, since the panel grows with each player.
  */
@@ -387,7 +561,7 @@ onMounted(() => {
   }
   window.addEventListener('resize', placeAndPublish);
 });
-watch([shownEntries, expanded], () => void nextTick(publishFeedRect), {flush: 'post'});
+watch([feedItems, expanded], () => void nextTick(publishFeedRect), {flush: 'post'});
 onBeforeUnmount(() => {
   placementObserver?.disconnect();
   dialogObserver?.disconnect();
@@ -732,6 +906,113 @@ function showLatest() {
     font: inherit;
     cursor: pointer;
   }
+}
+
+.activity-feed__chat {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px 6px;
+  border-left: 2px solid #a2eeff99;
+  border-radius: 4px;
+  background: #0d2a33cc;
+  color: #eaf8fc;
+
+  &--mine {
+    border-left-color: #e2c27f;
+    background: #2a2210cc;
+  }
+
+  .activity-feed__marker {
+    margin-top: 3px;
+  }
+}
+
+.activity-feed__chat-line {
+  min-width: 0;
+  overflow-wrap: anywhere;
+
+  strong {
+    margin-right: 5px;
+    color: #a2eeff;
+  }
+}
+
+.activity-feed__chat--mine .activity-feed__chat-line strong {
+  color: #ffe2a8;
+}
+
+.activity-feed__write {
+  display: flex;
+  gap: 4px;
+  margin: 6px 3px 0 0;
+
+  input {
+    min-width: 0;
+    flex: 1;
+    padding: 5px 8px;
+    border: 1px solid #8fa3ad59;
+    border-radius: 6px;
+    background: #0b141ce6;
+    color: #f3eee7;
+    font: inherit;
+    font-size: 0.8rem;
+
+    &:focus {
+      border-color: #a2eeff;
+      outline: none;
+    }
+  }
+
+  button {
+    flex: none;
+    width: 30px;
+    border: 1px solid #a2eeff80;
+    border-radius: 6px;
+    background: #12303a;
+    color: #a2eeff;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+  }
+}
+
+.activity-feed__filter {
+  display: inline-flex;
+  margin-left: auto;
+  overflow: hidden;
+  border: 1px solid #8fa3ad59;
+  border-radius: 5px;
+
+  .activity-feed__header & button {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 6px;
+    border: 0;
+    border-radius: 0;
+    background: #111a22;
+    color: #9fb1b9;
+
+    &[aria-pressed="true"] {
+      background: #24414d;
+      color: #fff;
+    }
+  }
+}
+
+.activity-feed__unread {
+  min-width: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: #e2582a;
+  color: #fff;
+  font-size: 0.6rem;
+  line-height: 14px;
+  text-align: center;
 }
 
 .activity-feed__list {

@@ -25,6 +25,7 @@ import {Phase} from '../common/Phase';
 import {IPlayer} from './IPlayer';
 import {Player} from './Player';
 import {PlayerId, GameId, SpectatorId, SpaceId} from '../common/Types';
+import {ChatLog} from './chat/ChatLog';
 import {PlayerInput} from './PlayerInput';
 import {CardResource} from '../common/CardResource';
 import {Resource} from '../common/Resource';
@@ -637,6 +638,7 @@ export class Game implements IGame, Logger {
       paused: this.paused,
       endedEarly: this.endedEarly,
       lastSeen: Array.from(this.lastSeen),
+      chat: ChatLog.get(this.id),
       playOn: this.playOn,
       playOnVotes: Array.from(this.playOnVotes),
       gameOptions: this.gameOptions,
@@ -2085,6 +2087,7 @@ export class Game implements IGame, Logger {
     game.paused = d.paused;
     game.endedEarly = d.endedEarly;
     game.lastSeen = new Map(d.lastSeen ?? []);
+    ChatLog.restore(game.id, d.chat);
     game.playOn = d.playOn ?? false;
     game.playOnVotes = new Set(d.playOnVotes ?? []);
     game.generation = d.generation;

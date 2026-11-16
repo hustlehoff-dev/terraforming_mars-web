@@ -13,6 +13,7 @@ export const paths = {
   API_PAUSE: 'api/pause',
   API_END_GAME: 'api/endgame',
   API_PLAY_ON: 'api/playon',
+  API_CHAT: 'api/chat',
   API_BUILD: 'api/build',
   API_CANCEL_PLACEMENT: 'api/cancelplacement',
   API_PLAYER: 'api/player',

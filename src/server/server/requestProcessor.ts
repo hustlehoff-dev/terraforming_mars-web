@@ -35,6 +35,7 @@ import {ServeAsset} from '../routes/ServeAsset';
 import {ApiPause} from '../routes/ApiPause';
 import {ApiEndGame} from '../routes/ApiEndGame';
 import {ApiPlayOn} from '../routes/ApiPlayOn';
+import {ApiChat} from '../routes/ApiChat';
 import {ApiBuild} from '../routes/ApiBuild';
 import {ApiCancelPlacement} from '../routes/ApiCancelPlacement';
 import {serverId, statsId} from '../utils/server-ids';
@@ -112,6 +113,7 @@ const handlers: Map<string, IHandler> = new Map(
     [paths.API_PAUSE, ApiPause.INSTANCE],
     [paths.API_END_GAME, ApiEndGame.INSTANCE],
     [paths.API_PLAY_ON, ApiPlayOn.INSTANCE],
+    [paths.API_CHAT, ApiChat.INSTANCE],
     [paths.API_BUILD, ApiBuild.INSTANCE],
     [paths.API_CANCEL_PLACEMENT, ApiCancelPlacement.INSTANCE],
     [paths.CARDS, ServeApp.INSTANCE],
