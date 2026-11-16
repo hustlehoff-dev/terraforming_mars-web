@@ -3,7 +3,7 @@
     <Teleport to="body">
       <!-- Same window as the card reveal and deck choice. -->
       <dialog v-if="open" ref="dialog" class="wf-root deck-choice-dialog mission-hud-dialog"
-        :class="{'mission-hud-dialog--list': maKind}" :aria-label="dialogTitle"
+        :class="{'mission-hud-dialog--list': maKind, 'mission-hud-dialog--choices': open === 'all'}" :aria-label="dialogTitle"
         @cancel.prevent="open = undefined" @click.self="open = undefined">
         <div v-if="maKind" class="wf-component-title mission-hud-dialog__title">{{ dialogTitle }}</div>
         <DecisionHeading v-else class="mission-hud-dialog__heading" :title="titles[open]" :literal-title="dialogTitle" closable @close="open = undefined" />
@@ -49,6 +49,65 @@
                 :title="$t('Click to view up close')" @click="zoomCard(card)">
                 <Card :card="card" autoTall :actionUsed="playedPlayer?.actionsThisGeneration.includes(card.name)" :cubeColor="playedPlayer?.color" />
               </div>
+            </template>
+          </template>
+
+          <!-- Everything the player can do now, grouped. -->
+          <template v-else-if="open === 'all'">
+            <p v-if="menuOptions === undefined" class="nofloat mission-hud-dialog__hint" v-i18n>Not available now</p>
+            <template v-else>
+              <details v-if="turnOptions.length" class="mission-all__section">
+                <summary v-i18n>Turn</summary>
+                <div class="mission-all__tiles">
+                  <button v-for="item in turnOptions" :key="item.index" type="button" class="mission-all__tile mission-all__tile--turn" @click="respondOption(item.index)">
+                    {{ $t(item.title) }}
+                  </button>
+                </div>
+              </details>
+              <details v-if="playableCards.length" class="mission-all__section">
+                <summary v-i18n>Play project card</summary>
+                <div class="mission-all__cards">
+                  <button v-for="card in playableCards" :key="card.name" type="button" class="cardbox mission-hud-dialog__card" @click="open = undefined; emit('playCard', card)">
+                    <Card :card="card" autoTall />
+                    <span class="mission-confirm" aria-hidden="true">{{ $t('Play') }}</span>
+                  </button>
+                </div>
+              </details>
+              <details v-if="actionCards?.length" class="mission-all__section">
+                <summary v-i18n>Card actions</summary>
+                <div class="mission-all__cards">
+                  <button v-for="card in actionCards" :key="card.name" type="button" class="cardbox mission-hud-dialog__card" @click="open = undefined; emit('cardAction', card)">
+                    <Card :card="card" autoTall />
+                    <span class="mission-confirm" aria-hidden="true">{{ $t('Use action') }}</span>
+                  </button>
+                </div>
+              </details>
+              <details v-if="projectActions.length" class="mission-all__section">
+                <summary v-i18n>Standard Projects</summary>
+                <div class="mission-all__tiles">
+                  <button v-for="action in projectActions" :key="action.id" type="button" class="mission-all__tile" :disabled="action.disabled" @click="chooseProject(action)">
+                    <span class="mission-all__effects" aria-hidden="true">
+                      <span v-for="(effect, index) in action.effects ?? []" :key="index" :class="{'mission-all__production': effect.production}"><small v-if="effect.text">{{ effect.text }}</small><img :src="effect.img" alt=""></span>
+                    </span>
+                    <span>{{ $t(action.label) }}</span>
+                    <b v-if="action.cost !== undefined" class="mission-all__cost">{{ action.cost }}</b>
+                  </button>
+                </div>
+              </details>
+              <details v-if="resourceActions.length || awardOption || milestoneOption || otherOptions.length" class="mission-all__section">
+                <summary v-i18n>Other actions</summary>
+                <div class="mission-all__tiles">
+                  <button v-for="action in resourceActions" :key="action.id" type="button" class="mission-all__tile" :disabled="action.disabled" @click="chooseResource(action)">
+                    <span class="mission-all__effects" aria-hidden="true">
+                      <span v-for="(effect, index) in action.effects ?? []" :key="index"><small v-if="effect.text">{{ effect.text }}</small><img :src="effect.img" alt=""></span>
+                    </span>
+                    <span>{{ $t(action.label) }}</span>
+                  </button>
+                  <button v-if="awardOption" type="button" class="mission-all__tile" @click="open = 'awards'"><span aria-hidden="true">🏆</span>{{ $t('Fund an award') }}</button>
+                  <button v-if="milestoneOption" type="button" class="mission-all__tile" @click="open = 'milestones'"><span aria-hidden="true">🏅</span>{{ $t('Claim a milestone') }}</button>
+                  <button v-for="item in otherOptions" :key="item.index" type="button" class="mission-all__tile" @click="chooseOther(item)">{{ $t(item.title) }}</button>
+                </div>
+              </details>
             </template>
           </template>
 
@@ -117,8 +176,8 @@ import {actionMenu, MissionQuickAction} from './MissionQuickAction';
 const props = defineProps<{playerView: PlayerViewModel, actions: ReadonlyArray<MissionQuickAction>, actionCards?: ReadonlyArray<CardModel>}>();
 const emit = defineEmits<{project: [action: MissionQuickAction], respond: [response: InputResponse], cardAction: [card: CardModel], playCard: [card: CardModel]}>();
 
-type Menu = 'projects' | 'awards' | 'milestones' | 'played' | 'actions' | 'sell';
-const titles: Record<Menu, string> = {projects: 'Standard Projects', awards: 'Awards', milestones: 'Milestones', played: 'Played Cards', actions: 'Card actions', sell: 'Sell patents'};
+type Menu = 'all' | 'projects' | 'awards' | 'milestones' | 'played' | 'actions' | 'sell';
+const titles: Record<Menu, string> = {all: 'Actions', projects: 'Standard Projects', awards: 'Awards', milestones: 'Milestones', played: 'Played Cards', actions: 'Card actions', sell: 'Sell patents'};
 const open = ref<Menu>();
 const dialog = ref<HTMLDialogElement>();
 const instance = getCurrentInstance()?.proxy;
@@ -291,6 +350,47 @@ function chooseProject(action: MissionQuickAction | undefined) {
     open.value = undefined;
     emit('project', action);
   }
+}
+
+// "Actions": the whole action menu, grouped.
+const menuOptions = computed(() => actionMenu(props.playerView.waitingFor)?.options);
+const TURN_TITLES = new Set(['Pass for this generation', 'End Turn']);
+const COVERED_TITLES = new Set([...TURN_TITLES, 'Play project card', 'Perform an action from a played card', 'Standard projects', 'Sell patents']);
+const turnOptions = computed(() => (menuOptions.value ?? [])
+  .map((option, index) => ({index, title: titleOf(option), type: option.type}))
+  .filter((item) => item.type === 'option' && TURN_TITLES.has(item.title)));
+const playableCards = computed(() => {
+  const option = menuOptions.value?.find((candidate) => candidate.type === 'projectCard' && titleOf(candidate) === 'Play project card');
+  return option?.type === 'projectCard' ? option.cards.filter((card) => card.isDisabled !== true) : [];
+});
+const projectActions = computed(() => props.actions.filter((action) => action.card !== undefined));
+const resourceActions = computed(() => props.actions.filter((action) => action.card === undefined));
+/** Menu entries without a place of their own (colonies, delegates, expansion actions...). */
+const otherOptions = computed(() => {
+  const used = new Set(props.actions.map((action) => action.index));
+  return (menuOptions.value ?? [])
+    .map((option, index) => ({index, title: titleOf(option), type: option.type}))
+    .filter((item) => !used.has(item.index) && !COVERED_TITLES.has(item.title) &&
+      !item.title.startsWith('Fund an award') && !item.title.startsWith('Claim a milestone'));
+});
+function respondOption(index: number) {
+  open.value = undefined;
+  emit('respond', {type: 'or', index, response: {type: 'option'}});
+}
+function chooseResource(action: MissionQuickAction) {
+  if (action.id === 'sell') {
+    open.value = 'sell';
+  } else {
+    chooseProject(action);
+  }
+}
+function chooseOther(item: {index: number, title: string, type: string}) {
+  if (item.type === 'option') {
+    respondOption(item.index);
+    return;
+  }
+  open.value = undefined;
+  emit('project', {id: 'menu:' + item.index, label: item.title, index: item.index});
 }
 
 function chooseMa(index: number) {
@@ -606,6 +706,127 @@ function chooseMa(index: number) {
   .mission-hud-dialog__hint {
     margin: 0;
     color: #c9d4d8;
+  }
+}
+</style>
+
+<style lang="less">
+// "Actions" window: sections of tiles and cards.
+.mission-hud-dialog {
+  .mission-all__section {
+    min-width: 0;
+    border: 1px solid #657884;
+    border-radius: 8px;
+    background: #0d1721d9;
+
+    > summary {
+      padding: 12px 16px;
+      color: #f6e2b8;
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-align: start;
+      text-transform: uppercase;
+      cursor: pointer;
+
+      &:focus-visible {
+        outline: 2px solid #a8edff;
+        outline-offset: -3px;
+      }
+    }
+  }
+
+  .mission-all__tiles,
+  .mission-all__cards {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 12px 14px;
+  }
+
+  .mission-all__cards > .cardbox {
+    animation: none;
+  }
+
+  @media (max-width: 800px) {
+    .mission-all__cards > .cardbox {
+      zoom: 0.78;
+    }
+  }
+
+  .mission-all__tile {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    line-height: 1.2;
+    border: 1px solid #6f8c98;
+    border-radius: 10px;
+    background: linear-gradient(#1c2f3fe6, #0b141ce6);
+    color: #eef6f8;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      border-color: #b4ffeb;
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    &--turn {
+      border-color: #e2c27f;
+      color: #ffe9bd;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+  }
+
+  .mission-all__effects {
+    display: inline-flex;
+    gap: 4px;
+
+    > span {
+      display: inline-flex;
+      align-items: center;
+      gap: 1px;
+    }
+
+    img {
+      width: 22px;
+      height: 22px;
+      object-fit: contain;
+    }
+
+    small {
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+  }
+
+  .mission-all__production img {
+    padding: 2px;
+    border: 1px solid #d79a5a;
+    border-radius: 3px;
+    background: #8a5a2b;
+  }
+
+  .mission-all__cost {
+    display: inline-grid;
+    min-width: 26px;
+    height: 22px;
+    font-size: 0.8rem;
+    place-items: center;
+    padding: 0 4px;
+    border-radius: 4px;
+    background: linear-gradient(#ffe36b, #f0b20f);
+    color: #1b1200;
   }
 }
 </style>
