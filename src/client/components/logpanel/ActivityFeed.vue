@@ -924,23 +924,20 @@ function showLatest() {
   }
 }
 
+// A chat message: the sender's colour as a stripe along the left edge of its own row only.
 .activity-feed__chat {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 6px;
-  padding: 4px 6px;
-  border-left: 2px solid #a2eeff99;
+  overflow: hidden;
+  padding: 4px 6px 4px 14px;
   border-radius: 4px;
   background: #0d2a33cc;
   color: #eaf8fc;
 
   &--mine {
-    border-left-color: #e2c27f;
     background: #2a2210cc;
-  }
-
-  .activity-feed__marker {
-    margin-top: 3px;
   }
 }
 
