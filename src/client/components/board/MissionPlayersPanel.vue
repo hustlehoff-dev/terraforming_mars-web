@@ -299,7 +299,7 @@ function productionClass(value: number): string {
   display: grid;
   min-width: 0;
   grid-area: who;
-  // Stretch: a long nick is cut to the column, so "Turn" and the clock never slide under TR.
+  // Stretch: the name line takes the column, so "Turn" and the clock never slide under TR.
   justify-items: stretch;
   gap: 1px;
 }
@@ -316,23 +316,22 @@ function productionClass(value: number): string {
   white-space: nowrap;
 }
 
+// The whole nick is always shown: when it is long, "Turn" and the clock go to the next line
+// and a very long nick wraps itself.
 .mission-players__name {
   display: flex;
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 2px 8px;
   font-size: 1.2rem;
   line-height: 1.1;
-  white-space: nowrap;
 }
 
 .mission-players__nick {
-  flex: 0 1 auto;
-  min-width: 2ch;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .mission-players__row--active .mission-players__name {
@@ -341,6 +340,7 @@ function productionClass(value: number): string {
 
 .mission-players__turn {
   flex: none;
+  white-space: nowrap;
   padding: 1px 6px;
   border: 1px solid var(--player);
   border-radius: 4px;
@@ -355,6 +355,7 @@ function productionClass(value: number): string {
 // The opponent's turn clock, next to "Turn".
 .mission-players__clock {
   flex: none;
+  white-space: nowrap;
   padding: 1px 8px;
   border: 1px solid #ffffff55;
   border-radius: 5px;
