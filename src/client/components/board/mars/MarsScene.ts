@@ -493,7 +493,20 @@ export class MarsScene {
     };
   }
 
-  private fitsSafeArea(state: CameraState) {
+  /**
+   * Where the default framing fits the board. On a wide screen it is the whole page (the board
+   * fills it, Mars still shows around it; the HUD panels may cover its edges), on a phone the
+   * area between the HUD panels.
+   */
+  private fitArea(): SafeArea {
+    if (this.width >= 900) {
+      const edge = 4;
+      return {top: edge, right: edge, bottom: edge, left: edge};
+    }
+    return this.safe;
+  }
+
+  private fitsSafeArea(state: CameraState, area: SafeArea = this.safe) {
     this.place(this.probe, state);
     const margin = 6;
     const {minX, maxX, minY, maxY} = this.geometry.bounds;
@@ -504,19 +517,20 @@ export class MarsScene {
     ];
     return corners.every(([x, y]) => {
       const p = this.project(this.probe, this.surface(x, y));
-      return p.visible && p.x >= this.safe.left + margin && p.x <= this.width - this.safe.right - margin &&
-        p.y >= this.safe.top + margin && p.y <= this.height - this.safe.bottom - margin;
+      return p.visible && p.x >= area.left + margin && p.x <= this.width - area.right - margin &&
+        p.y >= area.top + margin && p.y <= this.height - area.bottom - margin;
     });
   }
 
-  /** Default framing: the closest view that shows the whole board inside the safe area. */
+  /** Default framing: the closest view that shows the whole board inside the fit area. */
   private computeHome() {
     let low = MIN_DISTANCE;
     let high = MAX_DISTANCE;
     const base = {x: this.geometry.centerX, y: this.geometry.centerY + 8};
+    const area = this.fitArea();
     for (let i = 0; i < 28; i++) {
       const mid = Math.sqrt(low * high);
-      if (this.fitsSafeArea({...base, d: mid})) {
+      if (this.fitsSafeArea({...base, d: mid}, area)) {
         high = mid;
       } else {
         low = mid;
