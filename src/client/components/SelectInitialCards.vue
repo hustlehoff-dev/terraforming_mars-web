@@ -650,5 +650,41 @@ function hasOption(options: Array<PlayerInputModel>, title: string): boolean {
     border-color: #b4ffeb;
   }
 }
-</style>
 
+// Desktop: each step says clearly what to do, and its cards sit centred, at most 3 in a row.
+@media (min-width: 761px) {
+  body .setup-wizard .setup-step {
+    .wf-component-title,
+    .corporation-selection > legend {
+      display: block;
+      width: 100%;
+      margin: 6px 0 18px;
+      color: #fff3d6;
+      font-size: clamp(1.5rem, 2.2vw, 2rem);
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      line-height: 1.15;
+      text-align: center;
+      text-shadow: 0 2px 8px #000, 0 0 18px #e2c27f55;
+    }
+
+    > .wf-component--select-card {
+      display: grid;
+      grid-template-columns: repeat(3, auto);
+      justify-content: center;
+      justify-items: center;
+      gap: 18px 22px;
+
+      // Title, hints and warnings take the whole width above and below the cards.
+      > :not(.cardbox) {
+        grid-column: 1 / -1;
+      }
+
+      > .cardbox {
+        float: none;
+        margin: 0;
+      }
+    }
+  }
+}
+</style>
