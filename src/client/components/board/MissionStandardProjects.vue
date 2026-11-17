@@ -28,7 +28,8 @@ import {STANDARD_PROJECTS, type MissionQuickAction} from './MissionQuickAction';
  * Standard projects always on screen, under the top bar. Usable ones are lit and open the project
  * like a card from the hand; the rest stay visible but greyed out.
  */
-const props = defineProps<{actions: ReadonlyArray<MissionQuickAction>}>();
+// `allProjects`: every standard project of this game, shown (greyed) also outside the player's turn.
+const props = defineProps<{actions: ReadonlyArray<MissionQuickAction>, allProjects?: ReadonlyArray<CardName>}>();
 const emit = defineEmits<{select: [action: MissionQuickAction]}>();
 
 const BASE: ReadonlyArray<CardName> = [
@@ -47,7 +48,7 @@ function toggle() {
 
 const projects = computed(() => {
   const offered = props.actions.filter((action) => action.card !== undefined);
-  const names = offered.length > 0 ? offered.map((action) => action.card as CardName) : BASE;
+  const names = offered.length > 0 ? offered.map((action) => action.card as CardName) : (props.allProjects?.length ? props.allProjects : BASE);
   return names.map((name) => {
     const action = offered.find((candidate) => candidate.card === name);
     return {

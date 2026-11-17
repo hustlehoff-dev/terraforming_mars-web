@@ -1,3 +1,4 @@
+import {CardName} from '../cards/CardName';
 import {GameOptionsModel} from './GameOptionsModel';
 import {ColonyModel} from './ColonyModel';
 import {Color} from '../Color';
@@ -71,6 +72,8 @@ export type GameModel = {
   tags: ReadonlyArray<Tag>;
   temperature: number;
   isTerraformed: boolean;
+  /** The standard projects of this game (expansions included, Sell Patents not), in order. */
+  standardProjects?: Array<CardName>;
   turmoil: TurmoilModel | undefined;
   undoCount: number;
   venusScaleLevel: number;

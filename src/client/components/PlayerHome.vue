@@ -111,7 +111,7 @@
         <MissionDraftWaiting v-if="cinematic && (draftLockedIn || researchLockedIn)" :players="playerView.players" :deadline="game.draftDeadline"
           :stage="draftLockedIn ? 'draft' : 'research'" />
         <ConfirmDialog v-if="cinematic" ref="heatConfirm" message="Spend 8 heat to raise the temperature 1 step?" @accept="convertHeatNow" />
-        <MissionStandardProjects v-if="cinematic && !mapPlacement" :actions="quickActions" @select="openQuickAction" />
+        <MissionStandardProjects v-if="cinematic && !mapPlacement" :actions="quickActions" :allProjects="game.standardProjects" @select="openQuickAction" />
         <div class="mission-dock">
           <MissionHudMenus ref="hudMenus" :playerView="playerView" :actions="quickActions" :actionCards="cardActions?.cards" @project="openQuickAction" @respond="respondToMenu" @cardAction="useCardActionNow" @playCard="(card) => previewProject(card)" />
           <MissionPlayerHud
