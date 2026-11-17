@@ -229,6 +229,20 @@ export namespace SoundManager {
     });
   }
 
+  export function playerRing() {
+    playInContext((audio) => {
+      tone(audio, 988, 988, 0, 0.32, 0.25);
+      tone(audio, 784, 784, 0.16, 0.42, 0.25);
+    });
+  }
+
+  /** Unlock sound effects while a player gesture can still authorize audio playback. */
+  export function unlockEffects() {
+    if (context?.state !== 'running') {
+      playInContext(() => {}, true);
+    }
+  }
+
   /** Somebody else has chosen: this player's clock starts. */
   export function clockStarted() {
     playInContext((audio) => {

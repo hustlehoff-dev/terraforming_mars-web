@@ -38,6 +38,7 @@
           </li>
         </ul>
       </button>
+      <PlayerRingButton v-if="player.color !== myColor" class="mission-players__bell" :sender="playerId" :target="player" />
       <div v-if="player.played" :key="player.played.key" class="mission-players__played" role="status"
         @pointerenter="hold(player.color)" @pointerleave="release(player.color)" @focusin="hold(player.color)" @focusout="release(player.color)">
         <p class="mission-players__played-label" :class="'player_bg_color_' + player.color">{{ player.name }} <span v-i18n>played</span></p>
@@ -53,6 +54,7 @@
 import {getPreferences} from '@/client/utils/PreferencesManager';
 import {computed, onBeforeUnmount, reactive, ref} from 'vue';
 import Card from '@/client/components/card/Card.vue';
+import PlayerRingButton from '@/client/components/board/PlayerRingButton.vue';
 import {zoomCard} from '@/client/components/board/cardZoom';
 import {CardModel} from '@/common/models/CardModel';
 import {getCard} from '@/client/cards/ClientCardManifest';
@@ -61,6 +63,7 @@ import {Color} from '@/common/Color';
 import {PublicPlayerModel} from '@/common/models/PlayerModel';
 import {PlayedCardLogModel} from '@/common/models/PlayedCardLogModel';
 import {TurmoilModel} from '@/common/models/TurmoilModel';
+import {PlayerId} from '@/common/Types';
 import {translateTextWithParams} from '@/client/directives/i18n';
 
 /*
@@ -68,7 +71,7 @@ import {translateTextWithParams} from '@/client/directives/i18n';
  * the board game: corporation, name, terraform rating, resources and production, the number of
  * cards in hand and the number of played events (their content stays hidden).
  */
-const props = defineProps<{players: ReadonlyArray<PublicPlayerModel>, activeColor?: Color, myColor: Color, turmoil?: TurmoilModel}>();
+const props = defineProps<{players: ReadonlyArray<PublicPlayerModel>, activeColor?: Color, myColor: Color, playerId: PlayerId, turmoil?: TurmoilModel}>();
 
 /** Delegates of a player still in the Turmoil reserve (each can be sent for 5 M€). */
 function freeDelegates(color: Color): number {
@@ -251,6 +254,18 @@ function productionClass(value: number): string {
 
 .mission-players__entry:has(.mission-players__played) {
   z-index: 1;
+}
+
+.mission-players__entry:has(> .mission-players__bell) .mission-players__facts {
+  margin-inline-end: 36px;
+}
+
+.mission-players__bell {
+  position: absolute;
+  inset-block-start: 3px;
+  inset-inline-end: 5px;
+  min-width: 32px;
+  min-height: 30px;
 }
 
 .mission-players__played {

@@ -118,6 +118,11 @@
       </div>
     </div>
   </aside>
+  <Teleport to="body">
+    <p v-if="ringFrom" class="activity-feed__ring" role="status">
+      <span aria-hidden="true">🔔</span> {{ translateTextWithParams('${0} rang you', [playerName(ringFrom)]) }}
+    </p>
+  </Teleport>
   <ActivityCardReveal v-if="reveal?.deck?.length" :key="reveal.key" :batches="reveal.deck" :playerName="revealPlayerName" @close="closeReveal" />
 </template>
 
@@ -143,7 +148,8 @@ import {PlayedCardLogModel} from '@/common/models/PlayedCardLogModel';
 import {ViewModel} from '@/common/models/PlayerModel';
 import {isPlayerId, SpaceId} from '@/common/Types';
 import {cardResourceCSS} from '@/client/components/common/cardResources';
-import {CHAT_MESSAGE_MAX_LENGTH, ChatMessageModel} from '@/common/models/ChatMessageModel';
+import {CHAT_MESSAGE_MAX_LENGTH, ChatMessageModel, PlayerRingModel} from '@/common/models/ChatMessageModel';
+import {SoundManager} from '@/client/utils/SoundManager';
 
 const labels: Record<GameActivityKind, string> = {
   played: 'played',
@@ -442,6 +448,23 @@ function takeChat(messages: ReadonlyArray<ChatMessageModel>) {
 }
 
 let chatRequest: AbortController | undefined;
+const ringFrom = ref<Color>();
+let lastRingId: number | undefined;
+let ringTimer: number | undefined;
+
+function receiveRing(ring: PlayerRingModel | undefined) {
+  if (ring === undefined || ring.id === lastRingId) {
+    return;
+  }
+  lastRingId = ring.id;
+  ringFrom.value = ring.from;
+  SoundManager.playerRing();
+  window.clearTimeout(ringTimer);
+  ringTimer = window.setTimeout(() => {
+    ringFrom.value = undefined;
+  }, 5000);
+}
+
 async function refreshChat() {
   if (chatRequest !== undefined) {
     return;
@@ -450,9 +473,13 @@ async function refreshChat() {
   chatRequest = current;
   const since = String(chat.value[chat.value.length - 1]?.id ?? 0);
   try {
-    const response = await fetch(`${paths.API_CHAT}?${new URLSearchParams({id: props.viewModel.id, since})}`, {signal: current.signal});
+    const response = await fetch(`${paths.API_CHAT}?${new URLSearchParams({id: props.viewModel.id, since})}`, {cache: 'no-store', signal: current.signal});
     if (response.ok) {
-      takeChat((await response.json()).messages ?? []);
+      const {messages, ring}: {messages?: Array<ChatMessageModel>, ring?: PlayerRingModel} = await response.json();
+      if (!current.signal.aborted) {
+        takeChat(messages ?? []);
+        receiveRing(ring);
+      }
     }
   } catch {
     // Next time.
@@ -496,11 +523,17 @@ onMounted(() => {
 });
 onBeforeUnmount(() => {
   window.clearInterval(chatTimer);
+  window.clearTimeout(ringTimer);
   chatRequest?.abort();
 });
 watch(() => props.viewModel.id, () => {
+  chatRequest?.abort();
+  chatRequest = undefined;
   chat.value = [];
   unread.value = 0;
+  lastRingId = undefined;
+  ringFrom.value = undefined;
+  window.clearTimeout(ringTimer);
   void refreshChat();
 });
 
@@ -847,6 +880,23 @@ function showLatest() {
 </script>
 
 <style scoped lang="less">
+.activity-feed__ring {
+  position: fixed;
+  z-index: 61;
+  top: max(64px, calc(env(safe-area-inset-top) + 48px));
+  left: 50%;
+  max-width: calc(100% - 24px);
+  margin: 0;
+  padding: 8px 14px;
+  border: 1px solid #e2c27f;
+  border-radius: 8px;
+  background: #142630;
+  color: #fff1cf;
+  font-weight: 700;
+  text-align: center;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
 .activity-feed__summary {
   width: 215px;
   margin: 0 0 6px;

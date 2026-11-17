@@ -26,9 +26,12 @@
           <template v-if="selectedRival">{{ selectedRival.name }} · <span v-i18n>Played Cards</span></template>
           <span v-else v-i18n>Other players</span>
         </h2>
-        <form method="dialog">
-          <button type="submit" class="rival-panel__close" autofocus v-i18n>Close</button>
-        </form>
+        <div class="rival-panel__dialog-actions">
+          <PlayerRingButton v-if="selectedRival" :sender="playerId" :target="selectedRival" />
+          <form method="dialog">
+            <button type="submit" class="rival-panel__close" autofocus v-i18n>Close</button>
+          </form>
+        </div>
       </header>
       <template v-if="selectedRival">
         <div v-if="selectedRival.tableau.length > 0" class="rival-panel__cards">
@@ -51,15 +54,18 @@
 import {computed, nextTick, ref} from 'vue';
 import dialogPolyfill from 'dialog-polyfill';
 import Card from '@/client/components/card/Card.vue';
+import PlayerRingButton from '@/client/components/board/PlayerRingButton.vue';
 import {hasShowModal, showModal} from '@/client/components/HTMLDialogElementCompatibility';
 import RivalTile from '@/client/components/overview/RivalTile.vue';
 import {isCardActivated} from '@/client/utils/CardUtils';
 import {Color} from '@/common/Color';
 import {PublicPlayerModel} from '@/common/models/PlayerModel';
+import {PlayerId} from '@/common/Types';
 
 const props = defineProps<{
   players: ReadonlyArray<PublicPlayerModel>;
   playerColor: Color;
+  playerId: PlayerId;
   activeColor?: Color;
   passedColors?: ReadonlyArray<Color>;
 }>();

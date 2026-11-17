@@ -14,3 +14,7 @@ export type ChatMessageModel = {
 
 /** Longest chat message, in characters. */
 export const CHAT_MESSAGE_MAX_LENGTH = 300;
+
+export type PlayerRingModel = {id: number, from: Color};
+
+export const PLAYER_RING_COOLDOWN_MS = 5000;

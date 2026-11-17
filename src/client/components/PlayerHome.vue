@@ -84,9 +84,9 @@
         <ActivityFeed v-if="cinematic" :viewModel="playerView" @spaceClicked="jumpToLogSpace" @triggers="showEffectBadges" @cardPlays="showCardPlays" />
         <MissionEffectBadges v-if="cinematic" ref="effectBadges" :playerName="(color) => playerView.players.find((player) => player.color === color)?.name ?? color"
           @shown="(card, player) => player === thisPlayer.color && lightEffect(card)" />
-        <RivalPanel v-if="cinematic" :players="playerView.players" :playerColor="thisPlayer.color" :activeColor="activeTurnColor" :passedColors="game.phase === 'action' ? game.passedPlayers : []" />
+        <RivalPanel v-if="cinematic" :players="playerView.players" :playerColor="thisPlayer.color" :playerId="playerView.id" :activeColor="activeTurnColor" :passedColors="game.phase === 'action' ? game.passedPlayers : []" />
         <MissionPlayersPanel v-if="cinematic" ref="playersPanel" :key="`${playerView.id}:${playerView.runId}:${game.undoCount}`"
-          :players="playerView.players" :activeColor="activeTurnColor" :myColor="thisPlayer.color" :turmoil="game.turmoil" @open="showPlayerCards" />
+          :players="playerView.players" :activeColor="activeTurnColor" :myColor="thisPlayer.color" :playerId="playerView.id" :turmoil="game.turmoil" @open="showPlayerCards" />
         <!-- Right column: global parameters, then the turn button right under them. -->
         <div v-if="cinematic" class="mission-right-column">
           <MissionParameters :game="game" :solo="playerView.players.length === 1">
@@ -1207,6 +1207,7 @@ export default defineComponent({
     },
     startMissionAudio() {
       if (this.cinematic && this.soundsEnabled) {
+        SoundManager.unlockEffects();
         this.missionAudioStarted = true;
         this.syncMissionAmbience();
       }

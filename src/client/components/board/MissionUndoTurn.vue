@@ -1,6 +1,7 @@
 <template>
   <!-- Undoing a turn: whoever asked waits, every other player agrees or refuses. -->
   <Teleport to="body">
+    <ConfirmDialog ref="confirmation" :message="confirmationMessage" @accept="send('request')" />
     <div v-if="request || error" class="undo-turn" role="status">
       <template v-if="request">
         <p class="undo-turn__text">
@@ -28,7 +29,9 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onBeforeUnmount, onMounted, ref} from 'vue';
+import {computed, getCurrentInstance, onBeforeUnmount, onMounted, ref} from 'vue';
+import ConfirmDialog from '@/client/components/common/ConfirmDialog.vue';
+import {vueRoot} from '@/client/components/vueRoot';
 import {paths} from '@/common/app/paths';
 import {Color} from '@/common/Color';
 import {ViewModel} from '@/common/models/PlayerModel';
@@ -40,14 +43,20 @@ type Request = {by: Color, turnOf: Color, generation: number, votes: Array<Color
 /*
  * A player can ask to undo the last turn (the button is in the right column and calls `ask`).
  * Every other player sees the request here and agrees or refuses; when all agreed, the game goes
- * back to the start of that turn and every page reloads it.
+ * back to the start of that turn and the players' views update.
  */
 const props = defineProps<{viewModel: ViewModel}>();
+const instance = getCurrentInstance()?.proxy;
+const confirmation = ref<InstanceType<typeof ConfirmDialog>>();
+const confirmationMessage = computed(() => props.viewModel.players.length === 1 ?
+  'Go back to the start of the turn?' : 'Ask to undo the turn? All other players must agree.');
 const request = ref<Request>();
 const error = ref<string>();
 const busy = ref(false);
 let timer: number | undefined;
 let errorTimer: number | undefined;
+let actionVersion = 0;
+let refreshing = false;
 
 function nameOf(color: Color): string {
   return props.viewModel.players.find((player) => player.color === color)?.name ?? color;
@@ -72,11 +81,12 @@ function showError(message: string) {
 }
 
 async function call(action?: 'request' | 'yes' | 'no' | 'cancel'): Promise<void> {
+  const version = actionVersion;
   const query = new URLSearchParams({id: props.viewModel.id});
   if (action !== undefined) {
     query.set('do', action);
   }
-  const response = await fetch(`${paths.API_UNDO_TURN}?${query}`);
+  const response = await fetch(`${paths.API_UNDO_TURN}?${query}`, {cache: 'no-store'});
   if (!response.ok) {
     if (action !== undefined) {
       const text = (await response.text()).replace(/^Bad request:\s*/, '');
@@ -85,10 +95,25 @@ async function call(action?: 'request' | 'yes' | 'no' | 'cancel'): Promise<void>
     return;
   }
   const status: {request?: Request, undoCount: number} = await response.json();
+  if (version !== actionVersion) {
+    return;
+  }
   request.value = status.request;
+  if (instance && !refreshing && status.undoCount > props.viewModel.game.undoCount) {
+    refreshing = true;
+    try {
+      await vueRoot(instance).updatePlayer();
+    } finally {
+      refreshing = false;
+    }
+  }
 }
 
 async function send(action: 'request' | 'yes' | 'no' | 'cancel') {
+  if (busy.value) {
+    return;
+  }
+  actionVersion++;
   busy.value = true;
   try {
     await call(action);
@@ -101,12 +126,20 @@ async function send(action: 'request' | 'yes' | 'no' | 'cancel') {
 
 /** The "Undo turn" button of the right column. */
 function ask() {
-  void send('request');
+  if (!busy.value && !request.value) {
+    confirmation.value?.show();
+  }
+}
+
+function poll() {
+  if (!busy.value) {
+    void call().catch(() => {});
+  }
 }
 
 onMounted(() => {
-  void call().catch(() => {});
-  timer = window.setInterval(() => void call().catch(() => {}), 3000);
+  poll();
+  timer = window.setInterval(poll, 3000);
 });
 onBeforeUnmount(() => {
   window.clearInterval(timer);
