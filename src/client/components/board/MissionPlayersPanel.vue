@@ -24,6 +24,11 @@
           <span class="mission-players__fact mission-players__fact--events" :title="$t('Played events (face down)')">
             <span class="mission-players__event-icon" aria-hidden="true"></span><strong>{{ player.events }}</strong>
           </span>
+          <!-- Turmoil: influence, and delegates still free in the reserve. -->
+          <span v-if="turmoil" class="mission-players__fact mission-players__fact--influence" :title="influenceTitle(player)">
+            <small>{{ $t('Influence (short)') }}</small><strong>{{ player.influence }}</strong>
+            <em class="mission-players__delegates">{{ freeDelegates(player.color) }}<i aria-hidden="true">👤</i></em>
+          </span>
         </span>
         <ul class="mission-players__stock" :aria-label="$t('Resources')">
           <li v-for="resource in RESOURCES" :key="resource.key" :title="$t(resource.label)">
@@ -55,13 +60,24 @@ import {CardType} from '@/common/cards/CardType';
 import {Color} from '@/common/Color';
 import {PublicPlayerModel} from '@/common/models/PlayerModel';
 import {PlayedCardLogModel} from '@/common/models/PlayedCardLogModel';
+import {TurmoilModel} from '@/common/models/TurmoilModel';
+import {translateTextWithParams} from '@/client/directives/i18n';
 
 /*
  * Every player in the game as a low, wide card in the top-left corner, showing what is public in
  * the board game: corporation, name, terraform rating, resources and production, the number of
  * cards in hand and the number of played events (their content stays hidden).
  */
-const props = defineProps<{players: ReadonlyArray<PublicPlayerModel>, activeColor?: Color, myColor: Color}>();
+const props = defineProps<{players: ReadonlyArray<PublicPlayerModel>, activeColor?: Color, myColor: Color, turmoil?: TurmoilModel}>();
+
+/** Delegates of a player still in the Turmoil reserve (each can be sent for 5 M€). */
+function freeDelegates(color: Color): number {
+  return props.turmoil?.reserve.find((entry) => entry.color === color)?.number ?? 0;
+}
+function influenceTitle(player: PublicPlayerModel): string {
+  return translateTextWithParams('Influence ${0}: chairman and delegates in the dominant party. Free delegates: ${1}.',
+    [String(player.influence), String(freeDelegates(player.color))]);
+}
 const emit = defineEmits<{open: [color: Color]}>();
 const visible = reactive<Partial<Record<Color, PlayedCardLogModel>>>({});
 const queues = new Map<Color, Array<PlayedCardLogModel>>();
@@ -438,6 +454,31 @@ function productionClass(value: number): string {
     strong {
       font-size: 1.35rem;
     }
+  }
+}
+
+.mission-players__fact--influence {
+  grid-template-columns: auto auto;
+  border-color: #b48cff66;
+  background: #1a1430;
+
+  small {
+    color: #cbb6ff;
+  }
+}
+
+.mission-players__delegates {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  color: #cbb6ff;
+  font-size: 0.75rem;
+  font-style: normal;
+  font-weight: 700;
+
+  i {
+    font-size: 0.7rem;
+    font-style: normal;
   }
 }
 
