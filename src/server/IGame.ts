@@ -1,3 +1,4 @@
+import type {UndoTurnRequest} from './undo/UndoTurn';
 import {MarsBoard} from './boards/MarsBoard';
 import {CardName} from '../common/cards/CardName';
 import {ClaimedMilestone} from './milestones/ClaimedMilestone';
@@ -321,6 +322,8 @@ export interface IGame extends Logger {
   /** When each player last had their game page open (ms since epoch). */
   lastSeen: Map<PlayerId, number>;
   markSeen(player: IPlayer): void;
+  /** A player asked to undo the last turn; every player must agree. */
+  undoTurnRequest: UndoTurnRequest | undefined;
   /** The player has their game page open now. */
   isOnline(player: IPlayer): boolean;
   /** The player who created the game (the first player of the create game form). */

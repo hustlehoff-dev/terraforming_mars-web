@@ -26,6 +26,7 @@ import {IPlayer} from './IPlayer';
 import {Player} from './Player';
 import {PlayerId, GameId, SpectatorId, SpaceId} from '../common/Types';
 import {ChatLog} from './chat/ChatLog';
+import type {UndoTurnRequest} from './undo/UndoTurn';
 import {PlayerInput} from './PlayerInput';
 import {CardResource} from '../common/CardResource';
 import {Resource} from '../common/Resource';
@@ -226,6 +227,8 @@ export class Game implements IGame, Logger {
   public endedEarly: {by: Color, kind: 'surrender' | 'ended'} | undefined = undefined;
   /** When each player last opened their link (or their game page asked the server for news). */
   public lastSeen = new Map<PlayerId, number>();
+  /** A player asked to undo the last turn; every player must agree. Not saved. */
+  public undoTurnRequest: UndoTurnRequest | undefined = undefined;
   /**
    * Optional play-on phase: after the end, every player agreed to keep playing until the map is
    * full (no free land space left). The game then ends at the end of the generation that fills it.

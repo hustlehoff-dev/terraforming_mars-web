@@ -80,6 +80,7 @@
           atlas
           @toggleTileView="cycleTileView()"
         />
+        <MissionUndoTurn v-if="cinematic" ref="undoTurn" :viewModel="playerView" />
         <ActivityFeed v-if="cinematic" :viewModel="playerView" @spaceClicked="jumpToLogSpace" @triggers="showEffectBadges" @cardPlays="showCardPlays" />
         <MissionEffectBadges v-if="cinematic" ref="effectBadges" :playerName="(color) => playerView.players.find((player) => player.color === color)?.name ?? color"
           @shown="(card, player) => player === thisPlayer.color && lightEffect(card)" />
@@ -96,6 +97,7 @@
             <button type="button" :aria-expanded="missionPanel === 'log'" @click="toggleMissionPanel('log')">{{ $t('Game log') }}</button>
             <button type="button" class="primary" :aria-expanded="missionPanel === 'actions'" @click="openActions">{{ $t(finalGreenery ? 'Final greenery placement' : 'Actions') }}</button>
             <button type="button" class="mission-pause-button" :disabled="pausing" @click="setPaused(true)"><span aria-hidden="true">⏸</span>{{ $t('Pause the game') }}</button>
+            <button v-if="game.phase === 'action'" type="button" @click="askUndoTurn"><span aria-hidden="true">⟲</span>{{ $t('Undo turn') }}</button>
           </MissionParameters>
           <MissionTurnButton v-if="!mapPlacement" :actions="quickActions" :cardActions="cardActions?.cards ?? []"
             :canPass="passIndex !== -1" :canEndTurn="endTurnIndex !== -1" :active="activeTurnColor === thisPlayer.color && playerView.waitingFor !== undefined"
@@ -360,6 +362,7 @@ import MissionEffectBadges from '@/client/components/board/MissionEffectBadges.v
 import MissionEffectsBar from '@/client/components/board/MissionEffectsBar.vue';
 import {CardName} from '@/common/cards/CardName';
 import MissionParameters from '@/client/components/board/MissionParameters.vue';
+import MissionUndoTurn from '@/client/components/board/MissionUndoTurn.vue';
 import MissionPlayersPanel from '@/client/components/board/MissionPlayersPanel.vue';
 import {PlayedCardLogModel} from '@/common/models/PlayedCardLogModel';
 import {actionMenu, cardActionOption, getMissionQuickActions, MaxedParameters, MissionQuickAction, passOptionIndex, showsCards} from '@/client/components/board/MissionQuickAction';
@@ -846,6 +849,7 @@ export default defineComponent({
     MissionEffectBadges,
     MissionEffectsBar,
     MissionParameters,
+    MissionUndoTurn,
     MissionPlayersPanel,
     MissionCardStage,
     MissionPlayerHud,
@@ -975,6 +979,10 @@ export default defineComponent({
       } else {
         this.hudShow('all');
       }
+    },
+    /** Ask the other players to undo the last turn. */
+    askUndoTurn() {
+      (this.$refs.undoTurn as InstanceType<typeof MissionUndoTurn> | undefined)?.ask();
     },
     hudShow(menu: 'all' | 'awards' | 'milestones' | 'actions' | 'sell') {
       (this.$refs.hudMenus as InstanceType<typeof MissionHudMenus> | undefined)?.show(menu);
