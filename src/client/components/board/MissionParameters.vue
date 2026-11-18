@@ -1,41 +1,53 @@
 <template>
   <section class="mission-params" :aria-label="$t('Global parameters')">
-    <header class="mission-params__generation">
-      <span v-i18n>Generation</span>
-      <strong>{{ game.generation }}<template v-if="lastGeneration"> / {{ lastGeneration }}</template></strong>
-      <small v-if="game.phase === 'action' && game.turn !== undefined">· <span v-i18n>Turn</span> {{ game.turn }}</small>
-    </header>
-    <div v-for="track in tracks" :key="track.key" class="mission-params__track" :class="{'mission-params__track--done': track.value >= track.max}">
-      <div class="mission-params__head">
-        <img :src="track.icon" alt="">
-        <span class="mission-params__label">{{ $t(track.label) }}</span>
-        <strong class="mission-params__value">{{ track.value }}{{ track.unit }}</strong>
-        <small>/ {{ track.max }}{{ track.unit }}</small>
-      </div>
-      <div class="mission-params__bar" :style="{'--steps': track.steps}">
-        <span v-for="step in track.steps" :key="step" class="mission-params__step"
-          :class="{'mission-params__step--filled': step <= track.filled, 'mission-params__step--bonus': track.bonuses.some((bonus) => bonus.step === step)}"></span>
-      </div>
-      <!-- Bonuses under the bar, one row: each chip names its level and a line leads to its step. -->
-      <div v-if="track.bonuses.length" class="mission-params__bonuses">
-        <template v-for="bonus in track.bonuses" :key="bonus.at">
-          <span class="mission-params__lead" :class="{'mission-params__lead--used': track.value >= bonus.at}"
-            :style="{'--from': bonus.stepX, '--to': bonus.chipX}"></span>
-          <span class="mission-params__bonus" :class="{'mission-params__bonus--used': track.value >= bonus.at}"
-            :style="{'--x': bonus.chipX}" :title="$t(bonus.title) + ' (' + bonus.at + track.unit + ')'">
-            <em class="mission-params__bonus-at">{{ bonus.at }}{{ track.unit }}</em>
-            <img :src="bonus.icon" alt="" :class="{'mission-params__bonus-production': bonus.production}">
-            <small v-if="bonus.text">{{ bonus.text }}</small>
-          </span>
-        </template>
-      </div>
+    <div class="mission-params__compact">
+      <button type="button" class="mission-params__summary" :aria-label="$t('Global parameters')" :aria-controls="detailsId"
+        :aria-expanded="expanded" @click="expanded = !expanded">
+        <strong :title="$t('Generation')">{{ game.generation }}<template v-if="lastGeneration"> / {{ lastGeneration }}</template></strong>
+        <span v-for="track in tracks" :key="track.key" :aria-label="`${$t(track.label)} ${track.value}${track.unit}`">
+          <img :src="track.icon" alt="">{{ track.value }}{{ track.unit }}
+        </span>
+        <span aria-hidden="true">{{ expanded ? '▴' : '▾' }}</span>
+      </button>
     </div>
-    <div v-if="$slots.default" class="mission-params__buttons"><slot></slot></div>
+    <div :id="detailsId" class="mission-params__body" :class="{'mission-params__body--expanded': expanded}">
+      <header class="mission-params__generation">
+        <span v-i18n>Generation</span>
+        <strong>{{ game.generation }}<template v-if="lastGeneration"> / {{ lastGeneration }}</template></strong>
+        <small v-if="game.phase === 'action' && game.turn !== undefined">· <span v-i18n>Turn</span> {{ game.turn }}</small>
+      </header>
+      <div v-for="track in tracks" :key="track.key" class="mission-params__track" :class="{'mission-params__track--done': track.value >= track.max}">
+        <div class="mission-params__head">
+          <img :src="track.icon" alt="">
+          <span class="mission-params__label">{{ $t(track.label) }}</span>
+          <strong class="mission-params__value">{{ track.value }}{{ track.unit }}</strong>
+          <small>/ {{ track.max }}{{ track.unit }}</small>
+        </div>
+        <div class="mission-params__bar" :style="{'--steps': track.steps}">
+          <span v-for="step in track.steps" :key="step" class="mission-params__step"
+            :class="{'mission-params__step--filled': step <= track.filled, 'mission-params__step--bonus': track.bonuses.some((bonus) => bonus.step === step)}"></span>
+        </div>
+        <!-- Bonuses under the bar, one row: each chip names its level and a line leads to its step. -->
+        <div v-if="track.bonuses.length" class="mission-params__bonuses">
+          <template v-for="bonus in track.bonuses" :key="bonus.at">
+            <span class="mission-params__lead" :class="{'mission-params__lead--used': track.value >= bonus.at}"
+              :style="{'--from': bonus.stepX, '--to': bonus.chipX}"></span>
+            <span class="mission-params__bonus" :class="{'mission-params__bonus--used': track.value >= bonus.at}"
+              :style="{'--x': bonus.chipX}" :title="$t(bonus.title) + ' (' + bonus.at + track.unit + ')'">
+              <em class="mission-params__bonus-at">{{ bonus.at }}{{ track.unit }}</em>
+              <img :src="bonus.icon" alt="" :class="{'mission-params__bonus-production': bonus.production}">
+              <small v-if="bonus.text">{{ bonus.text }}</small>
+            </span>
+          </template>
+        </div>
+      </div>
+      <div v-if="$slots.default" class="mission-params__buttons"><slot></slot></div>
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import {computed} from 'vue';
+import {computed, ref, useId} from 'vue';
 import {GameModel} from '@/common/models/GameModel';
 import {BoardName} from '@/common/boards/BoardName';
 import {getGlobalParameterMaximums} from '@/common/boards/GlobalParameterMaximums';
@@ -50,6 +62,8 @@ import {
  * the current value and the bonus icons at the positions where the board grants them.
  */
 const props = defineProps<{game: GameModel, solo: boolean}>();
+const detailsId = useId();
+const expanded = ref(false);
 
 type Bonus = {at: number, icon: string, title: string, text?: string, production?: boolean};
 /** A bonus with the centre of its step and of its chip (fractions of the bar width). */
@@ -135,6 +149,14 @@ const tracks = computed<Track[]>(() => {
   color: #eef4f6;
 }
 
+.mission-params__compact {
+  display: none;
+}
+
+.mission-params__body {
+  display: contents;
+}
+
 .mission-params__generation {
   display: flex;
   align-items: baseline;
@@ -154,6 +176,7 @@ const tracks = computed<Track[]>(() => {
     color: #a9bac2;
   }
 }
+
 
 .mission-params__track--done .mission-params__value {
   color: #8dffb9;
@@ -351,10 +374,66 @@ const tracks = computed<Track[]>(() => {
 
 @media (max-width: 760px) {
   .mission-params {
-    top: 8px;
-    width: 200px;
-    gap: 5px;
-    padding: 6px 8px 8px;
+    padding: 0;
+  }
+
+  .mission-params__compact {
+    display: flex;
+    align-items: center;
+  }
+
+
+  .mission-params__summary {
+    display: flex;
+    min-width: 0;
+    min-height: 42px;
+    flex: 1;
+    align-items: center;
+    justify-content: space-between;
+    gap: 3px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: inherit;
+    background: none;
+    color: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+
+    span {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    img {
+      width: 17px;
+      height: 17px;
+      object-fit: contain;
+    }
+  }
+
+  .mission-params__body {
+    position: absolute;
+    inset: calc(100% + 4px) 0 auto;
+    display: none;
+    max-height: calc(100dvh - 160px);
+    gap: 6px;
+    padding: 8px 10px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid #8aa5af80;
+    border-radius: inherit;
+    background: #101c27;
+
+    &--expanded {
+      display: grid;
+    }
+  }
+
+  .mission-params__generation {
+    display: none;
   }
 }
 </style>

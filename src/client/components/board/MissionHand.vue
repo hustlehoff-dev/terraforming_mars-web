@@ -321,9 +321,10 @@ function fitHand() {
     const gap = parseFloat(style.columnGap) || 0;
     const width = slot.getBoundingClientRect().width;
     const insetFor = (count: number) => count < 2 ? 0 : Math.max(0, (count * width + (count - 1) * gap - available) / (count - 1));
-    // Cards may cover each other up to just over half; beyond that the hand goes on in a row above.
+    // Phones keep one swipeable row so long hands do not cover the board.
+    const maxRows = window.matchMedia?.('(max-width: 760px)').matches ? 1 : MAX_ROWS;
     const comfortable = width * 0.55;
-    while (rowsNeeded < MAX_ROWS && insetFor(Math.ceil(total / rowsNeeded)) > comfortable) {
+    while (rowsNeeded < maxRows && insetFor(Math.ceil(total / rowsNeeded)) > comfortable) {
       rowsNeeded++;
     }
     // Keep a 44px target visible on each card, then scroll the rest of the hand.

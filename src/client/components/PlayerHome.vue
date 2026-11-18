@@ -1278,3 +1278,5 @@ export default defineComponent({
 </script>
 
 <style lang="less" src="../../styles/mission-hud-layout.less"></style>
+
+<style lang="less" src="../../styles/mission-mobile-game.less"></style>

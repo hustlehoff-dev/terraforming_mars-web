@@ -23,10 +23,12 @@
           @keydown.enter="conversions?.[resource] && emit('convert', conversions[resource]!)">
           <ResourceIcon :resource="resource" />
           <strong :key="player[resource]" class="mission-status__value">{{ player[resource] }}</strong>
-          <span v-if="resource === 'megacredits'" class="mission-player-hud__production"
+          <span v-if="resource === 'megacredits'" class="mission-player-hud__production mission-player-hud__production--detailed"
             :aria-label="$t('Terraform rating') + ' ' + formatProduction(player.terraformRating) + ', ' + $t('Production') + ' ' + formatProduction(player.megacreditProduction)"
             :title="$t('Terraform rating') + ' + ' + $t('Production')">({{ formatProduction(player.terraformRating) }} TR {{ formatProduction(player.megacreditProduction) }})</span>
-          <span v-else class="mission-player-hud__production" :aria-label="$t('Production') + ' ' + formatProduction(productionFor(resource))">({{ formatProduction(productionFor(resource)) }})</span>
+          <span v-if="resource === 'megacredits'" class="mission-player-hud__production mission-player-hud__production--compact"
+            :aria-label="$t('Production') + ' ' + formatProduction(productionFor(resource))">({{ formatProduction(productionFor(resource)) }})</span>
+          <span v-if="resource !== 'megacredits'" class="mission-player-hud__production" :aria-label="$t('Production') + ' ' + formatProduction(productionFor(resource))">({{ formatProduction(productionFor(resource)) }})</span>
         </li>
       </ul>
       <slot name="afterStocks"></slot>
@@ -77,6 +79,10 @@ function formatProduction(value: number): string {
 </script>
 
 <style lang="less">
+.mission-player-hud__production--compact {
+  display: none;
+}
+
 .mission-player-hud__controls {
   display: flex;
   min-width: 0;
@@ -265,7 +271,7 @@ body #player-home.mission-cinematic {
 @media (max-width: 760px) {
   body #player-home.mission-cinematic .mission-player-hud {
     > .mission-hand {
-      --hand-scale: 0.38;
+      --hand-scale: var(--mobile-hand-scale);
     }
 
     .mission-player-hud__controls {
@@ -290,8 +296,14 @@ body #player-home.mission-cinematic {
 
 @media (max-width: 760px) {
   body #player-home.mission-cinematic {
+    --mobile-hand-scale: 0.31;
+    --mobile-dock-bottom: max(8px, env(safe-area-inset-bottom));
     --mission-card-scale: 0.42;
-    --dock-height: 260px;
+    --dock-height: calc(80px + var(--mobile-dock-bottom));
+
+    &:has(.mission-hand) {
+      --dock-height: calc(80px + var(--mobile-dock-bottom) + (352px * var(--mobile-hand-scale) + 39px) * max(1, var(--hand-size, 1)));
+    }
 
     .mission-player-hud__stocks li {
       font-size: 1.05rem;
