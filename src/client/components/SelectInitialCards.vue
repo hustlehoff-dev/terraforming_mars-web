@@ -86,6 +86,14 @@
           <dd class="setup-summary__money">{{ getStartingMegacredits() }}<small v-if="hasPrelude"> → {{ getStartingMegacredits() + getAfterPreludes() }} {{ $t('after preludes') }}</small></dd>
         </div>
       </dl>
+      <div v-if="showsave" class="setup-summary__mobile">
+        <div v-if="step === 'projects'" class="setup-summary__mobile-cost" role="status">
+          <span>{{ selectedCards.length }} {{ $t('Project cards') }} · {{ selectedCards.length * cardCost }} M€</span>
+          <strong v-if="selectedCorporations.length === 1">{{ $t('You have') }} {{ getStartingMegacredits() }} M€</strong>
+        </div>
+        <AppButton class="setup-summary__mobile-continue" type="submit" :title="nextStep ? 'Next' : 'Start'"
+          :disabled="nextStep ? !currentStepReady : !valid" @click="advanceSetup" />
+      </div>
       <p v-if="warning !== undefined" class="setup-summary__warning">{{ $t(warning) }}</p>
       <div class="setup-summary__buttons">
         <button v-if="nextStep" type="button" class="setup-summary__next" @click="step = nextStep" v-i18n>Next</button>
@@ -189,6 +197,13 @@ export default defineComponent({
     };
   },
   methods: {
+    advanceSetup() {
+      if (this.nextStep !== undefined) {
+        this.step = this.nextStep;
+      } else {
+        this.saveIfConfirmed();
+      }
+    },
     noop() {
       throw new Error('should not be called');
     },
@@ -348,7 +363,7 @@ export default defineComponent({
       this.selectedCorporations = cards;
       this.validate();
       // The first corporation chosen moves on to the next step; changing it later does not.
-      if (first && this.nextStep !== undefined) {
+      if (first && this.nextStep !== undefined && !window.matchMedia?.('(max-width: 760px)').matches) {
         this.step = this.nextStep;
       }
     },
@@ -432,6 +447,9 @@ export default defineComponent({
     nextStep(): SetupStep | undefined {
       const index = this.steps.findIndex((item) => item.id === this.step);
       return this.steps[index + 1]?.id;
+    },
+    currentStepReady(): boolean {
+      return this.steps.some((item) => item.id === this.step && item.done);
     },
     cardCost(): number {
       const corporation = this.selectedCorporations.length === 1 ? getCard(this.selectedCorporations[0]) : undefined;
@@ -580,6 +598,10 @@ function hasOption(options: Array<PlayerInputModel>, title: string): boolean {
   white-space: nowrap;
 }
 
+.setup-summary__mobile {
+  display: none;
+}
+
 .setup-summary {
   position: sticky;
   z-index: 5;
@@ -648,6 +670,81 @@ function hasOption(options: Array<PlayerInputModel>, title: string): boolean {
 
   &:hover {
     border-color: #b4ffeb;
+  }
+}
+
+@media (max-width: 760px) {
+  body #player-home .setup-page:has(.setup-wizard) {
+    padding-bottom: calc(130px + env(safe-area-inset-bottom));
+  }
+
+  body #player-home .setup-page .setup-summary {
+    position: fixed;
+    z-index: 8;
+    inset: auto 0 0;
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0;
+    padding: 0 0 env(safe-area-inset-bottom);
+    border: 0;
+    border-radius: 0;
+    background: #101820;
+    box-shadow: none;
+
+    > .setup-summary__facts,
+    > .setup-summary__buttons,
+    > .setup-mobile-cost {
+      display: none;
+    }
+
+    .setup-summary__mobile {
+      display: block;
+    }
+
+    .setup-summary__mobile-cost {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 4px 12px;
+      padding: 10px 14px;
+      color: #c5d0d6;
+      font-size: 0.78rem;
+
+      strong {
+        color: #f3c77e;
+      }
+    }
+
+    .setup-summary__mobile-continue {
+      display: flex;
+      box-sizing: border-box;
+      width: 100%;
+      min-width: 0;
+      min-height: 58px;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      padding: 12px 16px;
+      border: 0;
+      border-radius: 0;
+      background: #f3c77e !important;
+      color: #21180e !important;
+      font-family: inherit;
+      font-size: 1.1rem;
+      font-weight: 800;
+      box-shadow: none;
+
+      &:disabled {
+        opacity: 0.55;
+      }
+    }
+
+    > .setup-summary__warning {
+      margin: 0;
+      padding: 8px 14px;
+      font-size: 0.8rem;
+    }
   }
 }
 
