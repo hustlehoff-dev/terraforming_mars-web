@@ -2,56 +2,61 @@
   <button v-if="colonies.length" type="button" class="mission-colonies-trigger" aria-haspopup="dialog" @click="openWindow">
     <span aria-hidden="true">🪐</span>{{ $t('Colonies') }}
   </button>
-  <dialog v-if="colonies.length" ref="dialog" class="mission-colonies" :aria-label="$t('Colonies')" @click.self="closeWindow">
-    <header>
-      <h2 v-i18n>Colonies</h2>
-      <small v-if="tradeable.size" class="mission-colonies__hint" v-i18n>Click a colony to trade with, then choose how to pay.</small>
-    </header>
-    <!-- How colonies work, in three lines (open until the player folds it). -->
-    <details class="mission-colonies__legend" :open="legendOpen" @toggle="rememberLegend">
-      <summary v-i18n>How do colonies work?</summary>
-      <ul>
-        <li><b v-i18n>Ship</b> <span v-i18n>Once per generation per ship: pay 9 M€, 3 energy or 3 titanium and get the trade income, the number under the white cube. The cube then moves back and climbs again each generation.</span></li>
-        <li><b v-i18n>Colony</b> <span v-i18n>Standard project (17 M€): your marker on the first free space, you get what is drawn there. From then on, every trade with this moon, by anyone, gives you its BONUS.</span></li>
-        <li><b v-i18n>Grey moon</b> <span v-i18n>Not active yet: it opens when someone plays a card that holds its resource.</span></li>
+  <!-- The trigger is inside collapsible parameters. A modal must not inherit that hidden ancestor. -->
+  <Teleport to="body">
+    <dialog v-if="colonies.length" ref="dialog" class="mission-colonies" :aria-label="$t('Colonies')"
+      @click.self="closeWindow" @cancel.prevent="closeWindow" @close="picked = undefined">
+      <header>
+        <h2 v-i18n>Colonies</h2>
+        <small v-if="tradeable.size" class="mission-colonies__hint" v-i18n>Click a colony to trade with, then choose how to pay.</small>
+        <button type="button" class="mission-colonies__close" :aria-label="$t('Close')" @click="closeWindow">×</button>
+      </header>
+      <!-- How colonies work, in three lines (open until the player folds it). -->
+      <details class="mission-colonies__legend" :open="legendOpen" @toggle="rememberLegend">
+        <summary v-i18n>How do colonies work?</summary>
+        <ul>
+          <li><b v-i18n>Ship</b> <span v-i18n>Once per generation per ship: pay 9 M€, 3 energy or 3 titanium and get the trade income, the number under the white cube. The cube then moves back and climbs again each generation.</span></li>
+          <li><b v-i18n>Colony</b> <span v-i18n>Standard project (17 M€): your marker on the first free space, you get what is drawn there. From then on, every trade with this moon, by anyone, gives you its BONUS.</span></li>
+          <li><b v-i18n>Grey moon</b> <span v-i18n>Not active yet: it opens when someone plays a card that holds its resource.</span></li>
+        </ul>
+      </details>
+      <!-- Trade fleets still free this generation, per player. -->
+      <ul v-if="players.length" class="mission-colonies__fleets" :aria-label="$t('Trade fleets')">
+        <li v-for="player in players" :key="player.color">
+          <span class="mission-colonies__swatch" :class="'player_bg_color_' + player.color" aria-hidden="true"></span>
+          <span>{{ player.name }}</span>
+          <span class="mission-colonies__ships">
+            <span v-for="index in freeFleets(player)" :key="index" :class="'colonies-fleet colonies-fleet-' + player.color" aria-hidden="true"></span>
+          </span>
+          <small>{{ freeFleets(player) }} / {{ player.fleetSize }}</small>
+        </li>
       </ul>
-    </details>
-    <!-- Trade fleets still free this generation, per player. -->
-    <ul v-if="players.length" class="mission-colonies__fleets" :aria-label="$t('Trade fleets')">
-      <li v-for="player in players" :key="player.color">
-        <span class="mission-colonies__swatch" :class="'player_bg_color_' + player.color" aria-hidden="true"></span>
-        <span>{{ player.name }}</span>
-        <span class="mission-colonies__ships">
-          <span v-for="index in freeFleets(player)" :key="index" :class="'colonies-fleet colonies-fleet-' + player.color" aria-hidden="true"></span>
-        </span>
-        <small>{{ freeFleets(player) }} / {{ player.fleetSize }}</small>
-      </li>
-    </ul>
-    <!-- While trading is possible: colonies open for trade are lit and chosen with a click. -->
-    <div class="mission-colonies__tiles">
-      <component :is="tradeable.has(colony.name) ? 'button' : 'div'" v-for="colony in colonies" :key="colony.name"
-        :type="tradeable.has(colony.name) ? 'button' : undefined" class="mission-colonies__tile"
-        :class="{
-          'mission-colonies__tile--inactive': !colony.isActive,
-          'mission-colonies__tile--open': tradeable.has(colony.name),
-          'mission-colonies__tile--closed': tradeable.size > 0 && !tradeable.has(colony.name),
-          'mission-colonies__tile--picked': picked === colony.name,
-        }"
-        :aria-pressed="tradeable.has(colony.name) ? picked === colony.name : undefined"
-        @click="tradeable.has(colony.name) && (picked = colony.name)">
-        <Colony :colony="colony" :active="colony.isActive" />
-      </component>
-    </div>
-    <footer class="mission-window-footer">
-      <button type="button" class="mission-close" @click="closeWindow" v-i18n>Close</button>
-      <button v-for="pay in payments" :key="pay.index" type="button" class="mission-close mission-colonies__trade"
-        :disabled="picked === undefined" @click="trade(pay.index)">{{ pay.label }}</button>
-    </footer>
-  </dialog>
+      <!-- While trading is possible: colonies open for trade are lit and chosen with a click. -->
+      <div class="mission-colonies__tiles">
+        <component :is="tradeable.has(colony.name) ? 'button' : 'div'" v-for="colony in colonies" :key="colony.name"
+          :type="tradeable.has(colony.name) ? 'button' : undefined" class="mission-colonies__tile"
+          :class="{
+            'mission-colonies__tile--inactive': !colony.isActive,
+            'mission-colonies__tile--open': tradeable.has(colony.name),
+            'mission-colonies__tile--closed': tradeable.size > 0 && !tradeable.has(colony.name),
+            'mission-colonies__tile--picked': picked === colony.name,
+          }"
+          :aria-pressed="tradeable.has(colony.name) ? picked === colony.name : undefined"
+          @click="tradeable.has(colony.name) && (picked = colony.name)">
+          <Colony :colony="colony" :active="colony.isActive" />
+        </component>
+      </div>
+      <footer class="mission-window-footer">
+        <button type="button" class="mission-close" @click="closeWindow" v-i18n>Close</button>
+        <button v-for="pay in payments" :key="pay.index" type="button" class="mission-close mission-colonies__trade"
+          :disabled="picked === undefined" @click="trade(pay.index)">{{ pay.label }}</button>
+      </footer>
+    </dialog>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
-import {computed, ref, watch} from 'vue';
+import {computed, nextTick, onBeforeUnmount, ref, watch} from 'vue';
 import Colony from '@/client/components/colonies/Colony.vue';
 import {ColonyModel} from '@/common/models/ColonyModel';
 import {ColonyName} from '@/common/colonies/ColonyName';
@@ -67,14 +72,18 @@ import {translateMessage, translateTextWithParams} from '@/client/directives/i18
  * colonies are lit: click one, then "Trade: 9 M€" (or another way to pay) at the bottom.
  */
 const LEGEND_KEY = 'colonies-legend-folded';
-function legendFolded(): boolean {
+function initialLegendOpen(): boolean {
   try {
-    return window.localStorage.getItem(LEGEND_KEY) === '1';
+    const saved = window.localStorage.getItem(LEGEND_KEY);
+    if (saved !== null) {
+      return saved === '0';
+    }
   } catch {
-    return false;
+    // Use the screen's default when storage is unavailable.
   }
+  return window.matchMedia?.('(max-width: 760px)').matches !== true;
 }
-const legendOpen = ref(!legendFolded());
+const legendOpen = ref(initialLegendOpen());
 function rememberLegend(event: Event) {
   const open = (event.target as HTMLDetailsElement).open;
   legendOpen.value = open;
@@ -122,10 +131,12 @@ watch(tradeable, (open) => {
   }
 });
 
-function openWindow() {
-  const window = dialog.value;
-  if (window !== undefined && !window.open && typeof window.showModal === 'function') {
-    window.showModal();
+async function openWindow() {
+  // Let the action menu close and the teleported dialog finish mounting before taking focus.
+  await nextTick();
+  const element = dialog.value;
+  if (element !== undefined && element.isConnected && !element.open && typeof element.showModal === 'function') {
+    element.showModal();
   }
 }
 
@@ -135,6 +146,8 @@ function closeWindow() {
     dialog.value.close();
   }
 }
+
+onBeforeUnmount(closeWindow);
 
 function trade(payIndex: number) {
   const colonyName = picked.value;
@@ -188,6 +201,7 @@ defineExpose({openWindow});
 }
 
 .mission-colonies {
+  box-sizing: border-box;
   width: min(1320px, calc(100vw - 32px));
   max-width: none;
   max-height: 92dvh;
@@ -199,6 +213,7 @@ defineExpose({openWindow});
   background: linear-gradient(#152330f5, #0b131bf5);
   box-shadow: 0 24px 60px #000d;
   color: #eef6f8;
+  font-family: Ubuntu, Arial, sans-serif;
 
   &::backdrop {
     background: #03070cb3;
@@ -222,6 +237,49 @@ defineExpose({openWindow});
       text-transform: uppercase;
     }
   }
+}
+
+@media (max-width: 760px) {
+  dialog.mission-colonies {
+    position: fixed;
+    inset: 0;
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+    margin: auto;
+    overscroll-behavior: contain;
+
+    header {
+      position: sticky;
+      z-index: 3;
+      top: 0;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 10px 12px;
+
+      h2 { flex: 1; font-size: 18px; }
+    }
+
+    .mission-colonies__close { width: 40px; height: 40px; flex: none; }
+    .mission-colonies__hint { order: 3; flex-basis: 100%; font-size: 13px; line-height: 1.35; }
+    .mission-colonies__legend { padding: 10px 12px; font-size: 13px; }
+    .mission-colonies__fleets { gap: 6px 12px; padding: 8px 12px; font-size: 13px; }
+    .mission-colonies__tiles { gap: 14px; padding: 16px 10px; }
+    .mission-colonies__tile .colony-card { zoom: 0.78; }
+    .mission-window-footer {
+      position: sticky;
+      z-index: 3;
+      bottom: 0;
+      gap: 6px;
+      padding: 10px;
+      background: #0d1a24;
+
+      .mission-close { min-height: 42px; flex: 1 1 140px; padding: 6px 8px; font-size: 13px; }
+    }
+  }
+}
+
+@media (max-width: 360px) {
+  dialog.mission-colonies .mission-colonies__tile .colony-card { zoom: 0.63; }
 }
 
 .mission-colonies__close {
