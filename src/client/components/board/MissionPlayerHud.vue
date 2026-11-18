@@ -1,5 +1,5 @@
 <template>
-  <div class="mission-player-hud">
+  <div ref="hud" class="mission-player-hud">
     <div class="mission-player-hud__controls">
       <div class="mission-player-hud__corporations">
         <button
@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed} from 'vue';
+import {computed, onBeforeUnmount, onMounted, ref} from 'vue';
 import MissionHand from '@/client/components/board/MissionHand.vue';
 import Card from '@/client/components/card/Card.vue';
 import ResourceIcon from '@/client/components/common/ResourceIcon.vue';
@@ -60,6 +60,31 @@ const props = defineProps<{
   inspected?: CardName;
 }>();
 const emit = defineEmits<{preview: [card: CardModel, origin: DOMRect], play: [card: CardModel, origin: DOMRect], convert: [action: MissionQuickAction]}>();
+const hud = ref<HTMLElement>();
+let dockObserver: ResizeObserver | undefined;
+// The same measured dock boundary positions the camera, scene and return-to-choice button.
+function measureMobileDock() {
+  const dock = hud.value?.closest<HTMLElement>('.mission-dock');
+  if (dock && window.matchMedia?.('(max-width: 760px)').matches) {
+    const bottom = Math.max(0, window.innerHeight - dock.getBoundingClientRect().bottom);
+    document.documentElement.style.setProperty('--mobile-dock-height', `${Math.ceil(dock.offsetHeight + bottom)}px`);
+  } else {
+    document.documentElement.style.removeProperty('--mobile-dock-height');
+  }
+}
+onMounted(() => {
+  if (typeof ResizeObserver !== 'undefined' && hud.value) {
+    dockObserver = new ResizeObserver(measureMobileDock);
+    dockObserver.observe(hud.value);
+  }
+  window.addEventListener('resize', measureMobileDock);
+  measureMobileDock();
+});
+onBeforeUnmount(() => {
+  dockObserver?.disconnect();
+  window.removeEventListener('resize', measureMobileDock);
+  document.documentElement.style.removeProperty('--mobile-dock-height');
+});
 const corporations = computed(() => getCardsByType(props.player.tableau, [CardType.CORPORATION]));
 
 function productionFor(resource: typeof ALL_RESOURCES[number]): number {

@@ -1,13 +1,23 @@
 <template>
-  <aside ref="feed" class="activity-feed" :aria-label="$t('Activity feed')" :style="placement" @keydown.esc.stop="dismissPreview">
-    <button
+  <aside ref="feed" class="activity-feed" :class="{'activity-feed--expanded': expanded}" :aria-label="$t('Activity feed')" :style="placement" @keydown.esc.stop="dismissPreview">
+    <div class="activity-feed__mobile-heading">
+      <button
       type="button"
       class="activity-feed__toggle"
       :aria-controls="listId"
       :aria-expanded="expanded"
-      @click="toggleFeed"
-      v-i18n>Activity feed</button>
-    <div class="activity-feed__body" :class="{'activity-feed__body--expanded': expanded}">
+      @click="toggleFeed">
+        <svg class="activity-feed__heading-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 4h14v14H6zM6 8H3v13h14v-3M9 8h8M9 11h8M9 14h5" /></svg>
+        <span>{{ $t(filter === 'chat' ? 'Chat' : 'Activity feed') }}</span>
+        <svg class="activity-feed__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path :d="expanded ? 'm6 9 6 6 6-6' : 'm9 6 6 6-6 6'" /></svg>
+      </button>
+      <button v-if="canChat" type="button" class="activity-feed__chat-toggle" :aria-label="$t('Chat')" :aria-pressed="filter === 'chat'"
+        @click="setFilter(filter === 'chat' ? 'all' : 'chat'); expanded = true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 4h16v12H9l-5 4zM8 8h8M8 12h5" /></svg>
+        <b v-if="unread" class="activity-feed__unread">{{ unread }}</b>
+      </button>
+    </div>
+    <div class="activity-feed__body" :class="{'activity-feed__body--expanded': expanded, 'activity-feed__body--chat': filter === 'chat', 'activity-feed__body--card': latestCardEntry && filter !== 'chat'}">
       <ol :id="listId" ref="list" class="activity-feed__list" tabindex="0" @scroll.passive="updateScroll">
         <template v-for="item in feedItems" :key="item.key">
           <li v-if="item.chat" class="activity-feed__chat" :class="{'activity-feed__chat--mine': item.chat.player === viewModel.color}">
@@ -22,7 +32,7 @@
               :is="entry.card || entry.targetSpace || entry.deck?.length ? 'button' : 'div'"
               :type="entry.card || entry.targetSpace || entry.deck?.length ? 'button' : undefined"
               class="activity-feed__entry"
-              :class="{'activity-feed__entry--new': newKeys.has(entry.key)}"
+              :class="{'activity-feed__entry--new': newKeys.has(entry.key), 'activity-feed__entry--card': !!entry.card}"
               :aria-label="entry.card || entry.targetSpace || entry.deck?.length ? entry.text : undefined"
               :aria-expanded="entry.deck?.length ? reveal?.key === entry.key : entry.card ? previewKey === entry.key : undefined"
               @click="inspect(entry)"
@@ -33,6 +43,7 @@
               <span v-if="entry.player" class="activity-feed__marker" :class="'player_bg_color_' + entry.player" aria-hidden="true"></span>
               <span class="activity-feed__line">
                 <strong v-if="entry.actor">{{ entry.actor + ' ' }}</strong>
+                <span v-if="entry.card" class="activity-feed__mobile-arrow" aria-hidden="true">→ </span>
                 <span v-if="isCardAction(entry)" class="activity-feed__action-tag"><span aria-hidden="true">➜</span>{{ $t('Card action') }}</span>
                 <span v-else class="activity-feed__verb">{{ entry.action + ' ' }}</span>
                 <b v-if="entry.subjectText">{{ entry.subjectText }}</b>
@@ -57,6 +68,11 @@
           </li>
         </template>
       </ol>
+      <button v-if="mobile && latestCardEntry && latestCardModel && filter !== 'chat'" type="button" class="activity-feed__latest-card" :key="latestCardEntry.key"
+        :aria-label="latestCardEntry.text + ' · ' + $t('Click to view up close')" @click="inspect(latestCardEntry)">
+        <span>{{ latestCardEntry.actor }}</span>
+        <div class="activity-feed__latest-face"><Card :card="latestCardModel" inert /></div>
+      </button>
       <p v-if="loaded && feedItems.length === 0" class="activity-feed__empty">{{ $t(filter === 'chat' ? 'No messages yet' : 'No activity yet') }}</p>
       <!-- Chat: players write here; the messages show in the feed. -->
       <form v-if="canChat && filter !== 'game'" class="activity-feed__write" @submit.prevent="sendChat">
@@ -183,7 +199,17 @@ const emit = defineEmits<{
 }>();
 const listId = useId();
 const list = ref<HTMLOListElement>();
-const expanded = ref(false);
+const mobileQuery = typeof window !== 'undefined' ? window.matchMedia?.('(max-width: 760px)') : undefined;
+const mobile = ref(mobileQuery?.matches === true);
+const MOBILE_EXPANDED_KEY = 'mission-mobile-events-expanded';
+function mobileFeedExpanded(): boolean {
+  try {
+    return window.localStorage.getItem(MOBILE_EXPANDED_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
+const expanded = ref(mobileQuery?.matches === true && mobileFeedExpanded());
 const loaded = ref(false);
 const scrolled = ref(false);
 const events = shallowRef<Array<GameActivityModel>>([]);
@@ -346,6 +372,14 @@ const previewCards = computed<Array<CardModel>>(() => {
   return cards.slice(0, 4);
 });
 const previewEntry = computed(() => entries.value.find((entry) => entry.key === previewKey.value));
+// Only public actions are used here. Private drawn cards never become another player's thumbnail.
+const latestCardEntry = computed(() => entries.value.find((entry) =>
+  entry.card !== undefined && ['played', 'action', 'project'].includes(entry.kind) && getCard(entry.card) !== undefined));
+const latestCardModel = computed<CardModel | undefined>(() => {
+  const entry = latestCardEntry.value;
+  return entry?.card === undefined ? undefined :
+    (entry.player && players.value.get(entry.player)?.tableau.find((card) => card.name === entry.card)) || {name: entry.card};
+});
 /** The action of a played card (blue card, corporation...), not a standard action like converting heat. */
 function isCardAction(entry: GameActivityModel): boolean {
   if (entry.kind !== 'action' || entry.card === undefined) {
@@ -547,6 +581,10 @@ let placementObserver: ResizeObserver | undefined;
 function placeFeed() {
   const aside = feed.value;
   const map = aside?.offsetParent;
+  if (mobileQuery?.matches) {
+    placement.value = {};
+    return;
+  }
   const players = map?.querySelector<HTMLElement>('.mission-players');
   if (!aside || !(map instanceof HTMLElement) || !players || players.offsetHeight === 0) {
     placement.value = {};
@@ -571,7 +609,7 @@ function publishFeedRect() {
   // The whole feed (title and list), measured when it changes and whenever a window opens.
   const box = feed.value?.getBoundingClientRect();
   if (box === undefined || box.width === 0 || box.height === 0) {
-    for (const name of ['--feed-x', '--feed-y', '--feed-w', '--feed-h']) {
+    for (const name of ['--feed-x', '--feed-y', '--feed-w', '--feed-h', '--mobile-feed-bottom']) {
       root.removeProperty(name);
     }
     return;
@@ -580,10 +618,21 @@ function publishFeedRect() {
   root.setProperty('--feed-y', `${Math.round(box.top)}px`);
   root.setProperty('--feed-w', `${Math.round(box.width)}px`);
   root.setProperty('--feed-h', `${Math.round(box.height)}px`);
+  const map = feed.value?.offsetParent;
+  if (mobileQuery?.matches && map instanceof HTMLElement) {
+    root.setProperty('--mobile-feed-bottom', `${Math.ceil(box.bottom - map.getBoundingClientRect().top)}px`);
+  } else {
+    root.removeProperty('--mobile-feed-bottom');
+  }
 }
 function placeAndPublish() {
   placeFeed();
   void nextTick(publishFeedRect);
+}
+function changeFeedViewport() {
+  mobile.value = mobileQuery?.matches === true;
+  expanded.value = mobileQuery?.matches === true && mobileFeedExpanded();
+  placeAndPublish();
 }
 onMounted(() => {
   placeAndPublish();
@@ -603,13 +652,15 @@ onMounted(() => {
     dialogObserver.observe(document.body, {subtree: true, attributes: true, attributeFilter: ['open']});
   }
   window.addEventListener('resize', placeAndPublish);
+  mobileQuery?.addEventListener('change', changeFeedViewport);
 });
 watch([feedItems, expanded], () => void nextTick(publishFeedRect), {flush: 'post'});
 onBeforeUnmount(() => {
   placementObserver?.disconnect();
   dialogObserver?.disconnect();
   window.removeEventListener('resize', placeAndPublish);
-  for (const name of ['--feed-x', '--feed-y', '--feed-w', '--feed-h']) {
+  mobileQuery?.removeEventListener('change', changeFeedViewport);
+  for (const name of ['--feed-x', '--feed-y', '--feed-w', '--feed-h', '--mobile-feed-bottom']) {
     document.documentElement.style.removeProperty(name);
   }
 });
@@ -804,6 +855,14 @@ function dismissPreview() {
 
 function toggleFeed() {
   expanded.value = !expanded.value;
+  if (expanded.value) {
+    void nextTick(jumpToLatest);
+  }
+  if (mobileQuery?.matches) {
+    try {
+      window.localStorage.setItem(MOBILE_EXPANDED_KEY, expanded.value ? '1' : '0');
+    } catch { /* The current choice still works when storage is unavailable. */ }
+  }
   closePreview();
 }
 
@@ -827,6 +886,9 @@ function placePreview() {
 }
 
 function hoverEntry(entry: GameActivityModel, event?: Event) {
+  if (mobileQuery?.matches) {
+    return;
+  }
   if ((entry.card || entry.steps?.length || entry.deck?.length || ['milestone', 'award', 'trade', 'colony'].includes(entry.kind)) && !previewPinned) {
     previewAnchor = event?.currentTarget instanceof HTMLElement ? event.currentTarget : undefined;
     previewKey.value = entry.key;
@@ -880,6 +942,11 @@ function showLatest() {
 </script>
 
 <style scoped lang="less">
+.activity-feed__mobile-heading,
+.activity-feed__latest-card,
+.activity-feed__mobile-arrow {
+  display: none;
+}
 .activity-feed__ring {
   position: fixed;
   z-index: 61;

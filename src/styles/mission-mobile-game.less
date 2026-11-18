@@ -1,75 +1,73 @@
+// Phone layout only. Scene geometry and game rules remain owned by their existing components.
 @media (max-width: 760px) {
+  body:has(#player-home.mission-cinematic) {
+    --mobile-peek-height: 0px;
+
+    &:has(dialog.dialog--peek),
+    &:has(.mission-pending-decision) {
+      --mobile-peek-height: 54px;
+    }
+  }
+
   body #player-home.mission-cinematic {
     --scene-height: 100dvh;
     --mobile-toolbar-top: max(8px, env(safe-area-inset-top));
-    --mobile-status-top: calc(var(--mobile-toolbar-top) + 44px);
+    --mobile-status-top: calc(var(--mobile-toolbar-top) + 48px);
+    --mobile-feed-top: calc(var(--mobile-status-top) + var(--mobile-params-height, 54px) + 8px);
     --mobile-dock-bottom: max(6px, env(safe-area-inset-bottom));
-    --mobile-hand-scale: 0.31;
-    --dock-height: calc(74px + var(--mobile-dock-bottom));
+    --mobile-hand-scale: 0.33;
+    --dock-height: calc(var(--mobile-dock-height, 230px) + var(--mobile-peek-height));
 
     margin: 0;
     padding: 0;
 
-    &:has(.mission-hand) {
-      --dock-height: calc(80px + var(--mobile-dock-bottom) + (352px * var(--mobile-hand-scale) + 39px) * max(1, var(--hand-size, 1)));
-    }
-
     .mission-play {
-      --mobile-map-top: calc(var(--mobile-status-top) + 86px);
+      --mobile-toolbar-top: inherit;
+      --mobile-status-top: inherit;
 
       width: 100%;
       margin: 0;
       padding: 0;
 
-      > :not(.mission-play__map) {
-        margin-inline: 0;
-      }
+      > :not(.mission-play__map) { margin-inline: 0; }
     }
 
-    .mission-play__map {
-      margin: 0;
-
-      &:has(.rival-panel) {
-        --mobile-map-top: calc(var(--mobile-status-top) + 132px);
-      }
-    }
-
-    .mission-status {
-      display: none;
-    }
+    .mission-play__map { margin: 0; }
+    .mission-status,
+    .rival-panel { display: none; }
 
     .mission-settings-trigger,
     .mission-sound {
       top: var(--mobile-toolbar-top) !important;
-      width: 38px;
-      height: 38px;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      font-size: 24px;
     }
 
-    .mission-settings-trigger {
-      right: 8px !important;
-    }
-
-    .mission-sound {
-      right: 50px !important;
-    }
+    .mission-settings-trigger { right: 10px !important; }
+    .mission-sound { right: 58px !important; }
 
     .mission-sp {
       top: var(--mobile-toolbar-top);
-      left: 8px;
-      width: calc(100% - 108px);
-      max-width: 240px;
+      left: 10px;
+      width: calc(100% - 118px);
+      max-width: 310px;
       transform: none;
     }
 
     .mission-sp__title {
       box-sizing: border-box;
       width: 100%;
-      min-height: 38px;
-      padding: 6px 8px;
-      border-top: 1px solid #c9a35d;
-      border-radius: 6px;
-      font-size: 0.65rem;
+      min-height: 40px;
+      padding: 6px 10px;
+      border: 1px solid #dfba6a;
+      border-radius: 9px;
+      background: linear-gradient(#15242f, #091219);
+      color: #f5eee0;
+      font-size: clamp(12px, 3.3vw, 16px);
       letter-spacing: 0;
+      text-transform: none;
       white-space: nowrap;
     }
 
@@ -78,13 +76,13 @@
       top: calc(100% + 6px);
       left: 0;
       box-sizing: border-box;
-      width: calc(100vw - 16px);
+      width: calc(100vw - 20px);
       max-width: none;
       padding: 12px 8px;
       overflow: auto hidden;
       background: #101c27;
       border: 1px solid #6f8c98;
-      border-radius: 8px;
+      border-radius: 9px;
     }
 
     .mission-right-column {
@@ -93,30 +91,87 @@
 
       .mission-params {
         position: absolute !important;
+        z-index: 18;
         inset: var(--mobile-status-top) 8px auto;
         box-sizing: border-box;
         width: auto;
+        padding: 0;
+        border-radius: 10px;
+        background: linear-gradient(#152631e8, #09151de8);
       }
+
+      .mission-params__summary {
+        min-height: 52px;
+        gap: 4px;
+        padding: 5px 7px;
+        font-size: clamp(14px, 4vw, 20px);
+
+        img { width: 23px; height: 26px; }
+      }
+
+      .mission-params__summary-generation {
+        display: block;
+        flex: none;
+        padding-right: 8px;
+        border-right: 1px solid #829ba54d;
+        line-height: 1.15;
+        text-align: center;
+
+        > small {
+          display: block;
+          margin-bottom: 3px;
+          color: #bdcdd4;
+          font-size: 8px;
+          font-weight: 600;
+          text-transform: uppercase;
+        }
+      }
+
+      .mission-params__summary-track {
+        gap: 3px;
+
+        small { font-size: 11px; }
+      }
+
+      .mission-params__summary-chevron { font-size: 12px; }
+      .mission-params__compact-time { padding: 0 6px 5px; font-size: 11px; }
+      .mission-params__compact:has(.mission-params__compact-time) { flex-wrap: wrap; }
+      .mission-params__compact:has(.mission-params__compact-time) .mission-params__summary { flex-basis: 100%; }
 
       .mission-turn {
         position: absolute;
-        right: 10px;
-        bottom: calc(var(--dock-height) + 10px);
+        inset: auto auto calc(var(--dock-height) + 10px) 12px;
         display: grid;
-        width: min(270px, calc(100vw - 132px));
-        grid-template-columns: minmax(0, 1fr) auto 48px;
+        width: calc(100% - 136px);
+        grid-template-columns: minmax(0, 1fr) auto 42px;
         grid-template-areas: 'clock count button' 'caption caption button';
         align-items: center;
-        gap: 5px 7px;
+        gap: 4px 6px;
       }
 
       .mission-turn__button {
         grid-area: button;
-        width: 48px;
-        height: 48px;
-        border-width: 2px;
-        font-size: 1.6rem;
-        box-shadow: 0 0 0 2px #0c1720, 0 0 0 3px #b48f4c, 0 3px 10px #0009;
+        width: 42px;
+        height: 42px;
+        border-width: 1px;
+        font-size: 24px;
+        box-shadow: 0 0 0 2px #0c1720, 0 0 0 3px #b48f4c;
+      }
+
+      .mission-turn:has(.mission-turn__button--idle) {
+        display: block;
+
+        .mission-turn__button { display: none; }
+        .mission-turn__caption {
+          padding: 5px 0;
+          border: 0;
+          background: none;
+          color: #eee9dd;
+          font-size: 12px;
+          font-style: italic;
+          font-weight: 500;
+          text-align: left;
+        }
       }
 
       .mission-turn__clock {
@@ -124,20 +179,15 @@
         display: flex;
         min-width: 0;
         gap: 4px;
-        padding: 3px 6px;
+        padding: 3px 5px;
         border-width: 1px;
         border-radius: 5px;
         box-shadow: none;
 
-        b {
-          font-size: 1rem;
-        }
+        b { font-size: 15px; }
       }
 
-      .mission-turn__clock-icon {
-        font-size: 1rem;
-      }
-
+      .mission-turn__clock-icon { font-size: 15px; }
       .mission-turn__clock-label {
         position: absolute;
         width: 1px;
@@ -148,12 +198,12 @@
 
       .mission-turn__count {
         grid-area: count;
-        max-width: 118px;
-        gap: 4px;
-        padding: 3px 5px;
+        max-width: 110px;
+        gap: 3px;
+        padding: 3px 4px;
         border-width: 1px;
         border-radius: 5px;
-        font-size: 0.6rem;
+        font-size: 10px;
         line-height: 1.15;
         letter-spacing: 0;
         text-transform: none;
@@ -162,38 +212,35 @@
 
       .mission-turn__pips {
         gap: 3px;
-
-        i {
-          width: 7px;
-          height: 7px;
-          border-width: 1px;
-        }
+        i { width: 6px; height: 6px; border-width: 1px; }
       }
 
       .mission-turn__caption {
         grid-area: caption;
         justify-self: stretch;
         max-width: none;
-        padding: 4px 6px;
-        font-size: 0.65rem;
+        padding: 3px 5px;
+        font-size: 11px;
         letter-spacing: 0;
         text-transform: none;
       }
 
       .mission-turn__menu {
         position: absolute;
-        right: 0;
+        left: 0;
         bottom: calc(100% + 8px);
         box-sizing: border-box;
-        width: min(320px, calc(100vw - 20px));
+        width: min(340px, calc(100vw - 24px));
         min-width: 0;
         max-height: min(40dvh, 340px);
       }
     }
 
+    // The tools share the feed's header line, without changing ownership of map controls.
     .atlas-inspector {
-      top: calc(var(--mobile-status-top) + 48px) !important;
-      right: 8px !important;
+      z-index: 12;
+      top: calc(var(--mobile-feed-top) + 3px) !important;
+      right: 48px !important;
       bottom: auto;
       left: auto;
       width: auto;
@@ -203,82 +250,195 @@
       gap: 4px;
 
       button {
-        height: 32px;
-        min-height: 32px;
-        padding: 0 7px;
-        font-size: 0.58rem;
-        letter-spacing: 0;
+        display: grid;
+        width: 32px;
+        height: 30px;
+        min-height: 30px;
+        padding: 3px;
+        place-items: center;
+        border-radius: 7px;
       }
     }
 
-    .mars-camera {
-      inset: auto auto calc(var(--dock-height) + 18px) 8px;
+    .atlas-inspector__tool-label { display: none; }
+    .atlas-inspector__mobile-icon { display: block; width: 22px; height: 22px; }
 
-      button {
-        width: 32px;
-        height: 32px;
-      }
+    .mars-camera {
+      inset: auto 12px calc(var(--dock-height) + 10px) auto;
+      border-radius: 8px;
+      background: #0c1923d9;
+
+      button { width: 34px; height: 34px; }
     }
 
     .atlas-stage:has(.mars-surface--scene) .mars-surface.mars-surface--scene {
-      --scene-safe-top: var(--mobile-map-top);
-      --scene-safe-bottom: calc(var(--dock-height) + 72px);
-      --scene-safe-right: 8px;
-      --scene-safe-left: 8px;
+      --scene-safe-top: max(calc(var(--mobile-feed-top) + 36px), calc(var(--mobile-feed-bottom, 0px) + 4px));
+      --scene-safe-bottom: calc(var(--dock-height) + 38px);
+      --scene-safe-right: 4px;
+      --scene-safe-left: 4px;
     }
 
-    .rival-panel {
-      inset: calc(var(--mobile-status-top) + 86px) 8px auto;
-      display: flex;
-      width: auto;
-      gap: 4px;
-    }
+    .board-outer-spaces--dock > .board-space {
+      border-color: transparent;
+      background: none;
 
-    .rival-panel__list {
-      display: flex;
-      min-width: 0;
-      overflow: auto hidden;
-      scrollbar-width: none;
-    }
-
-    .rival-tile {
-      min-height: 34px;
-      grid-template-columns: minmax(0, 1fr) auto;
-      font-size: 0.7rem;
-    }
-
-    .rival-tile__person {
-      max-width: 95px;
-    }
-
-    .rival-tile__resource {
-      display: none;
-    }
-
-    .rival-panel__overflow {
-      margin-top: 0;
+      > .board-space-text {
+        max-width: 106px;
+        padding: 2px 4px;
+        background: #07121a8c;
+        font-size: 9px;
+        letter-spacing: 0;
+        text-transform: none;
+      }
     }
 
     .activity-feed {
-      inset-block-start: calc(var(--mobile-status-top) + 48px);
-      inset-inline-start: 8px;
-      width: min(260px, calc(100% - 16px));
+      z-index: 10;
+      inset: var(--mobile-feed-top) 8px auto;
+      box-sizing: border-box;
+      width: auto;
+      border: 1px solid #7596a7b3;
+      border-radius: 10px;
+      background: linear-gradient(110deg, #152c3ac9, #0a1923a6);
+      color: #edf3f5;
+      font-size: 12px;
+
+      .activity-feed__mobile-heading {
+        position: relative;
+        display: block;
+        height: 32px;
+      }
 
       .activity-feed__toggle {
-        min-height: 32px;
-        padding: 4px 8px;
-        font-size: 0.7rem;
+        position: relative;
+        display: flex;
+        box-sizing: border-box;
+        width: 100%;
+        height: 32px;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 160px 3px 10px;
+        border: 0;
+        border-radius: 10px;
+        background: none;
+        color: #f5f7f8;
+        font-size: 14px;
+        font-weight: 700;
+        text-align: left;
+        white-space: nowrap;
+
+        svg { width: 19px; height: 19px; flex: none; }
+      }
+
+      .activity-feed__chevron { position: absolute; right: 9px; }
+      .activity-feed__chat-toggle {
+        position: absolute;
+        top: 1px;
+        right: 116px;
+        display: grid;
+        width: 30px;
+        height: 30px;
+        padding: 4px;
+        place-items: center;
+        border: 1px solid #7596a780;
+        border-radius: 7px;
+        background: #0c192399;
+        color: inherit;
+
+        svg { width: 20px; height: 20px; }
+        .activity-feed__unread { position: absolute; top: -5px; right: -5px; }
+        &[aria-pressed='true'] { border-color: #e2c27f; color: #ffe2a8; }
       }
 
       .activity-feed__body--expanded {
-        border: 1px solid #49616d;
-        border-radius: 6px;
-        background: #101a23f5;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 2px 6px;
+        padding: 3px 8px 5px;
+        border-top: 1px solid #819aa44d;
+        border-radius: 0 0 10px 10px;
+        background: none;
       }
 
+      .activity-feed__body--expanded.activity-feed__body--card { grid-template-columns: minmax(0, 1fr) 57px; }
+
       .activity-feed__list {
-        max-height: 28dvh;
+        grid-column: 1;
+        grid-row: 1;
+        max-height: 82px;
+        gap: 0;
+        padding: 0 3px 0 0;
       }
+
+      .activity-feed__entry {
+        align-items: flex-start;
+        min-height: 38px;
+        padding: 6px 2px 6px 17px;
+        border: 0;
+        border-bottom: 1px solid #9eb1b42e;
+        border-radius: 0;
+        background: none;
+        box-shadow: none;
+        backdrop-filter: none;
+        line-height: 1.35;
+      }
+
+      .activity-feed__marker { top: 9px; bottom: auto; left: 2px; width: 9px; height: 9px; border-radius: 2px; }
+      .activity-feed__line { display: block; }
+      .activity-feed__mobile-arrow { display: inline; }
+      .activity-feed__entry--card .activity-feed__verb { display: none; }
+      .activity-feed__reveal { display: block; padding-top: 1px; color: #c0d2d9; font-size: 11px; }
+      .activity-feed__units { font-size: 11px; }
+
+      .activity-feed__latest-card {
+        display: grid;
+        grid-column: 2;
+        grid-row: 1;
+        align-self: start;
+        justify-items: center;
+        gap: 3px;
+        min-width: 0;
+        margin: 0;
+        padding: 0 0 0 5px;
+        border: 0;
+        border-left: 1px solid #819aa44d;
+        background: none;
+        color: #e8edf0;
+        font-size: 10px;
+        cursor: zoom-in;
+
+        > span { max-width: 51px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        &:focus-visible { outline: 2px solid #e2c27f; outline-offset: 2px; }
+      }
+
+      .activity-feed__latest-face {
+        width: 49px;
+        border-radius: 5px;
+        outline: 1px solid #e2c27f;
+
+        .card-container { margin: 0; zoom: 0.204; pointer-events: none; }
+      }
+
+      .activity-feed__header {
+        grid-column: 1 / -1;
+        min-height: 0;
+        padding: 0;
+
+        h2,
+        .activity-feed__filter { display: none; }
+      }
+
+      .activity-feed__empty { grid-column: 1; grid-row: 1; font-size: 12px; }
+      .activity-feed__write { display: none; }
+      .activity-feed__body--chat .activity-feed__write {
+        display: flex;
+        grid-column: 1 / -1;
+        margin: 3px 0 0;
+
+        input { font-size: 16px; }
+        button { width: 36px; }
+      }
+      .activity-feed__preview { display: none; }
     }
 
     .mission-dock {
@@ -286,102 +446,179 @@
       bottom: var(--mobile-dock-bottom);
       box-sizing: border-box;
       height: auto;
-      padding: 0 6px;
+      padding: 0 8px;
+      background: linear-gradient(transparent, #071019ed 28%);
     }
 
     .mission-player-hud {
-      gap: 4px;
+      gap: 8px;
 
-      > .mission-hand {
-        --hand-scale: var(--mobile-hand-scale);
-      }
-
+      > .mission-hand { --hand-scale: var(--mobile-hand-scale); }
       .mission-player-hud__controls {
         display: grid;
-        grid-template-columns: 38px minmax(0, 1fr) 44px;
+        grid-template-columns: 39px minmax(0, 1fr) 48px;
+        grid-template-rows: repeat(2, minmax(32px, auto));
         align-items: stretch;
-        gap: 3px 5px;
+        gap: 4px 6px;
+        padding: 7px 0 0;
         overflow: visible;
+        border-top: 1px solid #7d9ca975;
 
-        > * {
-          translate: none;
-        }
+        > * { translate: none; }
       }
 
       .mission-player-hud__controls .mission-player-hud__corporations {
-        --hand-scale: 0.15;
+        --hand-scale: 0.16;
 
         grid-column: 1;
         grid-row: 1 / span 2;
-        width: 38px;
-        align-self: end;
+        width: 39px;
+        align-self: center;
 
-        button {
-          width: 38px;
-          flex-basis: 38px;
-        }
+        button { width: 39px; flex-basis: 39px; }
       }
 
       .mission-player-hud__controls .mission-player-hud__stocks {
         grid-column: 2;
         grid-row: 1 / span 2;
         min-width: 0;
-        height: auto;
+        height: 100%;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 3px;
-        padding: 3px;
+        gap: 4px;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: none;
+        box-shadow: none;
 
         li {
+          display: flex;
           min-width: 0;
+          flex-wrap: wrap;
           justify-content: center;
-          gap: 3px;
+          gap: 2px;
           padding: 3px 1px;
-          font-size: 0.85rem;
+          border: 1px solid #7898a580;
+          border-radius: 6px;
+          background: linear-gradient(#1c303dc4, #0b1820cf);
+          font-size: clamp(13px, 4vw, 18px);
+          line-height: 1.05;
         }
 
-        .resource_icon {
-          width: 21px;
-          height: 21px;
-          flex-basis: 21px;
-        }
-
-        .mission-player-hud__production {
-          font-size: 0.63rem;
-        }
+        .resource_icon { width: 21px; height: 21px; flex-basis: 21px; }
+        .mission-player-hud__production { font-size: 10px; white-space: nowrap; }
       }
 
-      .mission-player-hud__production--detailed {
-        display: none;
-      }
-
-      .mission-player-hud__production--compact {
-        display: inline;
-      }
+      .mission-player-hud__production--detailed { display: none; }
+      .mission-player-hud__production--compact { display: inline; }
 
       .mission-player-hud__controls .mission-dock__played {
         grid-column: 3;
-        width: 44px;
-        height: 32px;
+        grid-row: 1 / span 2;
+        width: 48px;
+        height: auto;
         min-height: 32px;
-        padding: 2px;
-        gap: 2px;
-        font-size: 0.5rem;
-        line-height: 1.1;
+        padding: 3px;
+        gap: 3px;
+        border-radius: 7px;
+        font-size: 8px;
+        line-height: 1.15;
 
-        img {
-          display: none;
-        }
+        img { display: block; width: 18px; height: 23px; }
       }
 
-      .mission-player-hud__controls .mission-dock__count {
-        width: 16px;
-        height: 16px;
-        font-size: 0.6rem;
+      .mission-player-hud__controls:has(.mission-dock__played--actions) > .mission-dock__played {
+        grid-row: 1;
+
+        img { display: none; }
       }
 
-      .mission-player-hud__controls .mission-effects {
-        display: none;
-      }
+      .mission-player-hud__controls .mission-dock__played--actions { grid-row: 2 !important; }
+      .mission-player-hud__controls .mission-dock__count { width: 15px; height: 15px; font-size: 10px; }
+      .mission-player-hud__controls .mission-effects { display: none; }
     }
+
+    .mission-hand__mobile-caption {
+      display: block;
+      margin: 0 0 3px 3px;
+      color: #e4edf1;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .mission-hand__strip { gap: 7px; padding: 10px 4px 3px; scrollbar-width: none; }
+    .mission-hand__row { min-width: 100%; width: max-content; flex: none; justify-content: center; gap: 7px; }
+    .mission-hand__navigation { display: none; }
+    .mission-hand__slot { height: calc(352px * var(--hand-scale) + 4px); }
+    .mission-hand__face:not(.mission-hand__face--raised, .mission-hand__face--dragged) {
+      inset: 0 auto auto 0 !important;
+      rotate: none !important;
+      translate: none !important;
+    }
+
+    .mission-pending-decision {
+      inset: auto 12px calc(var(--mobile-dock-height, 230px) + 8px);
+      width: auto;
+      min-height: 44px;
+      padding: 6px 12px;
+      transform: none;
+      font-size: 14px;
+    }
+  }
+
+  // DialogPeek is teleported to body. It uses the dock's published boundary, just like the scene.
+  body:has(#player-home.mission-cinematic) dialog.dialog--peek {
+    inset: 0 !important;
+    width: 100vw !important;
+    max-width: none !important;
+    height: 100dvh !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    overflow: visible !important;
+    transform: none !important;
+  }
+
+  body:has(#player-home.mission-cinematic) dialog.dialog--peek .dialog-peek {
+    position: fixed !important;
+    inset: auto 12px calc(var(--mobile-dock-height, 230px) + 8px) !important;
+    box-sizing: border-box;
+    display: flex;
+    width: calc(100% - 24px);
+    height: 44px;
+    justify-content: center;
+    margin: 0;
+    padding: 6px 12px;
+    border: 1px solid #f0d18a;
+    border-radius: 9px;
+    background: linear-gradient(#d5a94f, #a96c24);
+    box-shadow: 0 2px 8px #0006;
+    color: #171006;
+    font-size: 17px;
+    letter-spacing: 0;
+    text-transform: none;
+    transform: none;
+  }
+}
+
+@media (max-width: 760px) and (max-height: 740px) {
+  body #player-home.mission-cinematic {
+    --mobile-hand-scale: 0.29;
+
+    .activity-feed .activity-feed__list { max-height: 68px; }
+    .activity-feed .activity-feed__latest-face { width: 39px; }
+    .activity-feed .activity-feed__latest-face .card-container { zoom: 0.163; }
+    .activity-feed .activity-feed__body--expanded.activity-feed__body--card { grid-template-columns: minmax(0, 1fr) 47px; }
+  }
+}
+
+@media (max-width: 760px) and (orientation: landscape) {
+  body #player-home.mission-cinematic {
+    --mobile-hand-scale: 0.22;
+
+    .activity-feed .activity-feed__list { max-height: 58px; }
+    .activity-feed .activity-feed__latest-card { display: none; }
+    .activity-feed .activity-feed__body--expanded.activity-feed__body--card { grid-template-columns: minmax(0, 1fr); }
   }
 }

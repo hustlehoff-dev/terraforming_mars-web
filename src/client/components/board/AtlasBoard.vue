@@ -45,8 +45,12 @@
 
     <aside class="atlas-inspector" :aria-label="$t('Board')">
       <div class="atlas-inspector__tools">
-        <button type="button" :aria-pressed="showTracks" @click="showTracks = !showTracks" v-i18n>Tracks</button>
-        <button type="button" @click="$emit('toggleTileView')">{{ $t(nextView + ' tiles') }}</button>
+        <button type="button" :aria-label="$t('Tracks')" :title="$t('Tracks')" :aria-pressed="showTracks" @click="showTracks = !showTracks">
+          <svg class="atlas-inspector__mobile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m3 8 9-5 9 5-9 5zM3 12l9 5 9-5M3 16l9 5 9-5" /></svg><span class="atlas-inspector__tool-label" v-i18n>Tracks</span>
+        </button>
+        <button type="button" :aria-label="$t(nextView + ' tiles')" :title="$t(nextView + ' tiles')" @click="$emit('toggleTileView')">
+          <svg class="atlas-inspector__mobile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></svg><span class="atlas-inspector__tool-label">{{ $t(nextView + ' tiles') }}</span>
+        </button>
       </div>
     </aside>
     <!-- A tile was placed: its "+" icon pops up in the middle of the screen for a moment. -->
@@ -396,6 +400,9 @@ export default defineComponent({
 </script>
 
 <style lang="less">
+.atlas-inspector__mobile-icon {
+  display: none;
+}
 .tile-pops {
   position: fixed;
   z-index: 34;

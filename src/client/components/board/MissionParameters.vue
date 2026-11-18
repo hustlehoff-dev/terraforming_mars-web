@@ -1,13 +1,13 @@
 <template>
-  <section class="mission-params" :aria-label="$t('Global parameters')">
+  <section ref="panel" class="mission-params" :aria-label="$t('Global parameters')">
     <div class="mission-params__compact">
       <button type="button" class="mission-params__summary" :aria-label="$t('Global parameters')" :aria-controls="detailsId"
         :aria-expanded="expanded" @click="expanded = !expanded">
-        <strong :title="$t('Generation')">{{ game.generation }}<template v-if="lastGeneration"> / {{ lastGeneration }}</template></strong>
-        <span v-for="track in tracks" :key="track.key" :aria-label="`${$t(track.label)} ${track.value}${track.unit}`">
-          <img :src="track.icon" alt="">{{ track.value }}{{ track.unit }}
+        <strong class="mission-params__summary-generation" :title="$t('Generation')"><small v-i18n>Generation</small>{{ game.generation }}<template v-if="lastGeneration"> / {{ lastGeneration }}</template></strong>
+        <span v-for="track in tracks" :key="track.key" class="mission-params__summary-track" :class="'mission-params__summary-track--' + track.key" :aria-label="`${$t(track.label)} ${track.value}${track.unit}${track.key === 'oceans' ? ' / ' + track.max : ''}`">
+          <img :src="track.icon" alt="">{{ track.value }}{{ track.unit }}<small v-if="track.key === 'oceans'"> / {{ track.max }}</small>
         </span>
-        <span aria-hidden="true">{{ expanded ? '▴' : '▾' }}</span>
+        <span class="mission-params__summary-chevron" aria-hidden="true">{{ expanded ? '▴' : '▾' }}</span>
       </button>
     </div>
     <div :id="detailsId" class="mission-params__body" :class="{'mission-params__body--expanded': expanded}">
@@ -47,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, ref, useId} from 'vue';
+import {computed, onBeforeUnmount, onMounted, ref, useId} from 'vue';
 import {GameModel} from '@/common/models/GameModel';
 import {BoardName} from '@/common/boards/BoardName';
 import {getGlobalParameterMaximums} from '@/common/boards/GlobalParameterMaximums';
@@ -64,6 +64,28 @@ import {
 const props = defineProps<{game: GameModel, solo: boolean}>();
 const detailsId = useId();
 const expanded = ref(false);
+const panel = ref<HTMLElement>();
+let panelObserver: ResizeObserver | undefined;
+function measureMobileParameters() {
+  if (panel.value && window.matchMedia?.('(max-width: 760px)').matches) {
+    document.documentElement.style.setProperty('--mobile-params-height', `${Math.ceil(panel.value.getBoundingClientRect().height)}px`);
+  } else {
+    document.documentElement.style.removeProperty('--mobile-params-height');
+  }
+}
+onMounted(() => {
+  if (panel.value && typeof ResizeObserver !== 'undefined') {
+    panelObserver = new ResizeObserver(measureMobileParameters);
+    panelObserver.observe(panel.value);
+  }
+  window.addEventListener('resize', measureMobileParameters);
+  measureMobileParameters();
+});
+onBeforeUnmount(() => {
+  panelObserver?.disconnect();
+  window.removeEventListener('resize', measureMobileParameters);
+  document.documentElement.style.removeProperty('--mobile-params-height');
+});
 
 type Bonus = {at: number, icon: string, title: string, text?: string, production?: boolean};
 /** A bonus with the centre of its step and of its chip (fractions of the bar width). */

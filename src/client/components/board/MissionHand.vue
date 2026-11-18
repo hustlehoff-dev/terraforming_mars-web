@@ -8,6 +8,7 @@
     :aria-label="$t('Cards In Hand')"
     :style="{'--hand-overlap': overlap + 'px'}"
     @keydown.esc.stop="close">
+    <p class="mission-hand__mobile-caption">{{ $t('Cards In Hand') }} · {{ cards.length }}</p>
     <div v-if="canScrollBack || canScrollForward" class="mission-hand__navigation">
       <button type="button" :aria-label="$t('Previous cards')" :aria-controls="handId" :disabled="!canScrollBack"
         @click="scrollCards(-1)">‹</button>
@@ -328,7 +329,7 @@ function fitHand() {
       rowsNeeded++;
     }
     // Keep a 44px target visible on each card, then scroll the rest of the hand.
-    inset = Math.min(insetFor(Math.ceil(total / rowsNeeded)), Math.max(0, width + gap - 44));
+    inset = maxRows === 1 ? 0 : Math.min(insetFor(Math.ceil(total / rowsNeeded)), Math.max(0, width + gap - 44));
   }
   rowCount.value = rowsNeeded;
   overlap.value = inset;
@@ -364,6 +365,9 @@ onBeforeUnmount(() => {
 </script>
 
 <style lang="less">
+.mission-hand__mobile-caption {
+  display: none;
+}
 .mission-hand__navigation {
   position: absolute;
   z-index: 3;

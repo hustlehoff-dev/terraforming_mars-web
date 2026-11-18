@@ -161,6 +161,9 @@ watch(viewport, (element, _previous, cleanup) => {
   if (typeof ResizeObserver !== 'undefined') {
     const observer = new ResizeObserver(resize);
     observer.observe(element);
+    if (safeArea.value) {
+      observer.observe(safeArea.value);
+    }
     cleanup(() => observer.disconnect());
   } else {
     window.addEventListener('resize', resize);
