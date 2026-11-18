@@ -47,6 +47,24 @@
   }
 }
 
+// The planet already dims unavailable sectors in its shader. DOM opacity keeps the HUD
+// readable during placement without filtering whole card rows into offscreen textures.
+#player-home.mission-cinematic.mission-placing {
+  .mission-params,
+  .mission-players,
+  .mission-dock,
+  .mission-turn,
+  .mission-pins,
+  .atlas-orbit {
+    filter: none;
+  }
+}
+
+#player-home .atlas-stage--placing:has(.mars-surface--scene) [data_space_id]:not(.atlas-sector--legal) {
+  filter: none;
+  opacity: 0.35;
+}
+
 @media (max-width: 760px) {
   #player-home.mission-cinematic {
     .mission-status__metrics {

@@ -592,7 +592,7 @@ export class MarsScene {
     this.width = width;
     this.height = height;
     this.safe = safe;
-    this.renderer.setSize(this.width, this.height, false);
+    this.renderer.setDrawingBufferSize(this.width, this.height, this.pixelRatio());
     this.computeHome();
     this.placeOrbitals();
     if (atHome) {
@@ -786,7 +786,9 @@ export class MarsScene {
   }
 
   private pixelRatio() {
-    return Math.min(window.devicePixelRatio || 1, this.compactDisplay ? 1 : 1.5) * this.renderScale;
+    const pixelBudget = this.compactDisplay ? 750_000 : 1_800_000;
+    const budgetRatio = Math.sqrt(pixelBudget / (this.width * this.height));
+    return Math.min(window.devicePixelRatio || 1, this.compactDisplay ? 1 : 1.5, budgetRatio) * this.renderScale;
   }
 
   /**
@@ -815,8 +817,7 @@ export class MarsScene {
       this.slowFrames = 0;
       this.fastFrames = 0;
       this.lastScaleChange = now;
-      this.renderer.setPixelRatio(this.pixelRatio());
-      this.renderer.setSize(this.width, this.height, false);
+      this.renderer.setDrawingBufferSize(this.width, this.height, this.pixelRatio());
     }
   }
 
