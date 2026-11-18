@@ -2,6 +2,7 @@
   <div class="select_space_cont">
     <Teleport to="body">
       <ConfirmDialog
+        class="tm-dialog--placement"
         message="Place your tile here?"
         :enableDontShowAgainCheckbox="true"
         ref="confirmation"

@@ -14,6 +14,7 @@
       <button v-if="canChat" type="button" class="activity-feed__chat-toggle" :aria-label="$t('Chat')" :aria-pressed="filter === 'chat'"
         @click="setFilter(filter === 'chat' ? 'all' : 'chat'); expanded = true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 4h16v12H9l-5 4zM8 8h8M8 12h5" /></svg>
+        <span v-i18n>Chat</span>
         <b v-if="unread" class="activity-feed__unread">{{ unread }}</b>
       </button>
     </div>
@@ -474,7 +475,7 @@ function takeChat(messages: ReadonlyArray<ChatMessageModel>) {
   }
   const atLatest = !scrolled.value;
   chat.value = [...chat.value, ...fresh].slice(-300);
-  if (filter.value === 'game') {
+  if (filter.value === 'game' || (mobile.value && !expanded.value)) {
     unread.value += fresh.filter((message) => message.player !== props.viewModel.color).length;
   } else if (atLatest) {
     void nextTick(jumpToLatest);

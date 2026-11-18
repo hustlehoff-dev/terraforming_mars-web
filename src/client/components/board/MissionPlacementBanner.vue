@@ -110,4 +110,36 @@ const tileImage = computed(() => {
 @keyframes mission-placement-pulse {
   50% { transform: scale(1.08); }
 }
+
+@media (max-width: 760px) {
+  .mission-placement {
+    inset: auto 10px calc(var(--mobile-dock-height, 230px) + 8px);
+    box-sizing: border-box;
+    width: auto;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #0d202bed;
+    box-shadow: 0 3px 12px #0008;
+    transform: none;
+  }
+
+  .mission-placement__tile {
+    width: 32px;
+    height: 32px;
+    animation: none;
+    filter: none;
+  }
+
+  .mission-placement__caption { display: none; }
+  .mission-placement__title {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 14px;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .mission-placement__text small { font-size: 12px; line-height: 1.25; }
+  .mission-placement__cancel { min-height: 36px; padding: 5px 8px; font-size: 13px; }
+}
 </style>

@@ -299,14 +299,14 @@
       width: auto;
       border: 1px solid #7596a7b3;
       border-radius: 10px;
-      background: linear-gradient(110deg, #152c3ac9, #0a1923a6);
+      background: linear-gradient(110deg, #152c3aeb, #0a1923e6);
       color: #edf3f5;
-      font-size: 12px;
+      font-size: 14px;
 
       .activity-feed__mobile-heading {
         position: relative;
         display: block;
-        height: 32px;
+        height: 40px;
       }
 
       .activity-feed__toggle {
@@ -314,10 +314,10 @@
         display: flex;
         box-sizing: border-box;
         width: 100%;
-        height: 32px;
+        height: 40px;
         align-items: center;
         gap: 6px;
-        padding: 3px 160px 3px 10px;
+        padding: 3px 180px 3px 10px;
         border: 0;
         border-radius: 10px;
         background: none;
@@ -333,19 +333,23 @@
       .activity-feed__chevron { position: absolute; right: 9px; }
       .activity-feed__chat-toggle {
         position: absolute;
-        top: 1px;
+        top: 3px;
         right: 116px;
-        display: grid;
-        width: 30px;
-        height: 30px;
-        padding: 4px;
-        place-items: center;
+        display: flex;
+        width: 55px;
+        height: 34px;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        padding: 3px;
         border: 1px solid #7596a780;
         border-radius: 7px;
         background: #0c192399;
         color: inherit;
+        font-size: 12px;
+        font-weight: 700;
 
-        svg { width: 20px; height: 20px; }
+        svg { width: 17px; height: 17px; flex: none; }
         .activity-feed__unread { position: absolute; top: -5px; right: -5px; }
         &[aria-pressed='true'] { border-color: #e2c27f; color: #ffe2a8; }
       }
@@ -365,7 +369,7 @@
       .activity-feed__list {
         grid-column: 1;
         grid-row: 1;
-        max-height: 82px;
+        max-height: min(17dvh, 128px);
         gap: 0;
         padding: 0 3px 0 0;
       }
@@ -380,15 +384,26 @@
         background: none;
         box-shadow: none;
         backdrop-filter: none;
-        line-height: 1.35;
+        line-height: 1.4;
       }
 
       .activity-feed__marker { top: 9px; bottom: auto; left: 2px; width: 9px; height: 9px; border-radius: 2px; }
       .activity-feed__line { display: block; }
       .activity-feed__mobile-arrow { display: inline; }
       .activity-feed__entry--card .activity-feed__verb { display: none; }
-      .activity-feed__reveal { display: block; padding-top: 1px; color: #c0d2d9; font-size: 11px; }
-      .activity-feed__units { font-size: 11px; }
+      .activity-feed__reveal { display: block; padding-top: 2px; color: #d3e2e9; font-size: 12px; }
+      .activity-feed__units { font-size: 12px; }
+      .activity-feed__chat {
+        gap: 6px;
+        padding: 7px 6px 7px 17px;
+        border-bottom: 1px solid #9eb1b42e;
+        border-radius: 0;
+        background: #173440;
+        color: #f4f8fa;
+        font-size: 14px;
+        line-height: 1.45;
+      }
+      .activity-feed__chat-line strong { display: block; margin-bottom: 2px; color: #b4f1ff; }
 
       .activity-feed__latest-card {
         display: grid;
@@ -429,15 +444,15 @@
       }
 
       .activity-feed__empty { grid-column: 1; grid-row: 1; font-size: 12px; }
-      .activity-feed__write { display: none; }
-      .activity-feed__body--chat .activity-feed__write {
+      .activity-feed__write {
         display: flex;
         grid-column: 1 / -1;
-        margin: 3px 0 0;
+        margin: 6px 0 0;
 
-        input { font-size: 16px; }
-        button { width: 36px; }
+        input { min-height: 36px; padding: 6px 8px; background: #07121c; font-size: 16px; }
+        button { width: 40px; min-height: 36px; font-size: 19px; }
       }
+      .activity-feed__body--chat .activity-feed__list { max-height: min(26dvh, 200px); }
       .activity-feed__preview { display: none; }
     }
 
@@ -564,7 +579,57 @@
       transform: none;
       font-size: 14px;
     }
+
+    &.mission-placing {
+      .atlas-stage:has(.mars-surface--scene) .mars-surface.mars-surface--scene {
+        --scene-safe-bottom: calc(var(--dock-height) + 86px);
+      }
+
+      // Keep the map spacious during placement; the explicit Chat tab still opens the composer.
+      .activity-feed__body:not(.activity-feed__body--chat) {
+        grid-template-columns: minmax(0, 1fr);
+
+        .activity-feed__list { max-height: 72px; }
+        .activity-feed__latest-card,
+        .activity-feed__write { display: none; }
+      }
+    }
+
+    .mission-panel.mission-panel--decision:has(.mission-final-greenery) {
+      inset: auto 10px calc(var(--mobile-dock-height, 230px) + 8px) !important;
+      width: calc(100% - 20px) !important;
+      max-height: min(220px, 40dvh);
+      box-shadow: 0 4px 16px #0008 !important;
+      transform: none;
+
+      .mission-panel__body { padding: 10px; }
+      .mission-panel__decision-heading { margin-bottom: 8px; }
+      .mission-final-greenery { gap: 6px; }
+      .mission-final-greenery .btn { margin: 0; padding: 6px 10px; font-size: 13px; }
+    }
   }
+
+  // A placement confirmation belongs beside the hand, leaving the selected sector visible.
+  body:has(#player-home.mission-cinematic) dialog.tm-dialog.tm-dialog--placement {
+    inset: auto 10px calc(var(--mobile-dock-height, 230px) + 8px) !important;
+    box-sizing: border-box;
+    width: calc(100% - 20px);
+    min-width: 0;
+    max-width: none;
+    max-height: min(220px, 40dvh);
+    margin: 0 !important;
+    padding: 10px 12px;
+    border-top-width: 1px;
+    border-radius: 9px;
+
+    &::backdrop { background: #03070c26; backdrop-filter: none; }
+    p { margin: 0; font-size: 14px; }
+    .dialog-menu { gap: 8px; margin: 8px 0; }
+    .btn { min-height: 38px; flex: 1; padding: 6px 14px; font-size: 14px; }
+    input[type='checkbox'] + label { font-size: 12px; }
+  }
+
+  body:has(dialog.tm-dialog--placement[open]) .mission-placement { visibility: hidden; }
 
   // DialogPeek is teleported to body. It uses the dock's published boundary, just like the scene.
   body:has(#player-home.mission-cinematic) dialog.dialog--peek {
