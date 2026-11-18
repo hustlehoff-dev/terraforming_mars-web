@@ -103,7 +103,6 @@
             :canPass="passIndex !== -1" :canEndTurn="endTurnIndex !== -1" :active="activeTurnColor === thisPlayer.color && playerView.waitingFor !== undefined"
             :requestId="playerView.requestId" :deadline="thisPlayer.turnDeadline" :actionsTaken="thisPlayer.actionsTakenThisRound" :noActionLimit="othersPassed" :soloGame="playerView.players.length === 1" @select="openQuickAction" @cardAction="(card) => stageCardAction(card)" @pass="passNow" @endTurn="endTurn" />
         </div>
-        <MissionCardZoom v-if="cinematic" :playerView="playerView" />
         <button v-if="pendingDecision" type="button" class="mission-pending-decision" @click="showMissionPanel('actions')">
           <span class="mission-pending-decision__icon" aria-hidden="true">!</span>
           <span>{{ $t('A decision is waiting') }}: <b>{{ pendingDecisionTitle }}</b></span>
@@ -144,6 +143,8 @@
     <MissionCardStage v-if="cinematic && previewedProject" :key="previewedProject.name + (projectAutoPlay ? ':drop' : '')"
       :card="previewedProject" :input="projectOption?.input" :playerView="playerView" :origin="projectOrigin" :autoPlay="projectAutoPlay"
       @close="closeProjectPreview" @play="playPreviewedProject" />
+
+    <MissionCardZoom v-if="cinematic || setupMode" :playerView="playerView" />
 
     <template v-if="thisPlayer.tableau.length === 0">
       <PlayerSetupView :playerView="playerView" :tileView="tileView" @toggleTileView="cycleTileView()" />

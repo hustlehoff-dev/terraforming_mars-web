@@ -1,14 +1,14 @@
 <template>
   <Teleport to="body">
     <!-- A dialog so it opens above other game windows (e.g. Played Cards). Closed by a click outside the panel or Escape. -->
-    <dialog v-if="card" ref="dialog" class="mission-card-zoom" :aria-label="$t(card.name)"
+    <dialog v-if="card" ref="dialog" class="mission-card-zoom" :class="{'mission-card-zoom--choice': cardChoicePreview}" :aria-label="$t(card.name)"
       @cancel.prevent="closeCardZoom()" @click="closeCardZoom()">
       <div class="mission-card-zoom__layout">
-        <div class="mission-card-zoom__card">
-          <Card :key="card.name" :card="card" art autoTall />
+        <div class="mission-card-zoom__card" @click="cardChoicePreview && $event.stopPropagation()">
+          <Card :key="card.name" :card="card" :art="!cardChoicePreview" autoTall />
         </div>
         <!-- About the card: what it is, where it comes from, who has it, and the deck. -->
-        <aside v-if="info" class="mission-card-zoom__info" @click.stop>
+        <aside v-if="!cardChoicePreview && info" class="mission-card-zoom__info" @click.stop>
           <p class="mission-card-zoom__kind">{{ $t(info.typeLabel) }}<template v-if="info.expansion"> · {{ info.expansion }}</template><template v-if="info.number"> · #{{ info.number }}</template></p>
           <h2>{{ $t(card.name) }}</h2>
 
@@ -55,7 +55,8 @@
           <button type="button" class="mission-card-zoom__close" @click="closeCardZoom()" v-i18n>Close</button>
         </aside>
       </div>
-      <p class="mission-card-zoom__hint" v-i18n>Click anywhere to close</p>
+      <button v-if="cardChoicePreview" type="button" class="mission-card-zoom__close" @click.stop="closeCardZoom()" v-i18n>Close</button>
+      <p v-else class="mission-card-zoom__hint" v-i18n>Click anywhere to close</p>
     </dialog>
   </Teleport>
 </template>
@@ -63,7 +64,7 @@
 <script setup lang="ts">
 import {computed, nextTick, ref, watch} from 'vue';
 import Card from '@/client/components/card/Card.vue';
-import {closeCardZoom, zoomedCard} from './cardZoom';
+import {cardChoicePreview, closeCardZoom, zoomedCard} from './cardZoom';
 import {getCard} from '@/client/cards/ClientCardManifest';
 import {MODULE_NAMES} from '@/common/cards/GameModule';
 import {CardType} from '@/common/cards/CardType';
@@ -207,6 +208,25 @@ dialog.mission-card-zoom {
       zoom: 1.3;
     }
   }
+}
+
+dialog.mission-card-zoom--choice {
+  align-content: safe center;
+  gap: 18px;
+  background: #02060aee;
+
+  .mission-card-zoom__card {
+    cursor: auto;
+
+    > .card-container {
+      zoom: 1.05;
+
+      @media (min-width: 370px) { zoom: 1.28; }
+      @media (min-width: 420px) { zoom: 1.43; }
+    }
+  }
+
+  .mission-card-zoom__close { min-height: 44px; }
 }
 
 .mission-card-zoom__info {

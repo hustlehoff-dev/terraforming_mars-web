@@ -19,11 +19,13 @@
     <section v-show="step === 'corporation'" class="setup-step">
       <fieldset class="corporation-selection">
         <legend v-i18n>Choose your corporation</legend>
-        <div class="corporation-selection__options">
+        <MobileCardControls />
+        <div v-mobile-card-grid class="corporation-selection__options mobile-card-browser">
           <!-- The whole card is the choice: a click anywhere on it selects the corporation. -->
           <label
             v-for="card in corpCardOption.cards"
             :key="card.name"
+            v-card-long-press="card"
             class="corporation-selection__option"
             :class="{'corporation-selection__option--selected': selectedCorporations.includes(card.name), 'corporation-selection__option--disabled': card.isDisabled}">
             <input
@@ -39,6 +41,8 @@
               <span v-if="selectedCorporations.includes(card.name)" class="corporation-selection__badge"><span aria-hidden="true">✓</span> {{ $t('Selected') }}</span>
             </span>
             <Card :card="card" autoTall />
+            <button type="button" class="mobile-card-preview" :aria-label="$t('Click to view up close')"
+              @click.stop.prevent="previewCorporation(card)">🔍</button>
           </label>
         </div>
       </fieldset>
@@ -126,6 +130,11 @@ import {ColonyModel, simpleColonyModel} from '@/common/models/ColonyModel';
 import * as titles from '@/common/inputs/SelectInitialCards';
 import {sum} from '@/common/utils/utils';
 import {translateText} from '@/client/directives/i18n';
+import {cardLongPress} from '@/client/components/board/cardLongPress';
+import MobileCardControls from '@/client/components/card/MobileCardControls.vue';
+import {mobileCardGrid} from '@/client/components/card/mobileCardLayout';
+import {zoomCard} from '@/client/components/board/cardZoom';
+import {CardModel} from '@/common/models/CardModel';
 import {recallChoice, rememberChoice} from '@/client/utils/choiceMemory';
 
 
@@ -149,6 +158,7 @@ type Refs = {
 
 export default defineComponent({
   name: 'SelectInitialCards',
+  directives: {cardLongPress, mobileCardGrid},
   props: {
     playerView: {
       type: Object as () => PlayerViewModel,
@@ -181,6 +191,7 @@ export default defineComponent({
     SelectCard,
     ConfirmDialog,
     Colony,
+    MobileCardControls,
   },
   setup() {
     return {corporationGroup: useId()};
@@ -197,6 +208,9 @@ export default defineComponent({
     };
   },
   methods: {
+    previewCorporation(card: CardModel) {
+      zoomCard({...card, isDisabled: false}, true);
+    },
     advanceSetup() {
       if (this.nextStep !== undefined) {
         this.step = this.nextStep;

@@ -1,8 +1,9 @@
 <template>
-  <div class="wf-component wf-component--select-card"
+  <div v-mobile-card-grid class="wf-component wf-component--select-card mobile-card-browser"
     :class="{'deck-deal': playerinput.dealtFromDeck || cardDialog || draftLocked, 'draft-pick': draftPick, 'draft-pick--locked': draftLocked, 'buy-cards': buyingWindow}"
     :aria-busy="draftSubmitting || undefined">
     <div v-if="showtitle === true" class="nofloat wf-component-title">{{ $t(draftLocked ? 'Draft' : preludeChoice ? 'Choose the prelude to play' : playerinput.title) }}</div>
+    <MobileCardControls />
     <p v-if="preludeChoice && selectableCards.length > 1" class="nofloat prelude-choice__hint" v-i18n>Click a card, then Play.</p>
     <MissionDraftClock v-if="(draftPick || buyingCards) && playerView.game.draftDeadline !== undefined" :deadline="playerView.game.draftDeadline"
       :label="draftPick ? 'Time to pick a card' : 'Time to buy cards'" />
@@ -17,6 +18,7 @@
     </div>
     <div v-if="playerinput.dealtFromDeck && !buyingWindow" class="deck-deal__origin" aria-hidden="true"></div>
     <component :is="draftLocked ? 'div' : 'label'" v-for="(card, index) in getOrderedCards()" :key="card.name"
+      v-card-long-press="card"
       :class="[getCardBoxClass(card), {'cardbox--featured': featuredCards, 'draft-pick__card--selected': lockedPicks.has(card.name)}]"
       :style="playerinput.dealtFromDeck ? {'--deal-delay': Math.min(index, 10) * 65 + 'ms'} : undefined">
       <template v-if="!draftLocked && !card.isDisabled && !featuredCards && !nothingToChoose">
@@ -34,6 +36,8 @@
           </div>
         </template>
       </Card>
+      <button type="button" class="mobile-card-preview" :aria-label="$t('Click to view up close')"
+        @click.stop.prevent="previewChoice(card)">🔍</button>
       <span v-if="lockedPicks.has(card.name)" class="draft-pick__selected" v-i18n>Selected</span>
     </component>
     <div v-if="hasCardWarning()" class="card-warning" v-i18n>{{ warning }}</div>
@@ -83,6 +87,10 @@ import {Phase} from '@/common/Phase';
 import {translateText, translateTextWithParams} from '@/client/directives/i18n';
 import MissionDraftClock from '@/client/components/board/MissionDraftClock.vue';
 import {isDraftRepick} from '@/client/components/board/MissionQuickAction';
+import {cardLongPress} from '@/client/components/board/cardLongPress';
+import MobileCardControls from '@/client/components/card/MobileCardControls.vue';
+import {mobileCardGrid} from '@/client/components/card/mobileCardLayout';
+import {zoomCard} from '@/client/components/board/cardZoom';
 import {recallChoice, rememberChoice} from '@/client/utils/choiceMemory';
 
 type Owner = {
@@ -101,6 +109,7 @@ type WidgetDataModel = {
 
 export default defineComponent({
   name: 'SelectCard',
+  directives: {cardLongPress, mobileCardGrid},
   setup: () => ({selectionGroup: useId(), cardDialog: inject('cardDialog', computed(() => false))}),
   emits: ['cardschanged'],
   props: {
@@ -139,6 +148,7 @@ export default defineComponent({
     WarningsComponent,
     AppButton,
     MissionDraftClock,
+    MobileCardControls,
   },
   mounted() {
     // A page reload keeps the cards ticked before it (draft picks are sent at once, nothing to keep).
@@ -164,6 +174,9 @@ export default defineComponent({
     },
   },
   methods: {
+    previewChoice(card: CardModel) {
+      zoomCard({...card, isDisabled: false}, true);
+    },
     playLabel(card: CardModel | undefined): string {
       return card === undefined ? translateText('Play') : translateTextWithParams('Play ${0}', [translateText(card.name)]);
     },
