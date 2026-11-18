@@ -36,8 +36,6 @@
           </div>
         </template>
       </Card>
-      <button type="button" class="mobile-card-preview" :aria-label="$t('Click to view up close')"
-        @click.stop.prevent="previewChoice(card)">🔍</button>
       <span v-if="lockedPicks.has(card.name)" class="draft-pick__selected" v-i18n>Selected</span>
     </component>
     <div v-if="hasCardWarning()" class="card-warning" v-i18n>{{ warning }}</div>
@@ -90,7 +88,6 @@ import {isDraftRepick} from '@/client/components/board/MissionQuickAction';
 import {cardLongPress} from '@/client/components/board/cardLongPress';
 import MobileCardControls from '@/client/components/card/MobileCardControls.vue';
 import {mobileCardGrid} from '@/client/components/card/mobileCardLayout';
-import {zoomCard} from '@/client/components/board/cardZoom';
 import {recallChoice, rememberChoice} from '@/client/utils/choiceMemory';
 
 type Owner = {
@@ -174,9 +171,6 @@ export default defineComponent({
     },
   },
   methods: {
-    previewChoice(card: CardModel) {
-      zoomCard({...card, isDisabled: false}, true);
-    },
     playLabel(card: CardModel | undefined): string {
       return card === undefined ? translateText('Play') : translateTextWithParams('Play ${0}', [translateText(card.name)]);
     },

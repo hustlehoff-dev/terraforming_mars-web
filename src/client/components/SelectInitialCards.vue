@@ -41,8 +41,6 @@
               <span v-if="selectedCorporations.includes(card.name)" class="corporation-selection__badge"><span aria-hidden="true">✓</span> {{ $t('Selected') }}</span>
             </span>
             <Card :card="card" autoTall />
-            <button type="button" class="mobile-card-preview" :aria-label="$t('Click to view up close')"
-              @click.stop.prevent="previewCorporation(card)">🔍</button>
           </label>
         </div>
       </fieldset>
@@ -133,8 +131,6 @@ import {translateText} from '@/client/directives/i18n';
 import {cardLongPress} from '@/client/components/board/cardLongPress';
 import MobileCardControls from '@/client/components/card/MobileCardControls.vue';
 import {mobileCardGrid} from '@/client/components/card/mobileCardLayout';
-import {zoomCard} from '@/client/components/board/cardZoom';
-import {CardModel} from '@/common/models/CardModel';
 import {recallChoice, rememberChoice} from '@/client/utils/choiceMemory';
 
 
@@ -208,9 +204,6 @@ export default defineComponent({
     };
   },
   methods: {
-    previewCorporation(card: CardModel) {
-      zoomCard({...card, isDisabled: false}, true);
-    },
     advanceSetup() {
       if (this.nextStep !== undefined) {
         this.step = this.nextStep;

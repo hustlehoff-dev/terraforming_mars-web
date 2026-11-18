@@ -5,7 +5,7 @@
       <button v-for="columns in [1, 2]" :key="columns" type="button" :aria-pressed="mobileCardColumns === columns"
         @click="setMobileCardColumns(columns)">{{ columns }}</button>
     </div>
-    <small v-i18n>Tap the magnifier to enlarge</small>
+    <small v-i18n>Hold a card to preview</small>
   </div>
 </template>
 
@@ -14,8 +14,7 @@ import {mobileCardColumns, setMobileCardColumns} from './mobileCardLayout';
 </script>
 
 <style lang="less">
-.mobile-card-controls,
-.mobile-card-preview {
+.mobile-card-controls {
   display: none;
 }
 
@@ -34,27 +33,6 @@ import {mobileCardColumns, setMobileCardColumns} from './mobileCardLayout';
     .setup-layout {
       grid-template-columns: minmax(0, 1fr);
       gap: 12px;
-    }
-
-    .setup-hero {
-      min-height: 0;
-      margin-inline: -10px;
-      padding: 14px 70px 14px 10px;
-      border: 0;
-      border-radius: 0;
-      background: #0a1016;
-      box-shadow: none;
-
-      h1 {
-        font-size: 1.2rem;
-      }
-    }
-
-    .setup-hero__kicker,
-    .setup-hero__chips,
-    .setup-plan,
-    .setup-hero__dome {
-      display: none;
     }
 
     .setup-layout__side {
@@ -152,21 +130,6 @@ import {mobileCardColumns, setMobileCardColumns} from './mobileCardLayout';
       display: none;
     }
 
-    .mobile-card-preview {
-      display: grid;
-      width: 44px;
-      height: 40px;
-      justify-self: end;
-      place-content: center;
-      margin-inline-end: 4px;
-      padding: 0;
-      border: 1px solid #68818c;
-      border-radius: 6px;
-      background: #142630;
-      color: #f3c77e;
-      font-size: 1.2rem;
-      cursor: zoom-in;
-    }
   }
 
   body dialog.deck-choice-dialog:has(.mobile-card-browser) {
