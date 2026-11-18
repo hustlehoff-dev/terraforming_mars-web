@@ -47,7 +47,6 @@ export function domesFor(cell: BoardCell): Array<Dome> {
 function hexPath(ctx: CanvasRenderingContext2D, cell: BoardCell, grow: number) {
   const w = SPACE_WIDTH / 2 + grow;
   const h = SPACE_HEIGHT / 2 + grow;
-  ctx.beginPath();
   ctx.moveTo(cell.x, cell.y - h);
   ctx.lineTo(cell.x + w, cell.y - h / 2);
   ctx.lineTo(cell.x + w, cell.y + h / 2);
@@ -75,6 +74,8 @@ export class TerrainState {
   private readonly texelHeight: number;
   private terrainKey?: string;
   private cityKey?: string;
+  private oceanKey?: string;
+  private greeneryKey?: string;
 
   constructor(private readonly geometry: BoardGeometry) {
     const {minX, minY, maxX, maxY} = geometry.bounds;
@@ -127,68 +128,104 @@ export class TerrainState {
     const greenery = cells.filter(({space}) => space.tileType !== undefined && GREENERY_TILES.has(space.tileType));
     const cities = cells.filter(({space}) => space.tileType !== undefined && CITY_TILES.has(space.tileType));
     const cityKey = cities.map(({cell}) => cell.id).join(',');
-    const terrainKey = [oceans.map(({cell}) => cell.id).join(','), greenery.map(({cell}) => cell.id).join(','), cityKey].join('|');
+    const oceanKey = oceans.map(({cell}) => cell.id).join(',');
+    const greeneryKey = greenery.map(({cell}) => cell.id).join(',');
+    const terrainKey = [oceanKey, greeneryKey, cityKey].join('|');
     if (this.terrainKey === terrainKey) {
       return false;
     }
 
-    const ocean = this.context(0);
-    const green = this.context(1);
-    const ground = this.context(2);
-    const shade = this.context(3);
-    if (ocean === null || green === null || ground === null || shade === null) {
-      return false;
-    }
-    if (this.cityKey !== cityKey) {
+    const changedCities = this.cityKey !== cityKey;
+    if (changedCities) {
       this.domes = cities.flatMap(({cell}) => domesFor(cell));
     }
 
-    // Oceans: grown hexes blurred together, so neighbouring oceans form one sea with a soft shore.
-    ocean.filter = `blur(${9 * DENSITY}px)`;
-    for (const {cell} of oceans) {
-      hexPath(ocean, cell, 10);
+    // Draw and read back only changed channels. One combined path applies each blur once,
+    // instead of processing a full-sized canvas again for every tile or dome.
+    if (this.oceanKey !== oceanKey) {
+      const ocean = this.context(0);
+      if (ocean === null) {
+        return false;
+      }
+      ocean.filter = `blur(${9 * DENSITY}px)`;
+      ocean.beginPath();
+      for (const {cell} of oceans) {
+        hexPath(ocean, cell, 10);
+      }
       ocean.fill();
+      this.writeChannel(0, ocean);
     }
-    green.filter = `blur(${8 * DENSITY}px)`;
-    for (const {cell} of greenery) {
-      hexPath(green, cell, 10);
+
+    if (this.greeneryKey !== greeneryKey) {
+      const green = this.context(1);
+      if (green === null) {
+        return false;
+      }
+      green.filter = `blur(${8 * DENSITY}px)`;
+      green.beginPath();
+      for (const {cell} of greenery) {
+        hexPath(green, cell, 10);
+      }
       green.fill();
+      this.writeChannel(1, green);
     }
-    ground.filter = `blur(${6 * DENSITY}px)`;
-    for (const dome of this.domes) {
+
+    if (changedCities) {
+      const ground = this.context(2);
+      const shade = this.context(3);
+      if (ground === null || shade === null) {
+        return false;
+      }
+      ground.filter = `blur(${6 * DENSITY}px)`;
       ground.beginPath();
-      ground.arc(dome.x, dome.y, dome.radius * (dome.main ? 2.1 : 1.6), 0, Math.PI * 2);
+      for (const dome of this.domes) {
+        const radius = dome.radius * (dome.main ? 2.1 : 1.6);
+        ground.moveTo(dome.x + radius, dome.y);
+        ground.arc(dome.x, dome.y, radius, 0, Math.PI * 2);
+      }
       ground.fill();
-    }
-    // Shadows: contact darkening and a cast shadow stretched away from the sun.
-    shade.filter = `blur(${1.6 * DENSITY}px)`;
-    for (const dome of this.domes) {
-      const height = dome.radius * 0.9;
+      this.writeChannel(2, ground);
+
+      // Shadows: contact darkening and a cast shadow stretched away from the sun.
+      shade.filter = `blur(${1.6 * DENSITY}px)`;
       shade.globalAlpha = 0.85;
       shade.beginPath();
-      shade.ellipse(dome.x + shadow.x * height * 0.5, dome.y + shadow.y * height * 0.5,
-        dome.radius * 1.02 + Math.hypot(shadow.x, shadow.y) * height * 0.5, dome.radius * 0.98,
-        Math.atan2(shadow.y, shadow.x), 0, Math.PI * 2);
+      const angle = Math.atan2(shadow.y, shadow.x);
+      const shadowLength = Math.hypot(shadow.x, shadow.y);
+      for (const dome of this.domes) {
+        const height = dome.radius * 0.9;
+        const x = dome.x + shadow.x * height * 0.5;
+        const y = dome.y + shadow.y * height * 0.5;
+        const radiusX = dome.radius * 1.02 + shadowLength * height * 0.5;
+        shade.moveTo(x + radiusX * Math.cos(angle), y + radiusX * Math.sin(angle));
+        shade.ellipse(x, y, radiusX, dome.radius * 0.98, angle, 0, Math.PI * 2);
+      }
       shade.fill();
       shade.globalAlpha = 0.5;
       shade.beginPath();
-      shade.arc(dome.x, dome.y, dome.radius * 1.15, 0, Math.PI * 2);
+      for (const dome of this.domes) {
+        shade.moveTo(dome.x + dome.radius * 1.15, dome.y);
+        shade.arc(dome.x, dome.y, dome.radius * 1.15, 0, Math.PI * 2);
+      }
       shade.fill();
+      shade.globalAlpha = 1;
+      this.writeChannel(3, shade);
     }
-    shade.globalAlpha = 1;
 
-    const data = this.terrain.image.data as Uint8Array;
-    const channels = [ocean, green, ground, shade].map((ctx) => ctx.getImageData(0, 0, this.texelWidth, this.texelHeight).data);
-    for (let i = 0; i < data.length; i += 4) {
-      data[i] = channels[0][i];
-      data[i + 1] = channels[1][i];
-      data[i + 2] = channels[2][i];
-      data[i + 3] = channels[3][i];
-    }
     this.terrain.needsUpdate = true;
     this.terrainKey = terrainKey;
     this.cityKey = cityKey;
+    this.oceanKey = oceanKey;
+    this.greeneryKey = greeneryKey;
     return true;
+  }
+
+  private writeChannel(channel: number, context: CanvasRenderingContext2D): void {
+    const pixels = context.getImageData(0, 0, this.texelWidth, this.texelHeight).data;
+    const data = this.terrain.image.data as Uint8Array;
+    for (let i = 0; i < data.length; i += 4) {
+      data[i + channel] = pixels[i];
+    }
   }
 
   public updateCells(spaces: ReadonlyArray<SpaceModel>, legal: ReadonlySet<SpaceId>, inspected: SpaceId | undefined) {

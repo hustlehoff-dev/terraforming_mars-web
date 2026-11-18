@@ -58,6 +58,13 @@ export class MarsScene {
   private readonly planetMaterial: ShaderMaterial;
   private readonly atmosphereMaterial: ShaderMaterial;
   private readonly buildings = new Group();
+  private readonly domeGroups = new Map<string, Group>();
+  private readonly cityMaterials = {
+    base: new MeshStandardMaterial({color: new Color(0.40, 0.37, 0.35), roughness: 0.9, metalness: 0.05}),
+    glass: new MeshStandardMaterial({color: new Color(0.70, 0.84, 0.95), roughness: 0.05, metalness: 0.0, transparent: true, opacity: 0.28, depthWrite: false}),
+    frame: new MeshStandardMaterial({color: new Color(0.80, 0.82, 0.84), roughness: 0.4, metalness: 0.6, wireframe: true, transparent: true, opacity: 0.35}),
+    garden: new MeshStandardMaterial({color: new Color(0.16, 0.30, 0.10), roughness: 0.9, emissive: new Color(0.9, 0.62, 0.32), emissiveIntensity: 0.08}),
+  };
   private readonly orbitals = new Group();
   private readonly shuttle: Mesh;
   private readonly cityLights: Array<Mesh> = [];
@@ -356,22 +363,39 @@ export class MarsScene {
   }
 
   private rebuildBuildings() {
-    const materials = new Set<MeshStandardMaterial>();
-    this.buildings.traverse((object) => {
-      if (object instanceof Mesh) {
-        object.geometry.dispose();
-        materials.add(object.material as MeshStandardMaterial);
+    const domeKey = (dome: {id: SpaceId, x: number, y: number}) => `${dome.id}:${dome.x}:${dome.y}`;
+    const keys = new Set(this.state.domes.map(domeKey));
+    const sharedMaterials = new Set(Object.values(this.cityMaterials));
+    for (const [key, group] of this.domeGroups) {
+      if (keys.has(key)) {
+        continue;
       }
-    });
-    materials.forEach((material) => material.dispose());
-    this.buildings.clear();
+      group.traverse((object) => {
+        if (object instanceof Mesh) {
+          object.geometry.dispose();
+          const material = object.material as MeshStandardMaterial;
+          if (!sharedMaterials.has(material)) {
+            material.dispose();
+          }
+        }
+      });
+      this.buildings.remove(group);
+      this.domeGroups.delete(key);
+    }
     this.cityLights.length = 0;
     const up = new Vector3(0, 1, 0);
-    const base = new MeshStandardMaterial({color: new Color(0.40, 0.37, 0.35), roughness: 0.9, metalness: 0.05});
-    const glass = new MeshStandardMaterial({color: new Color(0.70, 0.84, 0.95), roughness: 0.05, metalness: 0.0, transparent: true, opacity: 0.28, depthWrite: false});
-    const frame = new MeshStandardMaterial({color: new Color(0.80, 0.82, 0.84), roughness: 0.4, metalness: 0.6, wireframe: true, transparent: true, opacity: 0.35});
-    const garden = new MeshStandardMaterial({color: new Color(0.16, 0.30, 0.10), roughness: 0.9, emissive: new Color(0.9, 0.62, 0.32), emissiveIntensity: 0.08});
+    const {base, glass, frame, garden} = this.cityMaterials;
     for (const dome of this.state.domes) {
+      const key = domeKey(dome);
+      const existing = this.domeGroups.get(key);
+      if (existing !== undefined) {
+        existing.traverse((object) => {
+          if (object instanceof Mesh && typeof object.userData.phase === 'number') {
+            this.cityLights.push(object);
+          }
+        });
+        continue;
+      }
       const r = dome.radius * BOARD_SCALE;
       const group = new Group();
       const point = this.surface(dome.x, dome.y);
@@ -402,6 +426,7 @@ export class MarsScene {
         this.cityLights.push(light);
       }
       this.buildings.add(group);
+      this.domeGroups.set(key, group);
     }
   }
 
@@ -705,6 +730,11 @@ export class MarsScene {
       return;
     }
     this.frameHandle = requestAnimationFrame(this.loop);
+    if (document.hidden) {
+      this.lastFrame = 0;
+      this.lastRender = 0;
+      return;
+    }
     const dt = Math.min(0.1, (now - (this.lastFrame || now)) / 1000);
     this.lastFrame = now;
 
@@ -723,9 +753,6 @@ export class MarsScene {
       }
     }
     const moving = before.x !== this.current.x || before.y !== this.current.y || before.d !== this.current.d;
-    if (moving) {
-      this.adaptResolution(now, now - this.lastRender);
-    }
 
     // Keep camera movement responsive, with fewer idle frames on touch phones.
     const pulsing = this.pulseStart > 0 && now - this.pulseStart < PULSE_MS + 100;
@@ -733,6 +760,11 @@ export class MarsScene {
     const ambientDue = !this.reducedMotion && !document.hidden && (now - this.lastRender > ambientInterval || (pulsing && !this.compactDisplay));
     if (!moving && !this.dirty && !ambientDue) {
       return;
+    }
+    if (this.lastRender > 0 && (moving || ambientDue)) {
+      // Idle animation also needs to adapt when the planet shader stalls the GPU.
+      const interval = now - this.lastRender;
+      this.adaptResolution(now, moving ? interval : interval - ambientInterval + 16);
     }
     const seconds = this.reducedMotion ? 0 : (now - this.start) / 1000;
     this.planetMaterial.uniforms.time.value = seconds;
@@ -762,7 +794,7 @@ export class MarsScene {
    * scene drops its resolution while frames take too long and recovers it when they are fast again.
    */
   private adaptResolution(now: number, interval: number) {
-    if (interval <= 0 || interval > 250) {
+    if (interval <= 0) {
       return;
     }
     if (interval > 26) {
@@ -810,14 +842,21 @@ export class MarsScene {
   public dispose() {
     this.disposed = true;
     cancelAnimationFrame(this.frameHandle);
+    const materials = new Set<MeshStandardMaterial>(Object.values(this.cityMaterials));
     this.scene.traverse((object) => {
       const mesh = object as Mesh;
       mesh.geometry?.dispose();
       const material = mesh.material as MeshStandardMaterial | undefined;
-      material?.map?.dispose();
-      material?.dispose?.();
+      if (material !== undefined) {
+        materials.add(material);
+      }
+    });
+    materials.forEach((material) => {
+      material.map?.dispose();
+      material.dispose();
     });
     this.state.dispose();
+    this.domeGroups.clear();
     this.renderer.dispose();
   }
 }

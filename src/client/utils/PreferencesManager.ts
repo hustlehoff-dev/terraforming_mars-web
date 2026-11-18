@@ -56,7 +56,7 @@ const defaults: Preferences = {
   learner_mode: true,
   enable_sounds: true,
   enable_music: true,
-  music_volume: 65,
+  music_volume: 10,
   magnify_cards: true,
   show_alerts: true,
   lang: 'pl',
