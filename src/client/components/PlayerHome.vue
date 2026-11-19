@@ -170,7 +170,7 @@
             <section v-if="game.phase !== 'end'" v-show="!cinematic || missionPanel === 'actions'" class="mission-play__actions player_home_block player_home_block--actions nofloat">
               <a name="actions" class="player_home_anchor hotkey-target"></a>
               <WaitingFor ref="waitingFor" :playerView="playerView" :waitingfor="playerView.waitingFor" :hideInput="hideWaitingInput"
-                :centerDeckChoice="cinematic" :requestId="playerView.requestId" />
+                :centerDeckChoice="cinematic" :requestId="playerView.requestId" @undoTurn="askUndoTurn" />
               <template v-if="quickInput && quickAction">
                 <SelectProjectCardToPlay v-if="quickInput.type === 'projectCard' && quickAction.card" :key="quickAction.id"
                   :playerView="playerView" :playerinput="quickInput" :selectedCard="quickAction.card" :onsave="submitQuickAction" showsave />

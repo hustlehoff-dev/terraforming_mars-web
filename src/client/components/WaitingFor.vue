@@ -16,6 +16,9 @@
     <Teleport v-if="waitingfor !== undefined && !hideInput && (!draftRepick || showLockedDraft)" to="body" :disabled="!showDeckDialog">
       <component :is="showDeckDialog ? 'dialog' : 'div'" ref="inputContainer" class="wf-root"
         :class="{'deck-choice-dialog': showDeckDialog}" :aria-label="showDeckDialog ? $t(waitingfor.title) : undefined" @cancel.prevent>
+        <div v-if="showDeckDialog && canUndoDraft" class="draft-undo-bar">
+          <button type="button" :disabled="paused" @click="$emit('undoTurn')"><span aria-hidden="true">⟲</span>{{ $t('Undo turn') }}</button>
+        </div>
         <PlayerInputFactory :players="playerView.players"
           :playerView="playerView"
           :playerinput="waitingfor"
@@ -449,6 +452,11 @@ export default defineComponent({
     this.stop();
   },
   computed: {
+    canUndoDraft(): boolean {
+      const game = this.playerView.game;
+      return this.centerDeckChoice && isPlayerId(this.playerView.id) && game.generation > 1 &&
+        (game.phase === Phase.DRAFTING || game.phase === Phase.RESEARCH);
+    },
     paused(): boolean {
       return this.playerView.game.paused !== undefined;
     },
@@ -483,3 +491,32 @@ export default defineComponent({
 
 </script>
 
+<style scoped lang="less">
+.draft-undo-bar {
+  position: sticky;
+  z-index: 4;
+  top: 0;
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  margin: 0 0 12px;
+
+  button {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    border: 1px solid #c9a35d;
+    border-radius: 8px;
+    background: #101e29f5;
+    color: #ffe7b7;
+    font: 600 14px Ubuntu, Arial, sans-serif;
+    cursor: pointer;
+
+    span { font-size: 22px; line-height: 1; }
+    &:focus-visible { outline: 2px solid #fff3c4; outline-offset: 2px; }
+    &:disabled { opacity: 0.5; cursor: default; }
+  }
+}
+</style>
