@@ -23,6 +23,7 @@ const plugins = [
     typescript: {
       configOverwrite: {
         compilerOptions: {module: 'esnext'},
+        include: ['src/client/**/*.ts', 'src/client/**/*.vue', 'src/common/**/*.ts'],
         exclude: [
           'tests/**/*.ts',
         ],
