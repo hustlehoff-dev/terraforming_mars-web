@@ -10,19 +10,25 @@ import {OptionsInput} from '../inputs/OptionsPlayerInput';
 import {SelectInitialCards} from '../inputs/SelectInitialCards';
 import {SelectCardToPlay} from '../inputs/SelectCardToPlay';
 import {SelectProductionToLose} from '../inputs/SelectProductionToLose';
+import {SelectCard} from '../inputs/SelectCard';
+import {ICorporationCard} from '../cards/corporation/ICorporationCard';
+import {SelectColony} from '../inputs/SelectColony';
+import {BotStrategy} from './BotStrategy';
+
+type SetupPlan = {budget: number, cardCost: number, corporation: ICorporationCard};
 
 /** Chooses ordinary, validated input responses. Never calls a card's effect directly. */
 export class TestBotDecision {
-  public static choose(input: PlayerInput, player: IPlayer, initialBudget?: number): InputResponse | undefined {
+  public static choose(input: PlayerInput, player: IPlayer, setup?: SetupPlan): InputResponse | undefined {
     if (input.optional) return undefined;
     const model = input.toModel(player);
     switch (model.type) {
     case 'or': {
       if (!(input instanceof OptionsInput)) return undefined;
-      const candidates = input.options.map((option, index) => ({option, index, score: this.priority(option)}))
+      const candidates = input.options.map((option, index) => ({option, index, score: this.priority(option, player)}))
         .filter(({score}) => Number.isFinite(score)).sort((a, b) => b.score - a.score);
       for (const {option, index} of candidates) {
-        const response = this.choose(option, player);
+        const response = this.choose(option, player, setup);
         if (response) return {type: 'or', index, response};
       }
       return undefined;
@@ -30,14 +36,16 @@ export class TestBotDecision {
     case 'and':
     case 'initialCards': {
       if (!(input instanceof OptionsInput)) return undefined;
-      let budget: number | undefined;
+      let plan = setup;
       if (input instanceof SelectInitialCards) {
-        const corp = player.dealtCorporationCards[0];
-        budget = Math.max(0, (corp?.startingMegaCredits ?? 0) - 10);
+        const corp = [...player.dealtCorporationCards].sort((a, b) => BotStrategy.card(b, player) - BotStrategy.card(a, player))[0];
+        if (!corp) return undefined;
+        plan = {budget: Math.max(0, corp.startingMegaCredits - 12), cardCost: corp.cardCost ?? player.cardCost, corporation: corp};
       }
       const responses: Array<InputResponse> = [];
       for (const option of input.options) {
-        const response = this.choose(option, player, budget);
+        const response = input instanceof SelectInitialCards && option === input.inputs.corp && plan ?
+          {type: 'card' as const, cards: [plan.corporation.name]} : this.choose(option, player, plan);
         if (!response) return undefined;
         responses.push(response);
       }
@@ -45,11 +53,28 @@ export class TestBotDecision {
     }
     case 'option': return {type: 'option'};
     case 'card': {
-      const cards = model.cards.filter((card) => !card.isDisabled);
+      if (!(input instanceof SelectCard)) return undefined;
+      const title = this.title(input);
+      const values = new Map<CardName, number>();
+      const value = (name: CardName) => {
+        const cached = values.get(name);
+        if (cached !== undefined) return cached;
+        const card = input.cards.find((card) => card.name === name);
+        if (!card) return -Infinity;
+        const score = model.selectBlueCardAction ? BotStrategy.action(card, player) : BotStrategy.card(card, player, undefined, setup?.corporation);
+        values.set(name, score);
+        return score;
+      };
+      const discarding = /discard|sell patents/i.test(title);
+      let cards = model.cards.filter((card) => !card.isDisabled)
+        .sort((a, b) => (discarding ? 1 : -1) * (value(a.name) - value(b.name)));
       let count = model.min;
-      if (model.min === 0 && /buy|purchase|initial project/i.test(this.title(input))) {
-        const cost = initialBudget === undefined ? player.cardCost : (player.dealtCorporationCards[0]?.cardCost ?? player.cardCost);
-        count = Math.max(model.min, Math.min(model.max, 4, Math.floor((initialBudget ?? Math.max(0, player.megaCredits - 12)) / Math.max(1, cost))));
+      if (model.min === 0 && /buy|purchase|initial project/i.test(title)) {
+        const cost = setup?.cardCost ?? player.cardCost;
+        cards = cards.filter((card) => value(card.name) > cost);
+        count = Math.min(cards.length, model.max, Math.floor((setup?.budget ?? Math.max(0, player.megaCredits - 10)) / Math.max(1, cost)));
+      } else if (/sell patents/i.test(title)) {
+        count = Math.min(model.max, cards.filter((card) => value(card.name) < 0).length);
       }
       if (cards.length < count) return undefined;
       return {type: 'card', cards: cards.slice(0, count).map((card) => card.name)};
@@ -57,7 +82,8 @@ export class TestBotDecision {
     case 'projectCard': {
       if (!(input instanceof SelectCardToPlay)) return undefined;
       const cards = model.cards.filter((card) => !card.isDisabled)
-        .sort((a, b) => this.projectPriority(b.name) - this.projectPriority(a.name) || (a.calculatedCost ?? 0) - (b.calculatedCost ?? 0));
+        .map((card) => ({card, score: BotStrategy.card(input.cards.find((candidate) => candidate.name === card.name)!, player, card.calculatedCost)}))
+        .sort((a, b) => b.score - a.score).map(({card}) => card);
       for (const cardModel of cards) {
         const card = input.cards.find((candidate) => candidate.name === cardModel.name);
         if (!card || cardModel.calculatedCost === undefined) continue;
@@ -78,13 +104,20 @@ export class TestBotDecision {
     }
     case 'space': {
       const spaces = [...model.spaces].sort((a, b) => {
-        const score = (id: typeof a) => player.game.board.spaces.find((space) => space.id === id)?.bonus.length ?? 0;
+        const score = (id: typeof a) => {
+          const space = player.game.board.spaces.find((space) => space.id === id);
+          return space ? BotStrategy.space(space, player, this.title(input)) : 0;
+        };
         return score(b) - score(a);
       });
       return spaces[0] === undefined ? undefined : {type: 'space', spaceId: spaces[0]};
     }
     case 'player': {
-      const target = model.players.find((color) => color !== player.color) ?? model.players[0];
+      const hostile = /remove|decrease|steal|lose|reduce|attack/i.test(this.title(input));
+      const targets = model.players.map((color) => player.game.players.find((other) => other.color === color)).filter((other) => other !== undefined);
+      targets.sort((a, b) => b.plants + b.terraformRating * 0.3 - a.plants - a.terraformRating * 0.3);
+      const target = hostile ? targets.find((other) => other.id !== player.id)?.color ?? model.players[0] :
+        model.players.includes(player.color) ? player.color : model.players[0];
       return target === undefined ? undefined : {type: 'player', player: target};
     }
     case 'delegate': {
@@ -92,25 +125,37 @@ export class TestBotDecision {
       return target === undefined ? undefined : {type: 'delegate', player: target};
     }
     case 'party': return model.parties[0] === undefined ? undefined : {type: 'party', partyName: model.parties[0]};
-    case 'colony': return model.coloniesModel[0] === undefined ? undefined : {type: 'colony', colonyName: model.coloniesModel[0].name};
+    case 'colony': {
+      if (!(input instanceof SelectColony)) return undefined;
+      const build = /build|place.*colony/i.test(this.title(input));
+      const colony = [...input.colonies].sort((a, b) => BotStrategy.colony(b, player, build) - BotStrategy.colony(a, player, build))[0];
+      return colony ? {type: 'colony', colonyName: colony.name} : undefined;
+    }
     case 'globalEvent': return model.globalEventNames[0] === undefined ? undefined : {type: 'globalEvent', globalEventName: model.globalEventNames[0]};
     case 'amount': return {type: 'amount', amount: model.maxByDefault ? model.max : model.min};
     case 'deltaProject': return model.validSteps[0] === undefined ? undefined : {type: 'deltaProject', amount: model.validSteps[0]};
-    case 'resource': return model.include[0] === undefined ? undefined : {type: 'resource', resource: model.include[0]};
-    case 'resources': return {type: 'resources', units: Units.of({megacredits: model.count})};
+    case 'resource': {
+      const resource = [...model.include].sort((a, b) => BotStrategy.resource(b, player) - BotStrategy.resource(a, player))[0];
+      return resource === undefined ? undefined : {type: 'resource', resource};
+    }
+    case 'resources': {
+      const resource = [...Units.keys].sort((a, b) => BotStrategy.resource(b, player) - BotStrategy.resource(a, player))[0];
+      return {type: 'resources', units: Units.of({[resource]: model.count})};
+    }
     case 'productionToLose': {
       const units = Units.of({});
       const available = {...model.payProduction.units, megacredits: model.payProduction.units.megacredits + 5};
       let remaining = model.payProduction.cost;
       let pairs = input instanceof SelectProductionToLose ? input.pairs : 0;
-      for (const key of Units.keys) {
+      const resources = [...Units.keys].sort((a, b) => BotStrategy.resource(a, player) - BotStrategy.resource(b, player));
+      for (const key of resources) {
         const loss = Math.min(pairs, Math.floor(available[key] / 2)) * 2;
         units[key] += loss;
         available[key] -= loss;
         remaining -= loss;
         pairs -= loss / 2;
       }
-      for (const key of Units.keys) {
+      for (const key of resources) {
         const loss = Math.min(remaining, Math.max(0, available[key]));
         units[key] += loss;
         remaining -= loss;
@@ -126,22 +171,41 @@ export class TestBotDecision {
     return typeof input.title === 'string' ? input.title : input.title.message;
   }
 
-  private static priority(input: PlayerInput): number {
+  private static priority(input: PlayerInput, player: IPlayer): number {
     const title = this.title(input);
-    if (/undo|sell patents/i.test(title)) return -Infinity;
-    if (/pass/i.test(title)) return -100;
-    if (/end turn/i.test(title)) return -50;
-    if (/claim.*milestone|convert.*plants|convert.*heat/i.test(title)) return 100;
-    if (input.type === 'projectCard') return /standard/i.test(title) ? 40 : 90;
-    if (/played card/i.test(title)) return 80;
-    if (/trade/i.test(title)) return 60;
-    return 50;
-  }
-
-  private static projectPriority(name: CardName): number {
-    if ([CardName.AQUIFER_STANDARD_PROJECT, CardName.ASTEROID_STANDARD_PROJECT, CardName.GREENERY_STANDARD_PROJECT].includes(name)) return 10;
-    if (name === CardName.CITY_STANDARD_PROJECT) return 5;
-    return 0;
+    if (/undo/i.test(title) || input.optional) return -Infinity;
+    if (/pass/i.test(title)) return 0;
+    if (/end turn/i.test(title)) return 0.1;
+    if (/send.*delegate/i.test(title)) return /lobby/i.test(title) ? 3 : -1;
+    if (/^Pay.*(energy|titanium|M€)/i.test(title) && typeof input.title !== 'string') {
+      const amount = input.title.data.find((item) => typeof item.value === 'number')?.value;
+      if (typeof amount === 'number') return -amount * (/energy/i.test(title) ? BotStrategy.resource('energy', player) : /titanium/i.test(title) ? BotStrategy.resource('titanium', player) : 1);
+    }
+    if (/Trade with a colony/i.test(title) && input instanceof OptionsInput) {
+      const colony = input.options.find((option) => option instanceof SelectColony) as SelectColony | undefined;
+      const fees = input.options.find((option) => option instanceof OptionsInput) as OptionsInput<unknown> | undefined;
+      if (colony && fees) {
+        const gain = Math.max(0, ...colony.colonies.map((colony) => BotStrategy.colony(colony, player)));
+        const fee = Math.max(...fees.options.map((option) => this.priority(option, player)));
+        return gain + fee;
+      }
+    }
+    if (/claim.*milestone/i.test(title)) return 40;
+    if (/convert.*heat/i.test(title)) return player.game.getTemperature() < player.game.max.temperature ? 20 : -1;
+    if (/convert.*plants|greenery|forest/i.test(title) && input.type !== 'projectCard') return 25;
+    if (input instanceof SelectCardToPlay) {
+      const model = input.toModel(player);
+      return Math.max(-Infinity, ...model.cards.filter((card) => !card.isDisabled).map((card) => {
+        const actual = input.cards.find((candidate) => candidate.name === card.name);
+        return actual ? BotStrategy.card(actual, player, card.calculatedCost) : -Infinity;
+      }));
+    }
+    if (/sell patents/i.test(title)) return player.cardsInHand.some((card) => BotStrategy.card(card, player) < 0) ? 1 : -Infinity;
+    if (input instanceof SelectCard && input.config.selectBlueCardAction) return Math.max(0, ...input.cards.map((card) => BotStrategy.action(card, player)));
+    if (input instanceof OptionsInput) return Math.max(-Infinity, ...input.options.map((option) => this.priority(option, player)));
+    const award = BotStrategy.award(title, player);
+    if (award !== undefined) return award;
+    return 2;
   }
 
   /** Conservative payment: ordinary stock only, keeping the card's reserved resources. */

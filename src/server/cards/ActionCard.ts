@@ -12,6 +12,11 @@ export interface StaticActionCardProperties extends StaticCardProperties {
  * A Card that has a data-defined behavior in `action`.
  */
 export abstract class ActionCard extends Card {
+  /** Read-only action description for evaluators; reading it never executes the action. */
+  public get actionBehavior(): Behavior | undefined {
+    return this.properties.action;
+  }
+
   // Add actionBehavior to StaticCardProperties, otherwise this will multiple memory consumption.
   constructor(properties: StaticActionCardProperties) {
     super(properties);
