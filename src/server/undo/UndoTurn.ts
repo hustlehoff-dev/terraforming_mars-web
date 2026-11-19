@@ -1,5 +1,5 @@
 import {Color} from '../../common/Color';
-import {Phase} from '../../common/Phase';
+import {Phase, UNDO_TURN_PHASES} from '../../common/Phase';
 import {IGame} from '../IGame';
 import {IPlayer} from '../IPlayer';
 import {Game} from '../Game';
@@ -59,7 +59,7 @@ export class UndoTurn {
   /** A request that still matches the game (nothing was played since it was made). */
   public static current(game: IGame): UndoTurnRequest | undefined {
     const request = game.undoTurnRequest;
-    if (request !== undefined && (request.gameAge !== game.gameAge || request.undoCount !== game.undoCount || game.phase !== Phase.ACTION)) {
+    if (request !== undefined && (request.gameAge !== game.gameAge || request.undoCount !== game.undoCount || !UNDO_TURN_PHASES.includes(game.phase))) {
       game.undoTurnRequest = undefined;
       return undefined;
     }
@@ -84,7 +84,7 @@ export class UndoTurn {
    * The save made when the last turn started: the newest turn start (action phase, nothing done
    * yet by the player whose turn it is) older than the game as it is now.
    */
-  public static async findTurnStart(game: IGame): Promise<{saveId: number, serialized: SerializedGame} | undefined> {
+  private static async *turnStarts(game: IGame): AsyncGenerator<{saveId: number, serialized: SerializedGame}> {
     const db = Database.getInstance();
     const saveIds = (await db.getSaveIds(game.id)).filter((id) => id < game.lastSaveId).sort((a, b) => b - a);
     const age = gameplayAge(game);
@@ -102,16 +102,33 @@ export class UndoTurn {
       // takeAction saves before checking a pass. Such a transition snapshot advances the
       // generation again when deserialized, so it cannot be an undo checkpoint.
       if (active !== undefined && active.actionsTakenThisRound === 0 && !serialized.passedPlayers.includes(active.id)) {
-        return {saveId, serialized};
+        yield {saveId, serialized};
       }
+    }
+  }
+
+  public static async findTurnStart(game: IGame): Promise<{saveId: number, serialized: SerializedGame} | undefined> {
+    for await (const start of UndoTurn.turnStarts(game)) {
+      return start;
     }
     return undefined;
   }
 
+  /** Read-only checkpoint metadata; only requested explicitly, never by the regular status poll. */
+  public static async preview(game: IGame): Promise<{target: {saveId: number, generation: number} | null, generations: Array<number>}> {
+    let target: {saveId: number, generation: number} | null = null;
+    const generations = new Set<number>();
+    for await (const start of UndoTurn.turnStarts(game)) {
+      target ??= {saveId: start.saveId, generation: start.serialized.generation};
+      generations.add(start.serialized.generation);
+    }
+    return {target, generations: [...generations].sort((a, b) => b - a)};
+  }
+
   /** A player asks to undo the last turn. With nobody else to ask, it happens at once. */
   public static async request(game: IGame, player: IPlayer): Promise<void> {
-    if (game.phase !== Phase.ACTION) {
-      throw new Error('A turn can be undone only during the action phase');
+    if (!UNDO_TURN_PHASES.includes(game.phase)) {
+      throw new Error('The turn cannot be undone');
     }
     if (UndoTurn.current(game) !== undefined) {
       return;

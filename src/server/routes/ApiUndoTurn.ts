@@ -63,11 +63,11 @@ export class ApiUndoTurn extends Handler {
     const now = await ctx.gameLoader.getGame(id) ?? game;
     // Optional read-only preview, separate from the consent request and the regular status poll.
     if (ctx.urlParams.stringOrUndefined('preview') === 'true') {
-      const target = await UndoTurn.findTurnStart(now);
+      const preview = await UndoTurn.preview(now);
       responses.writeJson(res, ctx, {
         ...UndoTurn.status(now),
         undoCount: now.undoCount,
-        target: target === undefined ? null : {saveId: target.saveId, generation: target.serialized.generation},
+        ...preview,
       });
       return;
     }

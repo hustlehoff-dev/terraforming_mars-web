@@ -2,7 +2,7 @@
   <!-- Undoing a turn: whoever asked waits, every other player agrees or refuses. -->
   <Teleport to="body">
     <ConfirmDialog ref="confirmation" :message="confirmationMessage" @accept="send('request')" />
-    <div v-if="request || error" class="undo-turn" role="status">
+    <dialog v-if="request" ref="voteDialog" class="undo-turn" role="alertdialog" :aria-label="$t('Undo turn')" @cancel.prevent>
       <template v-if="request">
         <p class="undo-turn__text">
           <span aria-hidden="true">⟲</span>
@@ -23,13 +23,13 @@
           <button v-else-if="request.by === viewModel.color" type="button" class="undo-turn__button" :disabled="busy" @click="send('cancel')" v-i18n>Cancel</button>
         </span>
       </template>
-      <p v-else class="undo-turn__error">{{ error }}</p>
-    </div>
+    </dialog>
+    <p v-if="error && !request" class="undo-turn undo-turn__error" role="alert">{{ error }}</p>
   </Teleport>
 </template>
 
 <script setup lang="ts">
-import {computed, getCurrentInstance, onBeforeUnmount, onMounted, ref} from 'vue';
+import {computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref, watch} from 'vue';
 import ConfirmDialog from '@/client/components/common/ConfirmDialog.vue';
 import {vueRoot} from '@/client/components/vueRoot';
 import {paths} from '@/common/app/paths';
@@ -51,12 +51,22 @@ const confirmation = ref<InstanceType<typeof ConfirmDialog>>();
 const confirmationMessage = computed(() => props.viewModel.players.length === 1 ?
   'Go back to the start of the turn?' : 'Ask to undo the turn? All other players must agree.');
 const request = ref<Request>();
+const voteDialog = ref<HTMLDialogElement>();
 const error = ref<string>();
 const busy = ref(false);
 let timer: number | undefined;
 let errorTimer: number | undefined;
 let actionVersion = 0;
 let refreshing = false;
+
+watch([request, () => props.viewModel.game.paused], async () => {
+  await nextTick();
+  if (!request.value || props.viewModel.game.paused) {
+    voteDialog.value?.close();
+  } else if (voteDialog.value?.isConnected && !voteDialog.value.open) {
+    voteDialog.value.showModal();
+  }
+}, {flush: 'post'});
 
 function nameOf(color: Color): string {
   return props.viewModel.players.find((player) => player.color === color)?.name ?? color;
@@ -142,6 +152,7 @@ onMounted(() => {
   timer = window.setInterval(poll, 3000);
 });
 onBeforeUnmount(() => {
+  voteDialog.value?.close();
   window.clearInterval(timer);
   window.clearTimeout(errorTimer);
 });
@@ -150,6 +161,19 @@ defineExpose({ask});
 </script>
 
 <style scoped lang="less">
+dialog.undo-turn {
+  box-sizing: border-box;
+  inset: 14px auto auto 50%;
+  width: min(760px, calc(100vw - 24px));
+  max-width: none;
+  margin: 0;
+  max-height: calc(100dvh - 28px);
+  overflow: auto;
+
+  &:not([open]) { display: none; }
+  &::backdrop { background: #03070c66; }
+}
+
 .undo-turn {
   position: fixed;
   z-index: 60;

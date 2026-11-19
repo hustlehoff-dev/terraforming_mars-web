@@ -43,3 +43,6 @@ export const Phase = {
 } as const;
 
 export type Phase = typeof Phase[keyof typeof Phase];
+
+/** Phases from which players can jointly return to a saved action turn. */
+export const UNDO_TURN_PHASES: ReadonlyArray<Phase> = [Phase.ACTION, Phase.DRAFTING, Phase.RESEARCH, Phase.PRODUCTION];

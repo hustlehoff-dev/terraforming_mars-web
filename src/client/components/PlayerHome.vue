@@ -97,7 +97,7 @@
             <button type="button" :aria-expanded="missionPanel === 'log'" @click="toggleMissionPanel('log')">{{ $t('Game log') }}</button>
             <button type="button" class="primary" :aria-expanded="missionPanel === 'actions'" @click="openActions">{{ $t(finalGreenery ? 'Final greenery placement' : 'Actions') }}</button>
             <button type="button" class="mission-pause-button" :disabled="pausing" @click="setPaused(true)"><span aria-hidden="true">⏸</span>{{ $t('Pause the game') }}</button>
-            <button v-if="game.phase === 'action'" type="button" @click="askUndoTurn"><span aria-hidden="true">⟲</span>{{ $t('Undo turn') }}</button>
+            <button v-if="undoAvailable" type="button" @click="askUndoTurn"><span aria-hidden="true">⟲</span>{{ $t('Undo turn') }}</button>
           </MissionParameters>
           <MissionTurnButton v-if="!mapPlacement" :actions="quickActions" :cardActions="cardActions?.cards ?? []"
             :canPass="passIndex !== -1" :canEndTurn="endTurnIndex !== -1" :active="activeTurnColor === thisPlayer.color && playerView.waitingFor !== undefined"
@@ -311,7 +311,7 @@ import Card from '@/client/components/card/Card.vue';
 import PlayersOverview from '@/client/components/overview/PlayersOverview.vue';
 import RivalPanel from '@/client/components/overview/RivalPanel.vue';
 import {Color} from '@/common/Color';
-import {Phase} from '@/common/Phase';
+import {Phase, UNDO_TURN_PHASES} from '@/common/Phase';
 import WaitingFor from '@/client/components/WaitingFor.vue';
 import DecisionHeading from '@/client/components/board/DecisionHeading.vue';
 import Sidebar from '@/client/components/Sidebar.vue';
@@ -568,6 +568,9 @@ export default defineComponent({
     },
   },
   computed: {
+    undoAvailable(): boolean {
+      return UNDO_TURN_PHASES.includes(this.game.phase);
+    },
     missionPanelLabel(): string | undefined {
       if (this.finalGreenery && this.missionPanel === 'actions') {
         return 'Final greenery placement';
