@@ -318,8 +318,10 @@ export class GameLoader implements IGameLoader {
     if (this.purgedGames.includes(game.id)) {
       throw new Error('This game no longer exists');
     }
-    const save = Database.getInstance().saveGame(game);
     const previous = this.pendingSaves.get(game.id) ?? Promise.resolve();
+    // On shared deployments, finish this game's previous write before capturing its next
+    // snapshot and save ID (restoring a turn can trigger more than one save).
+    const save = multiInstance ? previous.then(() => Database.getInstance().saveGame(game)) : Database.getInstance().saveGame(game);
     const chain = previous.then(() => save).catch(() => {});
     this.pendingSaves.set(game.id, chain);
     void chain.then(async () => {

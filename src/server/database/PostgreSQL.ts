@@ -476,7 +476,9 @@ export class PostgreSQL implements IDatabase {
   // Not part of IDatabase, invisible to MetricsDelegate, and invoked fire-and-forget (not awaited) by
   // saveGame above. Instrumented directly here instead.
   private async trim(game: IGame) {
-    if (this.trimCount <= 0) {
+    // Undo appends new snapshots; trimming them by their new IDs would erase the older turns
+    // needed for the next undo. Completed-game maintenance still compacts this history.
+    if (this.trimCount <= 0 || game.undoCount > 0) {
       return;
     }
     if (game.lastSaveId % this.trimCount === 0) {

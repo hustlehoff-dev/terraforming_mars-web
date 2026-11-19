@@ -34,8 +34,24 @@ export type UndoTurnStatus = {
   request?: {by: Color, turnOf: Color, generation: number, votes: Array<Color>, waitingFor: Array<Color>},
 };
 
-/** Saves looked at, newest first, to find where the last turn started. */
-const SEARCH_DEPTH = 40;
+const CONTROL_MESSAGES = new Set([
+  '${0} paused the game',
+  '${0} resumed the game',
+  'Every player agreed: the turn of ${0} was undone',
+]);
+
+/** Pause/resume and undo notices do not mean another game action was taken. */
+function gameplayAge(state: Pick<SerializedGame, 'gameAge' | 'gameLog'>): number {
+  let age = state.gameAge;
+  for (let index = state.gameLog.length - 1; index >= 0; index--) {
+    const message = state.gameLog[index]?.message;
+    if (message === undefined || !CONTROL_MESSAGES.has(message)) {
+      break;
+    }
+    age--;
+  }
+  return Math.max(0, age);
+}
 
 export class UndoTurn {
   private constructor() {}
@@ -70,7 +86,8 @@ export class UndoTurn {
    */
   public static async findTurnStart(game: IGame): Promise<{saveId: number, serialized: SerializedGame} | undefined> {
     const db = Database.getInstance();
-    const saveIds = (await db.getSaveIds(game.id)).filter((id) => id < game.lastSaveId).sort((a, b) => b - a).slice(0, SEARCH_DEPTH);
+    const saveIds = (await db.getSaveIds(game.id)).filter((id) => id < game.lastSaveId).sort((a, b) => b - a);
+    const age = gameplayAge(game);
     for (const saveId of saveIds) {
       let serialized: SerializedGame;
       try {
@@ -78,7 +95,7 @@ export class UndoTurn {
       } catch {
         continue;
       }
-      if (serialized.phase !== Phase.ACTION || serialized.gameAge >= game.gameAge) {
+      if (serialized.phase !== Phase.ACTION || gameplayAge(serialized) >= age) {
         continue;
       }
       const active = serialized.players.find((player) => player.id === serialized.activePlayer);
@@ -144,10 +161,14 @@ export class UndoTurn {
     const serialized = await Database.getInstance().getGameVersion(game.id, request.saveId);
     // The game this one replaces stops its turn clocks.
     game.players.forEach((player) => player.stopTurnLimit());
-    const restored = Game.deserialize(serialized);
-    // Saved as the newest version, after everything already saved: the history stays.
-    restored.lastSaveId = game.lastSaveId;
-    restored.undoCount = game.undoCount + 1;
+    // Deserialization rebuilds the active input and may save immediately. Install current
+    // control state and the new history position before that can happen.
+    const restored = Game.deserialize({
+      ...serialized,
+      paused: game.paused,
+      lastSaveId: game.lastSaveId,
+      undoCount: game.undoCount + 1,
+    });
     const turnOf = restored.players.find((candidate) => candidate.color === request.turnOf);
     if (turnOf !== undefined) {
       restored.log('Every player agreed: the turn of ${0} was undone', (b) => b.player(turnOf).forNotice());
