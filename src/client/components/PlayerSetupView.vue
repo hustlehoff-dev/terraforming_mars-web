@@ -490,6 +490,7 @@ export default defineComponent({
 
 .setup-crew {
   display: grid;
+  min-width: 0;
   gap: 10px;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
   margin: 0;
@@ -498,7 +499,10 @@ export default defineComponent({
 }
 
 .setup-crew__player {
-  display: flex;
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 28px 10px minmax(0, 1fr) max-content;
+  box-sizing: border-box;
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
@@ -537,21 +541,21 @@ export default defineComponent({
 }
 
 .setup-crew__name {
-  display: flex;
+  display: block;
   min-width: 0;
   flex: 1;
   align-items: baseline;
   gap: 6px;
 
   strong {
-    overflow: hidden;
     font-size: 1.05rem;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    white-space: normal;
   }
 
   small {
     color: var(--setup-muted);
+    white-space: nowrap;
   }
 }
 
@@ -769,6 +773,7 @@ export default defineComponent({
 
 .setup-layout__side {
   position: sticky;
+  min-width: 0;
   top: 12px;
   display: flex;
   flex-direction: column;
@@ -776,7 +781,11 @@ export default defineComponent({
   gap: 18px;
 
   .setup-crew {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .setup-section {
+    min-width: 0;
   }
 }
 
