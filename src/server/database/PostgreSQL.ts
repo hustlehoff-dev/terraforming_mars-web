@@ -248,6 +248,7 @@ export class PostgreSQL implements IDatabase {
     // Retrieve last save from database
     const res = await this.client.query(
       `SELECT
+        games.save_id as save_id,
         games.game as game,
         games.game_compressed as game_compressed,
         game.log as log,
@@ -263,7 +264,10 @@ export class PostgreSQL implements IDatabase {
       throw new Error(`Game ${gameId} not found`);
     }
     const row = res.rows[0];
-    return this.compose(this.resolveGameText(row), row.log, row.options);
+    const serialized = this.compose(this.resolveGameText(row), row.log, row.options);
+    // Older overlapping saves could put an earlier counter inside a later database row.
+    // Loading that counter makes every subsequent save look stale and get rejected.
+    return {...serialized, lastSaveId: Math.max(serialized.lastSaveId, Number(row.save_id))};
   }
 
   async getGameVersion(gameId: GameId, saveId: number): Promise<SerializedGame> {
@@ -380,6 +384,8 @@ export class PostgreSQL implements IDatabase {
   }
 
   async saveGame(game: IGame): Promise<void> {
+    // Capture the key with the snapshot, before any asynchronous database work.
+    const thisSaveId = game.lastSaveId;
     const serialized = game.serialize();
     const options = JSON.stringify(serialized.gameOptions);
     const log = JSON.stringify(serialized.gameLog);
@@ -393,9 +399,6 @@ export class PostgreSQL implements IDatabase {
     this.statistics.saveCount++;
     try {
       await this.client.query('BEGIN');
-
-      // Holding onto a value avoids certain race conditions where saveGame is called twice in a row.
-      const thisSaveId = game.lastSaveId;
 
       // Several server instances can share this database. Saves of one game are serialized, and a
       // copy that fell behind (another instance saved a newer state meanwhile) is not written over
@@ -422,7 +425,7 @@ export class PostgreSQL implements IDatabase {
         VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT (game_id, save_id) DO UPDATE SET game = $3, game_compressed = $4
         RETURNING (xmax = 0) AS inserted`,
-        [game.id, game.lastSaveId, this.compressOnWrite ? null : gameJSON, this.compressOnWrite ? gameCompressed : null, game.players.length]);
+        [game.id, thisSaveId, this.compressOnWrite ? null : gameJSON, this.compressOnWrite ? gameCompressed : null, game.players.length]);
 
       await this.client.query(
         `INSERT INTO game (game_id, log, options)
@@ -431,7 +434,7 @@ export class PostgreSQL implements IDatabase {
         DO UPDATE SET log = $2`,
         [game.id, log, options]);
 
-      game.lastSaveId = thisSaveId + 1;
+      game.lastSaveId = Math.max(game.lastSaveId, thisSaveId + 1);
 
       let inserted = true;
       try {

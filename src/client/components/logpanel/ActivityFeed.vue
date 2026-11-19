@@ -2,11 +2,11 @@
   <aside ref="feed" class="activity-feed" :class="{'activity-feed--expanded': expanded}" :aria-label="$t('Activity feed')" :style="placement" @keydown.esc.stop="dismissPreview">
     <div class="activity-feed__mobile-heading">
       <button
-      type="button"
-      class="activity-feed__toggle"
-      :aria-controls="listId"
-      :aria-expanded="expanded"
-      @click="toggleFeed">
+        type="button"
+        class="activity-feed__toggle"
+        :aria-controls="listId"
+        :aria-expanded="expanded"
+        @click="toggleFeed">
         <svg class="activity-feed__heading-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 4h14v14H6zM6 8H3v13h14v-3M9 8h8M9 11h8M9 14h5" /></svg>
         <span>{{ $t(filter === 'chat' ? 'Chat' : 'Activity feed') }}</span>
         <svg class="activity-feed__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path :d="expanded ? 'm6 9 6 6 6-6' : 'm9 6 6 6-6 6'" /></svg>

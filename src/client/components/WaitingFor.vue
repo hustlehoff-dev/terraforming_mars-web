@@ -121,7 +121,7 @@ export default defineComponent({
   },
   watch: {
     showDeckDialog: {flush: 'post', handler: 'openDeckDialog'},
-    'playerView.game.paused': {flush: 'post', handler: 'openDeckDialog'},
+    paused: {flush: 'post', handler: 'openDeckDialog'},
     // While the drawn cards are shown, the choice waits behind them (closed, its state kept).
     revealShowing: {flush: 'post', handler(showing: boolean) {
       const dialog = this.$refs.inputContainer;
@@ -449,6 +449,9 @@ export default defineComponent({
     this.stop();
   },
   computed: {
+    paused(): boolean {
+      return this.playerView.game.paused !== undefined;
+    },
     /** Cards that are simply received (nothing to choose): no "Show the game" in their window. */
     preludeChoice(): boolean {
       return this.waitingfor?.type === 'card' && this.waitingfor.title === 'Select prelude card to play';

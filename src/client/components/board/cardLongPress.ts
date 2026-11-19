@@ -24,16 +24,22 @@ export const cardLongPress: ObjectDirective<HTMLElement, CardModel> = {
     }, {signal, passive: true});
 
     element.addEventListener('touchmove', (event) => {
-      if (!press) return;
+      if (!press) {
+        return;
+      }
       const touch = event.touches[0];
       if (event.touches.length !== 1 || Math.hypot(touch.clientX - press.touch.clientX, touch.clientY - press.touch.clientY) > MOVE_LIMIT) {
         press = undefined;
       }
     }, {signal, passive: true});
 
-    element.addEventListener('touchcancel', () => { press = undefined; }, {signal});
+    element.addEventListener('touchcancel', () => {
+      press = undefined;
+    }, {signal});
     element.addEventListener('contextmenu', (event) => {
-      if (press) event.preventDefault();
+      if (press) {
+        event.preventDefault();
+      }
     }, {signal});
 
     element.addEventListener('touchend', (event) => {
@@ -41,7 +47,9 @@ export const cardLongPress: ObjectDirective<HTMLElement, CardModel> = {
       const touch = event.changedTouches[0];
       press = undefined;
       if (!held || touch?.identifier !== held.touch.identifier || performance.now() - held.startedAt < HOLD_MS ||
-        Math.hypot(touch.clientX - held.touch.clientX, touch.clientY - held.touch.clientY) > MOVE_LIMIT || !event.cancelable) return;
+        Math.hypot(touch.clientX - held.touch.clientX, touch.clientY - held.touch.clientY) > MOVE_LIMIT || !event.cancelable) {
+        return;
+      }
 
       // Cancel the synthesized click before it can activate the choice label.
       event.preventDefault();
@@ -50,7 +58,9 @@ export const cardLongPress: ObjectDirective<HTMLElement, CardModel> = {
   },
   updated(element, {value}) {
     const state = choices.get(element);
-    if (state) state.card = value;
+    if (state) {
+      state.card = value;
+    }
   },
   unmounted(element) {
     choices.get(element)?.listeners.abort();
