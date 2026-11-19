@@ -66,7 +66,8 @@ const projects = computed(() => {
 .mission-sp {
   position: absolute;
   z-index: 11;
-  top: 0;
+  // Under the terraform rating track at the top centre (desktop).
+  top: 72px;
   left: 50%;
   display: grid;
   justify-items: center;
@@ -212,6 +213,12 @@ const projects = computed(() => {
 .mission-sp-slide-enter-active,
   .mission-sp-slide-leave-active {
     transition: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .mission-sp {
+    top: 0;
   }
 }
 </style>
