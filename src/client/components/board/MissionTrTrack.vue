@@ -127,12 +127,10 @@ const ranking = computed(() => props.players
 <style scoped lang="less">
 // Wide and low: one line of players, then the rail.
 .tr-track {
-  position: absolute;
-  z-index: 12;
-  top: 6px;
-  left: 50%;
+  position: relative;
   display: grid;
-  width: min(1100px, 70vw);
+  box-sizing: border-box;
+  width: 100%;
   gap: 2px;
   padding: 5px 22px 4px;
   border: 1px solid #c9a35d88;
@@ -140,7 +138,6 @@ const ranking = computed(() => props.players
   background: #0b131bf0;
   box-shadow: 0 6px 18px #000a;
   color: #f6e2b8;
-  transform: translateX(-50%);
   pointer-events: auto;
 }
 

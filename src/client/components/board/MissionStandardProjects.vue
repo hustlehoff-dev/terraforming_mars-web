@@ -64,14 +64,11 @@ const projects = computed(() => {
 
 <style scoped lang="less">
 .mission-sp {
-  position: absolute;
+  position: relative;
   z-index: 11;
-  // Under the terraform rating track at the top centre (desktop).
-  top: 86px;
-  left: 50%;
   display: grid;
   justify-items: center;
-  transform: translateX(-50%);
+  pointer-events: auto;
 }
 
 .mission-sp__title {
@@ -218,7 +215,10 @@ const projects = computed(() => {
 
 @media (max-width: 760px) {
   .mission-sp {
+    position: absolute;
     top: 0;
+    left: 50%;
+    transform: translateX(-50%);
   }
 }
 </style>
