@@ -1,34 +1,33 @@
 <template>
   <!-- Terraform rating of every player, as the track around the board: one marker per player. -->
   <section class="tr-track" :aria-label="$t('Terraform Rating')">
+    <!-- One line: the title, then every player in TR order (gain this generation, gap to the leader). -->
     <header class="tr-track__head">
-      <span class="tr-track__title" v-i18n>Terraform Rating</span>
-      <small class="tr-track__hint">{{ $t('Each TR: +1 M€ every generation and 1 VP at the end') }}</small>
+      <span class="tr-track__title" :title="$t('Each TR: +1 M€ every generation and 1 VP at the end')">{{ $t('TR') }}</span>
+      <ol class="tr-track__players">
+        <li v-for="(row, index) in ranking" :key="row.color" :class="{'tr-track__player--me': row.color === myColor}" :title="row.name">
+          <span class="tr-track__swatch" :class="'player_bg_color_' + row.color" aria-hidden="true"></span>
+          <span class="tr-track__name">{{ row.name }}</span>
+          <b class="tr-track__value">{{ row.tr }}</b>
+          <small v-if="row.gain !== 0" class="tr-track__gain" :class="{'tr-track__gain--down': row.gain < 0}"
+            :title="$t('Change this generation')">{{ row.gain > 0 ? '+' : '' }}{{ row.gain }}</small>
+          <small v-if="index > 0" class="tr-track__gap" :title="$t('Behind the leader')">−{{ ranking[0].tr - row.tr }}</small>
+        </li>
+      </ol>
     </header>
     <div class="tr-track__rail">
       <span v-for="step in steps" :key="step" class="tr-track__tick"
         :class="{'tr-track__tick--major': step % 5 === 0, 'tr-track__tick--start': step === 20}" :style="{left: position(step)}">
         <small v-if="step % 5 === 0">{{ step }}</small>
       </span>
+      <!-- Players on the same step stand side by side. -->
       <span v-for="marker in markers" :key="marker.color" class="tr-track__marker"
         :class="['player_bg_color_' + marker.color, {'tr-track__marker--me': marker.color === myColor}]"
-        :style="{left: position(marker.tr), bottom: (8 + marker.stack * 24) + 'px'}"
+        :style="{left: position(marker.tr), '--stack': marker.stack}"
         :title="marker.name + ': ' + $t('TR') + ' ' + marker.tr">
         <b>{{ marker.tr }}</b>
       </span>
     </div>
-    <!-- Every player in TR order: name, TR, the gain this generation, the gap to the leader. -->
-    <ol class="tr-track__players">
-      <li v-for="(row, index) in ranking" :key="row.color" :class="{'tr-track__player--me': row.color === myColor}">
-        <span class="tr-track__place">{{ index + 1 }}.</span>
-        <span class="tr-track__swatch" :class="'player_bg_color_' + row.color" aria-hidden="true"></span>
-        <span class="tr-track__name">{{ row.name }}</span>
-        <b class="tr-track__value">{{ row.tr }}</b>
-        <small v-if="row.gain !== 0" class="tr-track__gain" :class="{'tr-track__gain--down': row.gain < 0}"
-          :title="$t('Change this generation')">{{ row.gain > 0 ? '+' : '' }}{{ row.gain }}</small>
-        <small v-if="index > 0" class="tr-track__gap" :title="$t('Behind the leader')">−{{ ranking[0].tr - row.tr }}</small>
-      </li>
-    </ol>
   </section>
 </template>
 
@@ -126,18 +125,19 @@ const ranking = computed(() => props.players
 </script>
 
 <style scoped lang="less">
+// Wide and low: one line of players, then the rail.
 .tr-track {
   position: absolute;
   z-index: 12;
   top: 6px;
   left: 50%;
   display: grid;
-  width: min(760px, 56vw);
-  gap: 4px;
-  padding: 6px 18px 8px;
+  width: min(1100px, 70vw);
+  gap: 2px;
+  padding: 5px 22px 4px;
   border: 1px solid #c9a35d88;
   border-radius: 10px;
-  background: #0b131be6;
+  background: #0b131bf0;
   box-shadow: 0 6px 18px #000a;
   color: #f6e2b8;
   transform: translateX(-50%);
@@ -146,27 +146,87 @@ const ranking = computed(() => props.players
 
 .tr-track__head {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
+  min-width: 0;
+  align-items: center;
+  gap: 14px;
 }
 
 .tr-track__title {
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 5px;
+  background: #e2c27f;
+  color: #241a05;
+  font-size: 0.85rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  cursor: help;
 }
 
-.tr-track__hint {
+.tr-track__players {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  justify-content: space-around;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  font-size: 0.95rem;
+  white-space: nowrap;
+
+  li {
+    display: inline-flex;
+    min-width: 0;
+    align-items: baseline;
+    gap: 6px;
+  }
+}
+
+.tr-track__player--me .tr-track__name {
+  color: #fff3c4;
+  font-weight: 800;
+}
+
+.tr-track__swatch {
+  width: 11px;
+  height: 11px;
+  flex: none;
+  align-self: center;
+  border-radius: 50%;
+}
+
+.tr-track__name {
+  overflow: hidden;
+  color: #eef6f8;
+  text-overflow: ellipsis;
+}
+
+.tr-track__value {
+  color: #ffe36b;
+  font-size: 1.05rem;
+}
+
+.tr-track__gain {
+  color: #8dffb9;
+  font-size: 0.85rem;
+  font-weight: 800;
+
+  &--down {
+    color: #ff9c8a;
+  }
+}
+
+.tr-track__gap {
   color: #9fb1b9;
-  font-size: 0.68rem;
+  font-size: 0.85rem;
 }
 
 .tr-track__rail {
   position: relative;
-  height: 40px;
-  margin: 0 10px 14px;
+  height: 26px;
+  margin: 0 12px 16px;
   border-bottom: 3px solid #e2c27f;
 }
 
@@ -174,11 +234,11 @@ const ranking = computed(() => props.players
   position: absolute;
   bottom: -3px;
   width: 1px;
-  height: 5px;
-  background: #e2c27f88;
+  height: 6px;
+  background: #e2c27f99;
 
   &--major {
-    height: 10px;
+    height: 11px;
     background: #e2c27f;
   }
 
@@ -191,33 +251,35 @@ const ranking = computed(() => props.players
     position: absolute;
     top: 12px;
     left: 50%;
-    color: #c9b88f;
-    font-size: 0.64rem;
+    color: #e0cfa4;
+    font-size: 0.75rem;
+    font-weight: 700;
     transform: translateX(-50%);
   }
 }
 
 .tr-track__marker {
   position: absolute;
+  bottom: 5px;
   display: grid;
-  min-width: 24px;
+  min-width: 26px;
   height: 22px;
   place-items: center;
-  padding: 0 4px;
+  padding: 0 5px;
   border: 2px solid #0b131b;
   border-radius: 11px;
   color: #fff;
-  font-size: 0.75rem;
+  font-size: 0.82rem;
   text-shadow: 0 1px 2px #000;
-  transform: translateX(-50%);
+  transform: translateX(calc(-50% + var(--stack, 0) * 22px));
   transition: left 600ms ease;
 
   &::after {
     position: absolute;
-    bottom: -8px;
+    bottom: -7px;
     left: 50%;
     width: 2px;
-    height: 7px;
+    height: 6px;
     background: inherit;
     content: "";
     transform: translateX(-50%);
@@ -228,59 +290,6 @@ const ranking = computed(() => props.players
     border-color: #fff3c4;
     box-shadow: 0 0 8px #ffd36baa;
   }
-}
-
-.tr-track__players {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 4px 16px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 0.78rem;
-
-  li {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-  }
-}
-
-.tr-track__player--me .tr-track__name {
-  color: #fff3c4;
-  font-weight: 800;
-}
-
-.tr-track__place {
-  color: #9fb1b9;
-}
-
-.tr-track__swatch {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-}
-
-.tr-track__name {
-  color: #eef6f8;
-}
-
-.tr-track__value {
-  color: #ffe36b;
-}
-
-.tr-track__gain {
-  color: #8dffb9;
-  font-weight: 700;
-
-  &--down {
-    color: #ff9c8a;
-  }
-}
-
-.tr-track__gap {
-  color: #9fb1b9;
 }
 
 @media (max-width: 760px) {
