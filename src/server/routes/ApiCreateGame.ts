@@ -19,6 +19,7 @@ import {readBody} from './readBody';
 import {RouteError} from './RouteError';
 import {CEO_CARDS_DEALT_PER_PLAYER} from '../../common/constants';
 import {hasNegativeEscapeVelocityOption, sanitizeEscapeVelocityOptions} from '../../common/game/escapeVelocity';
+import {TestBot} from '../bots/TestBot';
 
 function parseQuotaConfig(struct: any): QuotaConfig {
   let {limit} = struct;
@@ -105,6 +106,10 @@ export class ApiCreateGame extends Handler {
     const body = await readBody(req);
     try {
       const gameReq = JSON.parse(body) as NewGameConfig;
+      const testBotColors = gameReq.players.filter((player) => player.bot === true).map((player) => player.color);
+      if (testBotColors.length > 0 && (gameReq.players.length < 2 || testBotColors.length === gameReq.players.length)) {
+        throw RouteError.badRequest('A test bot needs at least one human opponent');
+      }
       this.validateCustomLists(gameReq);
       if (gameReq.escapeVelocity !== undefined && hasNegativeEscapeVelocityOption(gameReq.escapeVelocity)) {
         throw RouteError.badRequest('Escape Velocity values cannot be negative.');
@@ -116,7 +121,7 @@ export class ApiCreateGame extends Handler {
       const spectatorId = safeCast(generateRandomId('s'), isSpectatorId);
       const players = gameReq.players.map((p) => {
         return new Player(
-          p.name,
+          p.bot === true ? `[BOT] ${p.name || 'Mars'}` : p.name,
           p.color,
           p.beginner,
           Number(p.handicap), // For some reason handicap is coming up a string.
@@ -139,6 +144,7 @@ export class ApiCreateGame extends Handler {
         aresHazards: true, // Not a runtime option.
         aresExtremeVariant: gameReq.aresExtremeVariant,
         automa: false, // No create-game UI yet.
+        testBotColors,
         bannedCards: gameReq.bannedCards,
         boardName: boardName,
         ceoExtension: gameReq.expansions.ceo,
@@ -196,12 +202,17 @@ export class ApiCreateGame extends Handler {
       let game: IGame;
       if (gameOptions.clonedGamedId !== undefined && !gameOptions.clonedGamedId.startsWith('#')) {
         const serialized = await Database.getInstance().getGameVersion(gameOptions.clonedGamedId, 0);
+        serialized.gameOptions.testBotColors = testBotColors;
         game = Cloner.clone(gameId, players, firstPlayerIdx, serialized);
       } else {
         const seed = Math.random();
         game = Game.newInstance(gameId, players, players[firstPlayerIdx], spectatorId, gameOptions, seed);
       }
-      ctx.gameLoader.add(game);
+      await ctx.gameLoader.add(game);
+      if (testBotColors.length > 0) {
+        await ctx.gameLoader.saveGame(game);
+        TestBot.wake(game, ctx.gameLoader);
+      }
       // Only games that are actually created count against the quota.
       this.quotaHandlers.forEach((handler) => handler.record(ctx));
       responses.writeJson(res, ctx, Server.getSimpleGameModel(game));

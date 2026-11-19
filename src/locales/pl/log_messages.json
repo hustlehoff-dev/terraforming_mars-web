@@ -248,5 +248,6 @@
   "${0} decreased ${1} colony track 1 step": "${0} przesuwa biały znacznik toru kolonii ${1} 1 pole w lewo",
   "${0} kept ${1} project cards": "${0} zatrzymuje ${1} kart projektów",
   "Unable to perform undo operation. Error retrieving game from database. Please try again.": "Nie można przeprowadzić akcji cofnięcia ruchu. Proszę spróbować ponownie.",
-  "Final greenery phase is skipped since you did not complete the win condition.": "Ostatnia faza zieleni zostaje pominięta, ponieważ nie spełniłeś warunku zwycięstwa."
+  "Final greenery phase is skipped since you did not complete the win condition.": "Ostatnia faza zieleni zostaje pominięta, ponieważ nie spełniłeś warunku zwycięstwa.",
+  "${0} needs a manual decision. Open this player's view to continue.": "${0} potrzebuje ręcznego wyboru. Otwórz widok tego gracza, aby kontynuować."
 }

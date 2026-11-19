@@ -10,6 +10,7 @@ import {Request} from '../Request';
 import {Response} from '../Response';
 import {Color} from '../../common/Color';
 import {RouteError} from './RouteError';
+import {TestBot} from '../bots/TestBot';
 
 export class ApiWaitingFor extends Handler {
   public static readonly INSTANCE = new ApiWaitingFor();
@@ -89,6 +90,7 @@ export class ApiWaitingFor extends Handler {
     }
     ctx.ipTracker.addParticipant(id, ctx.ip);
     game.markSeen(player);
+    TestBot.wake(game, ctx.gameLoader);
     responses.writeJson(res, ctx, {...this.getPlayerWaitingForModel(player, game, gameAge, undoCount), online: this.onlinePlayers(game)});
   }
 }

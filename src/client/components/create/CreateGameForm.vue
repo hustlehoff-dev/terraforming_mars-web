@@ -452,6 +452,7 @@
           <div class="create-game-players-cont">
             <div class="create-game-page-column">
               <h4 v-i18n>Players</h4>
+              <p v-if="getPlayers.some((player) => player.bot)" v-i18n>Test bots make simple decisions automatically. Keep at least one human player.</p>
             </div>
             <div class="container">
               <div class="columns">
@@ -473,6 +474,10 @@
                       </div>
                       <div>
                         <!-- <template v-if="beginnerOption"> -->
+                        <label v-if="playersCount > 1" class="form-switch form-inline">
+                          <input type="checkbox" v-model="newPlayer.bot">
+                          <i class="form-icon"></i> <span v-i18n>Test bot</span>
+                        </label>
                         <label v-if="isBeginnerToggleEnabled" class="form-switch form-inline create-game-beginner-option-label">
                           <input type="checkbox" v-model="newPlayer.beginner">
                           <i class="form-icon"></i> <span v-i18n>Beginner?</span>
@@ -1012,6 +1017,12 @@ export default defineComponent({
     },
     async serializeSettings(): Promise<NewGameConfig | undefined> {
       let players = this.players.slice(0, this.playersCount);
+      if (this.playersCount === 1) {
+        players[0].bot = false;
+      } else if (players.every((player) => player.bot === true)) {
+        alert(this.$t('A test bot needs at least one human opponent'));
+        return undefined;
+      }
 
       if (this.randomFirstPlayer) {
         // Shuffle players array to assign each player a random seat around the table

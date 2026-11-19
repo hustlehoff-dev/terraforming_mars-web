@@ -6,6 +6,7 @@ import {Response} from '../Response';
 import {RouteError} from './RouteError';
 import {isPlayerId} from '../../common/Types';
 import {UndoTurn} from '../undo/UndoTurn';
+import {TestBot} from '../bots/TestBot';
 
 /**
  * Undoing a turn with every player's consent.
@@ -58,6 +59,7 @@ export class ApiUndoTurn extends Handler {
         throw RouteError.badRequest(err instanceof Error ? err.message : String(err));
       }
       await ctx.gameLoader.waitForSaves?.(game.id);
+      TestBot.wake(game, ctx.gameLoader);
     }
     // After an undo the game in the cache is the restored one.
     const now = await ctx.gameLoader.getGame(id) ?? game;

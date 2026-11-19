@@ -14,6 +14,8 @@ export interface NewPlayerModel {
   beginner: boolean;
   handicap: number;
   first: boolean;
+  /** A regular multiplayer seat controlled by the test bot. */
+  bot?: boolean;
 }
 
 export type EscapeVelocityOptions = {

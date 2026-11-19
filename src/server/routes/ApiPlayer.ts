@@ -5,6 +5,7 @@ import {Context} from './IHandler';
 import {Request} from '../Request';
 import {Response} from '../Response';
 import {RouteError} from './RouteError';
+import {TestBot} from '../bots/TestBot';
 
 export class ApiPlayer extends Handler {
   public static readonly INSTANCE = new ApiPlayer();
@@ -27,6 +28,7 @@ export class ApiPlayer extends Handler {
 
       ctx.ipTracker.addParticipant(playerId, ctx.ip);
       game.markSeen(player);
+      TestBot.wake(game, ctx.gameLoader);
       responses.writeJson(res, ctx, Server.getPlayerModel(player));
     } catch (err) {
       console.warn(`unable to find player ${playerId}`, err);

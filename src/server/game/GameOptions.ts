@@ -8,6 +8,7 @@ import {AgendaStyle} from '../../common/turmoil/Types';
 import {Expansion} from '../../common/cards/GameModule';
 import {EscapeVelocityOptions} from '../../common/game/NewGameConfig';
 import {CustomMA} from '../../common/ma/CustomMA';
+import {Color} from '../../common/Color';
 
 export type GameOptions = {
   boardName: BoardName;
@@ -16,6 +17,8 @@ export type GameOptions = {
   // Configuration
   undoOption: boolean;
   showTimers: boolean;
+  /** Regular multiplayer players controlled by the testing bot. */
+  testBotColors?: Array<Color>;
   /** Seconds a player has for each action turn; 0 means no limit. When it runs out the player passes. */
   turnTimeLimit: number;
   /** Seconds the other players have to pick once one player has picked a draft card; 0 means no limit. */

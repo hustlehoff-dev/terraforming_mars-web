@@ -953,5 +953,8 @@
   "or the": "lub",
   "Debug View": "Tryb debugowania",
   "Add information useful for development and debugging.": "Dodaj informacje przydatne do developmentu i debugowania.",
-  "Reorder Cards": "Zmień kolejność kart"
+  "Reorder Cards": "Zmień kolejność kart",
+  "Test bot": "Bot testowy",
+  "A test bot needs at least one human opponent": "Bot testowy potrzebuje co najmniej jednego gracza ludzkiego",
+  "Test bots make simple decisions automatically. Keep at least one human player.": "Bot testowy sam podejmuje proste decyzje. Zostaw co najmniej jednego gracza ludzkiego."
 }
