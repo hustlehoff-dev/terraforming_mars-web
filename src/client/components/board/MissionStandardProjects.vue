@@ -67,7 +67,7 @@ const projects = computed(() => {
   position: absolute;
   z-index: 11;
   // Under the terraform rating track at the top centre (desktop).
-  top: 72px;
+  top: 124px;
   left: 50%;
   display: grid;
   justify-items: center;
