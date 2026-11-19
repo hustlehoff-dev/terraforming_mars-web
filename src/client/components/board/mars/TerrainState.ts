@@ -1,9 +1,10 @@
 import {DataTexture, LinearFilter, NearestFilter, RGBAFormat, UnsignedByteType} from 'three';
-import {BoardCell, BoardGeometry, SPACE_HEIGHT, SPACE_WIDTH} from '@/client/components/board/BoardGeometry';
+import {BoardCell, BoardGeometry} from '@/client/components/board/BoardGeometry';
 import {SpaceModel} from '@/common/models/SpaceModel';
 import {SpaceType} from '@/common/boards/SpaceType';
 import {CITY_TILES, GREENERY_TILES, OCEAN_TILES} from '@/common/TileType';
 import {SpaceId} from '@/common/Types';
+import {TerrainRaster, TerrainRasterJob, TerrainRasterResult} from './TerrainRaster';
 
 /** Texels per board pixel in the terrain texture. */
 const DENSITY = 2;
@@ -44,18 +45,6 @@ export function domesFor(cell: BoardCell): Array<Dome> {
   return domes;
 }
 
-function hexPath(ctx: CanvasRenderingContext2D, cell: BoardCell, grow: number) {
-  const w = SPACE_WIDTH / 2 + grow;
-  const h = SPACE_HEIGHT / 2 + grow;
-  ctx.moveTo(cell.x, cell.y - h);
-  ctx.lineTo(cell.x + w, cell.y - h / 2);
-  ctx.lineTo(cell.x + w, cell.y + h / 2);
-  ctx.lineTo(cell.x, cell.y + h);
-  ctx.lineTo(cell.x - w, cell.y + h / 2);
-  ctx.lineTo(cell.x - w, cell.y - h / 2);
-  ctx.closePath();
-}
-
 /**
  * Turns the real game state into textures the planet shader reads in board space:
  * soft fields for oceans, greenery, settled ground and building shadows, plus one texel per space
@@ -69,25 +58,24 @@ export class TerrainState {
   public readonly owners: DataTexture;
   public readonly cellsSize: {width: number, height: number};
   public domes: Array<Dome> = [];
-  private readonly canvases: Array<HTMLCanvasElement>;
   private readonly texelWidth: number;
   private readonly texelHeight: number;
   private terrainKey?: string;
   private cityKey?: string;
-  private oceanKey?: string;
-  private greeneryKey?: string;
+  private worker?: Worker;
+  private pending?: TerrainRasterJob;
+  private latest?: TerrainRasterJob;
+  private busy = false;
+  private revision = 0;
+  private disposed = false;
+  private fallback?: TerrainRaster;
+  private fallbackTimer?: number;
 
-  constructor(private readonly geometry: BoardGeometry) {
+  constructor(private readonly geometry: BoardGeometry, private readonly onChange: () => void = () => {}) {
     const {minX, minY, maxX, maxY} = geometry.bounds;
     this.rect = {x: minX - MARGIN, y: minY - MARGIN, width: maxX - minX + MARGIN * 2, height: maxY - minY + MARGIN * 2};
     this.texelWidth = Math.ceil(this.rect.width * DENSITY);
     this.texelHeight = Math.ceil(this.rect.height * DENSITY);
-    this.canvases = [0, 1, 2, 3].map(() => {
-      const canvas = document.createElement('canvas');
-      canvas.width = this.texelWidth;
-      canvas.height = this.texelHeight;
-      return canvas;
-    });
     this.terrain = new DataTexture(new Uint8Array(this.texelWidth * this.texelHeight * 4), this.texelWidth, this.texelHeight, RGBAFormat, UnsignedByteType);
     this.terrain.magFilter = LinearFilter;
     this.terrain.minFilter = LinearFilter;
@@ -99,133 +87,83 @@ export class TerrainState {
     this.owners = new DataTexture(new Uint8Array(this.cellsSize.width * this.cellsSize.height * 4), this.cellsSize.width, this.cellsSize.height, RGBAFormat, UnsignedByteType);
     this.owners.magFilter = NearestFilter;
     this.owners.minFilter = NearestFilter;
+    this.startWorker();
   }
 
-  private context(index: number): CanvasRenderingContext2D | null {
-    const ctx = this.canvases[index].getContext('2d', {willReadFrequently: true});
-    if (ctx === null) {
-      return null;
+  private startWorker(): void {
+    if (typeof Worker === 'undefined' || typeof OffscreenCanvas === 'undefined') return;
+    try {
+      this.worker = new Worker(new URL('./TerrainWorker.ts', import.meta.url));
+      this.worker.onmessage = (event: MessageEvent<TerrainRasterResult>) => this.finish(event.data);
+      this.worker.onerror = () => this.useFallback();
+    } catch {
+      this.useFallback();
     }
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.filter = 'none';
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, this.texelWidth, this.texelHeight);
-    ctx.setTransform(DENSITY, 0, 0, DENSITY, -this.rect.x * DENSITY, -this.rect.y * DENSITY);
-    ctx.fillStyle = '#fff';
-    return ctx;
   }
 
-  /**
-   * @param shadow board-pixel offset of a shadow per unit of building height (direction away from the sun)
-   */
+  private useFallback(): void {
+    this.worker?.terminate();
+    this.worker = undefined;
+    this.busy = false;
+    this.pending = this.latest;
+    this.dispatch();
+  }
+
+  /** At most one raster in progress and one latest state waiting; intermediate moves are coalesced. */
+  private dispatch(): void {
+    if (this.disposed || this.busy || !this.pending) return;
+    const job = this.pending;
+    this.pending = undefined;
+    this.busy = true;
+    if (this.worker) {
+      try {
+        this.worker.postMessage(job);
+      } catch {
+        this.useFallback();
+      }
+    } else {
+      this.fallbackTimer = window.setTimeout(() => {
+        if (this.disposed) return;
+        this.fallback ??= new TerrainRaster(job);
+        this.finish({revision: job.revision, pixels: this.fallback.draw(job)});
+      }, 0);
+    }
+  }
+
+  private finish(result: TerrainRasterResult): void {
+    if (this.disposed) return;
+    this.busy = false;
+    if (result.revision === this.revision) {
+      this.terrain.image.data = result.pixels;
+      this.terrain.needsUpdate = true;
+      this.onChange();
+    }
+    this.dispatch();
+  }
+
   public update(spaces: ReadonlyArray<SpaceModel>, shadow: {x: number, y: number}) {
     const cells = spaces.flatMap((space) => {
       const cell = this.geometry.byId.get(space.id);
       return cell === undefined || space.spaceType === SpaceType.COLONY ? [] : [{space, cell}];
     });
-    const oceans = cells.filter(({space}) => space.tileType !== undefined && OCEAN_TILES.has(space.tileType));
-    const greenery = cells.filter(({space}) => space.tileType !== undefined && GREENERY_TILES.has(space.tileType));
-    const cities = cells.filter(({space}) => space.tileType !== undefined && CITY_TILES.has(space.tileType));
-    const cityKey = cities.map(({cell}) => cell.id).join(',');
-    const oceanKey = oceans.map(({cell}) => cell.id).join(',');
-    const greeneryKey = greenery.map(({cell}) => cell.id).join(',');
+    const oceans = cells.filter(({space}) => space.tileType !== undefined && OCEAN_TILES.has(space.tileType)).map(({cell}) => cell);
+    const greenery = cells.filter(({space}) => space.tileType !== undefined && GREENERY_TILES.has(space.tileType)).map(({cell}) => cell);
+    const cities = cells.filter(({space}) => space.tileType !== undefined && CITY_TILES.has(space.tileType)).map(({cell}) => cell);
+    const cityKey = cities.map(({id}) => id).join(',');
+    const oceanKey = oceans.map(({id}) => id).join(',');
+    const greeneryKey = greenery.map(({id}) => id).join(',');
     const terrainKey = [oceanKey, greeneryKey, cityKey].join('|');
-    if (this.terrainKey === terrainKey) {
-      return false;
-    }
-
-    const changedCities = this.cityKey !== cityKey;
-    if (changedCities) {
-      this.domes = cities.flatMap(({cell}) => domesFor(cell));
-    }
-
-    // Draw and read back only changed channels. One combined path applies each blur once,
-    // instead of processing a full-sized canvas again for every tile or dome.
-    if (this.oceanKey !== oceanKey) {
-      const ocean = this.context(0);
-      if (ocean === null) {
-        return false;
-      }
-      ocean.filter = `blur(${9 * DENSITY}px)`;
-      ocean.beginPath();
-      for (const {cell} of oceans) {
-        hexPath(ocean, cell, 10);
-      }
-      ocean.fill();
-      this.writeChannel(0, ocean);
-    }
-
-    if (this.greeneryKey !== greeneryKey) {
-      const green = this.context(1);
-      if (green === null) {
-        return false;
-      }
-      green.filter = `blur(${8 * DENSITY}px)`;
-      green.beginPath();
-      for (const {cell} of greenery) {
-        hexPath(green, cell, 10);
-      }
-      green.fill();
-      this.writeChannel(1, green);
-    }
-
-    if (changedCities) {
-      const ground = this.context(2);
-      const shade = this.context(3);
-      if (ground === null || shade === null) {
-        return false;
-      }
-      ground.filter = `blur(${6 * DENSITY}px)`;
-      ground.beginPath();
-      for (const dome of this.domes) {
-        const radius = dome.radius * (dome.main ? 2.1 : 1.6);
-        ground.moveTo(dome.x + radius, dome.y);
-        ground.arc(dome.x, dome.y, radius, 0, Math.PI * 2);
-      }
-      ground.fill();
-      this.writeChannel(2, ground);
-
-      // Shadows: contact darkening and a cast shadow stretched away from the sun.
-      shade.filter = `blur(${1.6 * DENSITY}px)`;
-      shade.globalAlpha = 0.85;
-      shade.beginPath();
-      const angle = Math.atan2(shadow.y, shadow.x);
-      const shadowLength = Math.hypot(shadow.x, shadow.y);
-      for (const dome of this.domes) {
-        const height = dome.radius * 0.9;
-        const x = dome.x + shadow.x * height * 0.5;
-        const y = dome.y + shadow.y * height * 0.5;
-        const radiusX = dome.radius * 1.02 + shadowLength * height * 0.5;
-        shade.moveTo(x + radiusX * Math.cos(angle), y + radiusX * Math.sin(angle));
-        shade.ellipse(x, y, radiusX, dome.radius * 0.98, angle, 0, Math.PI * 2);
-      }
-      shade.fill();
-      shade.globalAlpha = 0.5;
-      shade.beginPath();
-      for (const dome of this.domes) {
-        shade.moveTo(dome.x + dome.radius * 1.15, dome.y);
-        shade.arc(dome.x, dome.y, dome.radius * 1.15, 0, Math.PI * 2);
-      }
-      shade.fill();
-      shade.globalAlpha = 1;
-      this.writeChannel(3, shade);
-    }
-
-    this.terrain.needsUpdate = true;
+    if (this.terrainKey === terrainKey) return false;
+    if (this.cityKey !== cityKey) this.domes = cities.flatMap(domesFor);
+    this.latest = {
+      revision: ++this.revision, rect: this.rect, width: this.texelWidth, height: this.texelHeight,
+      density: DENSITY, oceans, greenery, domes: this.domes, shadow, cityKey, oceanKey, greeneryKey,
+    };
+    this.pending = this.latest;
     this.terrainKey = terrainKey;
     this.cityKey = cityKey;
-    this.oceanKey = oceanKey;
-    this.greeneryKey = greeneryKey;
+    this.dispatch();
     return true;
-  }
-
-  private writeChannel(channel: number, context: CanvasRenderingContext2D): void {
-    const pixels = context.getImageData(0, 0, this.texelWidth, this.texelHeight).data;
-    const data = this.terrain.image.data as Uint8Array;
-    for (let i = 0; i < data.length; i += 4) {
-      data[i + channel] = pixels[i];
-    }
   }
 
   public updateCells(spaces: ReadonlyArray<SpaceModel>, legal: ReadonlySet<SpaceId>, inspected: SpaceId | undefined) {
@@ -253,6 +191,9 @@ export class TerrainState {
   }
 
   public dispose() {
+    this.disposed = true;
+    this.worker?.terminate();
+    window.clearTimeout(this.fallbackTimer);
     this.terrain.dispose();
     this.cells.dispose();
     this.owners.dispose();

@@ -73,6 +73,7 @@ import {hasShowModal, showModal, windowHasHTMLDialogElement} from './HTMLDialogE
 
 import dialogPolyfill from 'dialog-polyfill';
 import {setDocumentTitle} from '../utils/documentTitle';
+import {reuseGameView} from '@/client/utils/reuseGameView';
 
 type Screen = 'admin' |
             'create-game-form' |
@@ -201,10 +202,10 @@ export default defineComponent({
         })
         .then((model: ViewModel) => {
           if (path === paths.PLAYER) {
-            app.playerView = model as PlayerViewModel;
+            app.playerView = reuseGameView(app.playerView, model as PlayerViewModel);
             setTranslationContext(app.playerView);
           } else if (path === paths.SPECTATOR) {
-            app.spectator = model as SpectatorModel;
+            app.spectator = reuseGameView(app.spectator, model as SpectatorModel);
           }
           if (
             model.game.phase === 'end' &&

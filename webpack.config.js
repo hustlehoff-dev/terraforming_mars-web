@@ -22,6 +22,7 @@ const plugins = [
   new ForkTsCheckerWebpackPlugin({
     typescript: {
       configOverwrite: {
+        compilerOptions: {module: 'esnext'},
         exclude: [
           'tests/**/*.ts',
         ],

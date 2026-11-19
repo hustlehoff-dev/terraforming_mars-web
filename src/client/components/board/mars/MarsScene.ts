@@ -81,11 +81,6 @@ export class MarsScene {
   private dirty = true;
   private projectionDirty = true;
   private readonly compactDisplay = window.matchMedia?.('(max-width: 760px) and (pointer: coarse)').matches === true;
-  /** Fraction of the device pixel ratio the scene renders at; lowered while frames are slow. */
-  private renderScale = 1;
-  private slowFrames = 0;
-  private fastFrames = 0;
-  private lastScaleChange = 0;
   private disposed = false;
   private readonly start = performance.now();
 
@@ -96,7 +91,7 @@ export class MarsScene {
     private readonly onFrame: () => void,
   ) {
     this.geometry = boardGeometry(large);
-    this.state = new TerrainState(this.geometry);
+    this.state = new TerrainState(this.geometry, () => { this.dirty = true; });
     this.renderer = new WebGLRenderer({canvas, antialias: true, powerPreference: 'high-performance'});
     this.renderer.setPixelRatio(this.pixelRatio());
     this.renderer.outputColorSpace = SRGBColorSpace;
@@ -222,6 +217,7 @@ export class MarsScene {
    */
   public setClimate(climate: Climate) {
     const previous = this.climate;
+    if (previous && previous.temperature === climate.temperature && previous.oxygen === climate.oxygen && previous.oceans === climate.oceans) return;
     this.climate = climate;
     for (const material of [this.planetMaterial, this.atmosphereMaterial]) {
       material.uniforms.air.value = climate.oxygen;
@@ -589,10 +585,12 @@ export class MarsScene {
     }
     const homeBefore = this.home;
     const atHome = Math.abs(this.target.d - homeBefore.d) < 1e-4 && Math.abs(this.target.x - homeBefore.x) < 0.5 && Math.abs(this.target.y - homeBefore.y) < 0.5;
+    const resized = width !== this.width || height !== this.height;
     this.width = width;
     this.height = height;
     this.safe = safe;
-    this.renderer.setDrawingBufferSize(this.width, this.height, this.pixelRatio());
+    if (resized) this.renderer.setDrawingBufferSize(this.width, this.height, this.pixelRatio());
+    this.projectionDirty = true;
     this.computeHome();
     this.placeOrbitals();
     if (atHome) {
@@ -754,18 +752,14 @@ export class MarsScene {
     }
     const moving = before.x !== this.current.x || before.y !== this.current.y || before.d !== this.current.d;
 
-    // Keep camera movement responsive, with fewer idle frames on touch phones.
+    if (moving) this.projectionDirty = true;
+    // Keep crisp pixels. Idle weather is intentionally slow; CPU stalls must never reduce image quality.
     const pulsing = this.pulseStart > 0 && now - this.pulseStart < PULSE_MS + 100;
-    const ambientInterval = this.compactDisplay ? 125 : 66;
-    const ambientDue = !this.reducedMotion && !document.hidden && (now - this.lastRender > ambientInterval || (pulsing && !this.compactDisplay));
-    if (!moving && !this.dirty && !ambientDue) {
-      return;
-    }
-    if (this.lastRender > 0 && (moving || ambientDue)) {
-      // Idle animation also needs to adapt when the planet shader stalls the GPU.
-      const interval = now - this.lastRender;
-      this.adaptResolution(now, moving ? interval : interval - ambientInterval + 16);
-    }
+    const active = moving || this.projectionDirty || this.dirty || pulsing;
+    const ambientDue = !this.reducedMotion && now - this.lastRender >= (this.compactDisplay ? 125 : 100);
+    if (!active && !ambientDue) return;
+    const minInterval = this.compactDisplay ? 1000 / 30 : 1000 / 45;
+    if (this.lastRender > 0 && now - this.lastRender < minInterval) return;
     const seconds = this.reducedMotion ? 0 : (now - this.start) / 1000;
     this.planetMaterial.uniforms.time.value = seconds;
     const pulse = this.pulseStart > 0 ? Math.max(0, 1 - (now - this.pulseStart) / PULSE_MS) : 0;
@@ -786,39 +780,9 @@ export class MarsScene {
   }
 
   private pixelRatio() {
-    const pixelBudget = this.compactDisplay ? 750_000 : 1_800_000;
+    const pixelBudget = this.compactDisplay ? 1_500_000 : 4_500_000;
     const budgetRatio = Math.sqrt(pixelBudget / (this.width * this.height));
-    return Math.min(window.devicePixelRatio || 1, this.compactDisplay ? 1 : 1.5, budgetRatio) * this.renderScale;
-  }
-
-  /**
-   * Dynamic resolution: the surface shader costs per pixel, so on large or high-DPI screens the
-   * scene drops its resolution while frames take too long and recovers it when they are fast again.
-   */
-  private adaptResolution(now: number, interval: number) {
-    if (interval <= 0) {
-      return;
-    }
-    if (interval > 26) {
-      this.slowFrames++;
-      this.fastFrames = 0;
-    } else if (interval < 18) {
-      this.fastFrames++;
-      this.slowFrames = 0;
-    }
-    let next = this.renderScale;
-    if (this.slowFrames >= 4 && this.renderScale > 0.5) {
-      next = Math.max(0.5, this.renderScale - 0.15);
-    } else if (this.fastFrames >= 45 && this.renderScale < 1) {
-      next = Math.min(1, this.renderScale + 0.1);
-    }
-    if (next !== this.renderScale && now - this.lastScaleChange > 300) {
-      this.renderScale = next;
-      this.slowFrames = 0;
-      this.fastFrames = 0;
-      this.lastScaleChange = now;
-      this.renderer.setDrawingBufferSize(this.width, this.height, this.pixelRatio());
-    }
+    return Math.min(window.devicePixelRatio || 1, this.compactDisplay ? 1.75 : 1.5, budgetRatio);
   }
 
   private animateAmbient(seconds: number) {

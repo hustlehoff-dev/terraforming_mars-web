@@ -53,6 +53,7 @@ import {INVALID_REQUEST_ID, INVALID_RUN_ID, AppErrorResponse} from '@/common/app
 import {Color} from '@/common/Color';
 import {gameDocumentTitle} from '../utils/documentTitle';
 import {revealOpen} from '@/client/components/logpanel/revealState';
+import {reuseGameView} from '@/client/utils/reuseGameView';
 import {setFaviconStatus, setFaviconTurnFrame} from '@/client/utils/favicon';
 
 let ui_update_timeout_id: number | undefined;
@@ -267,7 +268,7 @@ export default defineComponent({
     },
     updatePlayerView(playerView: PlayerViewModel | undefined) {
       const root = vueRoot(this);
-      root.playerView = playerView;
+      root.playerView = playerView === undefined ? undefined : reuseGameView(root.playerView, playerView);
       root.screen = 'player-home';
       if (playerView?.game.phase === Phase.END && !window.location.search.includes('&noredirect')) {
         root.screen = 'the-end';

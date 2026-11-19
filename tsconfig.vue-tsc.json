@@ -1,6 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "module": "esnext",
     "types": ["node", "mocha", "chai"]
   },
   "include": [
