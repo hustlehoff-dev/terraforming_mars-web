@@ -108,7 +108,6 @@
           <span>{{ $t('A decision is waiting') }}: <b>{{ pendingDecisionTitle }}</b></span>
           <span class="mission-pending-decision__open" v-i18n>Open</span>
         </button>
-        <MissionPauseOverlay v-if="cinematic" :paused="game.paused" :players="playerView.players" :busy="pausing" @resume="setPaused(false)" />
         <MissionDraftWaiting v-if="cinematic && (draftLockedIn || researchLockedIn)" :players="playerView.players" :deadline="game.draftDeadline"
           :stage="draftLockedIn ? 'draft' : 'research'" />
         <ConfirmDialog v-if="cinematic" ref="heatConfirm" message="Spend 8 heat to raise the temperature 1 step?" @accept="convertHeatNow" />
@@ -145,6 +144,7 @@
       @close="closeProjectPreview" @play="playPreviewedProject" />
 
     <MissionCardZoom v-if="cinematic || setupMode" :playerView="playerView" />
+    <MissionPauseOverlay v-if="cinematic || setupMode" :paused="game.paused" :players="playerView.players" :busy="pausing" @resume="setPaused(false)" />
 
     <template v-if="thisPlayer.tableau.length === 0">
       <PlayerSetupView :playerView="playerView" :tileView="tileView" @toggleTileView="cycleTileView()" />

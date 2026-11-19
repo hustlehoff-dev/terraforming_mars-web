@@ -121,6 +121,7 @@ export default defineComponent({
   },
   watch: {
     showDeckDialog: {flush: 'post', handler: 'openDeckDialog'},
+    'playerView.game.paused': {flush: 'post', handler: 'openDeckDialog'},
     // While the drawn cards are shown, the choice waits behind them (closed, its state kept).
     revealShowing: {flush: 'post', handler(showing: boolean) {
       const dialog = this.$refs.inputContainer;
@@ -139,7 +140,17 @@ export default defineComponent({
   methods: {
     openDeckDialog() {
       const dialog = this.$refs.inputContainer;
-      if (this.showDeckDialog && !revealOpen.value && dialog instanceof HTMLDialogElement && !dialog.open) {
+      if (!(dialog instanceof HTMLDialogElement)) {
+        return;
+      }
+      if (this.playerView.game.paused !== undefined) {
+        // Keep the choice mounted, but release its modal focus trap so Resume can be reached.
+        if (dialog.open) {
+          dialog.close();
+        }
+        return;
+      }
+      if (this.showDeckDialog && !revealOpen.value && !dialog.open) {
         dialog.showModal();
       }
     },
@@ -367,6 +378,7 @@ export default defineComponent({
             // The draft clock starts when another player picks: show it to this player too.
             if (latest.game !== undefined) {
               playerView.game.draftDeadline = latest.game.draftDeadline;
+              playerView.game.paused = latest.game.paused;
             }
             // A timed pick can advance the whole draft straight to the next question.
             if ((latest.requestId !== undefined && (playerView as Partial<PlayerViewModel>).requestId !== latest.requestId) ||
