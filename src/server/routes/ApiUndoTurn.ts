@@ -61,6 +61,16 @@ export class ApiUndoTurn extends Handler {
     }
     // After an undo the game in the cache is the restored one.
     const now = await ctx.gameLoader.getGame(id) ?? game;
+    // Optional read-only preview, separate from the consent request and the regular status poll.
+    if (ctx.urlParams.stringOrUndefined('preview') === 'true') {
+      const target = await UndoTurn.findTurnStart(now);
+      responses.writeJson(res, ctx, {
+        ...UndoTurn.status(now),
+        undoCount: now.undoCount,
+        target: target === undefined ? null : {saveId: target.saveId, generation: target.serialized.generation},
+      });
+      return;
+    }
     responses.writeJson(res, ctx, {...UndoTurn.status(now), undoCount: now.undoCount});
   }
 }

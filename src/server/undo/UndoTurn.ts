@@ -99,7 +99,9 @@ export class UndoTurn {
         continue;
       }
       const active = serialized.players.find((player) => player.id === serialized.activePlayer);
-      if (active !== undefined && active.actionsTakenThisRound === 0) {
+      // takeAction saves before checking a pass. Such a transition snapshot advances the
+      // generation again when deserialized, so it cannot be an undo checkpoint.
+      if (active !== undefined && active.actionsTakenThisRound === 0 && !serialized.passedPlayers.includes(active.id)) {
         return {saveId, serialized};
       }
     }
