@@ -1,3 +1,4 @@
+import {sum} from '../../common/utils/utils';
 import {CardName} from '../../common/cards/CardName';
 import {Tag} from '../../common/cards/Tag';
 import {InputResponse} from '../../common/inputs/InputResponse';
@@ -36,16 +37,33 @@ export class TestBotDecision {
     case 'and':
     case 'initialCards': {
       if (!(input instanceof OptionsInput)) return undefined;
+      // Heat paid with heat and Stormcraft floaters (2 heat each): as much heat as allowed, floaters for the rest.
+      if (model.type === 'and' && model.heatPayment !== undefined) {
+        const [heatOption, floaterOption] = model.options;
+        if (heatOption?.type !== 'amount' || floaterOption?.type !== 'amount') return undefined;
+        const target = model.heatPayment.target;
+        const floaters = Math.max(0, Math.ceil((target - heatOption.max) / 2));
+        if (floaters > floaterOption.max) return undefined;
+        const heat = Math.max(0, target - floaters * 2);
+        return {type: 'and', responses: [{type: 'amount', amount: heat}, {type: 'amount', amount: floaters}]};
+      }
       let plan = setup;
+      let corporations: Array<CardName> = [];
       if (input instanceof SelectInitialCards) {
-        const corp = [...player.dealtCorporationCards].sort((a, b) => BotStrategy.card(b, player) - BotStrategy.card(a, player))[0];
-        if (!corp) return undefined;
-        plan = {budget: Math.max(0, corp.startingMegaCredits - 12), cardCost: corp.cardCost ?? player.cardCost, corporation: corp};
+        // Two corporations mode: the 2 best, half of their M€ and the cheaper card price.
+        const count = player.game.gameOptions.dualCorporations ? 2 : 1;
+        const corps = [...player.dealtCorporationCards].sort((a, b) => BotStrategy.card(b, player) - BotStrategy.card(a, player)).slice(0, count);
+        const corp = corps[0];
+        if (!corp || corps.length < count) return undefined;
+        const money = count === 2 ? Math.floor(sum(corps.map((c) => c.startingMegaCredits)) / 2) : corp.startingMegaCredits;
+        const cardCost = Math.min(...corps.map((c) => c.cardCost ?? player.cardCost));
+        plan = {budget: Math.max(0, money - 12), cardCost, corporation: corp};
+        corporations = corps.map((c) => c.name);
       }
       const responses: Array<InputResponse> = [];
       for (const option of input.options) {
         const response = input instanceof SelectInitialCards && option === input.inputs.corp && plan ?
-          {type: 'card' as const, cards: [plan.corporation.name]} : this.choose(option, player, plan);
+          {type: 'card' as const, cards: corporations} : this.choose(option, player, plan);
         if (!response) return undefined;
         responses.push(response);
       }
