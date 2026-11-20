@@ -271,7 +271,13 @@
               <span v-i18n>min</span>
             </label>
 
-            <template v-if="expansions.prelude">
+            <!-- Each player picks and plays 2 corporations; starting M€ is half of their sum. -->
+            <input type="checkbox" v-model="dualCorporations" id="dualCorporations-checkbox">
+            <label for="dualCorporations-checkbox" :title="$t('Pick 2 corporations and play both. Starting M€ is half of their sum; cards cost the cheaper price.')">
+              <span v-i18n>Two corporations</span>
+            </label>
+
+            <template v-if="expansions.prelude && !dualCorporations">
               <input type="checkbox" v-model="twoCorpsVariant" id="twoCorps-checkbox">
               <label for="twoCorps-checkbox" title="Always gain the Merger Prelude card (will be given post-draft)">
                 <div class="create-game-expansion-icon expansion-icon-prelude"></div>
@@ -796,7 +802,8 @@ export default defineComponent({
           penaltyPeriodMinutes: this.escapeVelocityPeriod,
           penaltyVPPerPeriod: this.escapeVelocityPenalty,
         } : undefined,
-        twoCorpsVariant: this.twoCorpsVariant,
+        twoCorpsVariant: this.twoCorpsVariant && !this.dualCorporations,
+        dualCorporations: this.dualCorporations,
         startingCeos: this.startingCeos,
         startingPreludes: this.startingPreludes,
       };

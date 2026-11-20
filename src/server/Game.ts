@@ -530,7 +530,8 @@ export class Game implements IGame, Logger {
 
     // Failsafe for exceeding corporation pool
     // (I do not think this is necessary any further given how corporation cards are stored now)
-    const minCorpsRequired = players.length * gameOptions.startingCorporations;
+    const corpsPerPlayer = gameOptions.startingCorporations * (gameOptions.dualCorporations ? 2 : 1);
+    const minCorpsRequired = players.length * corpsPerPlayer;
     if (minCorpsRequired > corporationDeck.drawPile.length) {
       gameOptions.startingCorporations = 2;
     }
@@ -563,7 +564,7 @@ export class Game implements IGame, Logger {
         gameOptions.preludeDraftVariant ||
         gameOptions.underworldExpansion ||
         gameOptions.moonExpansion) {
-        player.dealtCorporationCards.push(...corporationDeck.drawN(game, gameOptions.startingCorporations));
+        player.dealtCorporationCards.push(...corporationDeck.drawN(game, gameOptions.startingCorporations * (gameOptions.dualCorporations ? 2 : 1)));
         if (gameOptions.initialDraftVariant === false) {
           const cards = projectDeck.drawN(game, 10);
           LogHelper.logProjectOffer(player, cards);
@@ -844,7 +845,7 @@ export class Game implements IGame, Logger {
       for (const p of players) {
         // This if clause is necessary because `every` above doesn't help.
         if (p.pickedCorporationCard) {
-          p.playCorporationCard(p.pickedCorporationCard);
+          p.playCorporationCard(p.pickedCorporationCard, p.pickedSecondCorporationCard);
         }
       }
     }

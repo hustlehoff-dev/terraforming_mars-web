@@ -18,7 +18,7 @@
 
     <section v-show="step === 'corporation'" class="setup-step">
       <fieldset class="corporation-selection">
-        <legend v-i18n>Choose your corporation</legend>
+        <legend>{{ $t(corporationsToPick === 2 ? 'Choose 2 corporations' : 'Choose your corporation') }}</legend>
         <MobileCardControls />
         <div v-mobile-card-grid class="corporation-selection__options mobile-card-browser">
           <!-- The whole card is the choice: a click anywhere on it selects the corporation. -->
@@ -30,12 +30,12 @@
             :class="{'corporation-selection__option--selected': selectedCorporations.includes(card.name), 'corporation-selection__option--disabled': card.isDisabled}">
             <input
               class="corporation-selection__radio"
-              type="radio"
+              :type="corporationsToPick === 2 ? 'checkbox' : 'radio'"
               :name="corporationGroup"
               :checked="selectedCorporations.includes(card.name)"
               :disabled="card.isDisabled"
               :aria-label="$t(card.name)"
-              @change="corporationChanged([card.name])">
+              @change="toggleCorporation(card.name)">
             <span class="corporation-selection__head">
               <h2>{{ $t(card.name) }}</h2>
               <span v-if="selectedCorporations.includes(card.name)" class="corporation-selection__badge"><span aria-hidden="true">✓</span> {{ $t('Selected') }}</span>
@@ -69,7 +69,7 @@
       <dl class="setup-summary__facts">
         <div>
           <dt v-i18n>Corporation</dt>
-          <dd>{{ selectedCorporations.length === 1 ? $t(selectedCorporations[0]) : '—' }}</dd>
+          <dd>{{ corporationsChosen ? selectedCorporations.map((name) => $t(name)).join(' + ') : '—' }}</dd>
         </div>
         <div v-if="hasPrelude">
           <dt v-i18n>Preludes</dt>
@@ -83,7 +83,7 @@
           <dt v-i18n>Project cards</dt>
           <dd>{{ selectedCards.length }} <small>(−{{ selectedCards.length * cardCost }} M€)</small></dd>
         </div>
-        <div v-if="selectedCorporations.length === 1">
+        <div v-if="corporationsChosen">
           <dt v-i18n>Starting M€:</dt>
           <dd class="setup-summary__money">{{ getStartingMegacredits() }}<small v-if="hasPrelude"> → {{ getStartingMegacredits() + getAfterPreludes() }} {{ $t('after preludes') }}</small></dd>
         </div>
@@ -91,7 +91,7 @@
       <div v-if="showsave" class="setup-summary__mobile">
         <div v-if="step === 'projects'" class="setup-summary__mobile-cost" role="status">
           <span>{{ selectedCards.length }} {{ $t('Project cards') }} · {{ selectedCards.length * cardCost }} M€</span>
-          <strong v-if="selectedCorporations.length === 1">{{ $t('You have') }} {{ getStartingMegacredits() }} M€</strong>
+          <strong v-if="corporationsChosen">{{ $t('You have') }} {{ getStartingMegacredits() }} M€</strong>
         </div>
         <AppButton class="setup-summary__mobile-continue" type="submit" :title="nextStep ? 'Next' : 'Start'"
           :disabled="nextStep ? !currentStepReady : !valid" @click="advanceSetup" />
@@ -221,9 +221,13 @@ export default defineComponent({
         return base + this.extra(prelude);
       }));
     },
+    /** M€ a prelude brings with the chosen corporations' effects (each corporation counted). */
     extra(prelude: CardName): number {
+      return sum(this.selectedCorporations.map((corporation) => this.extraFor(corporation, prelude)));
+    },
+    extraFor(corporation: CardName, prelude: CardName): number {
       const card = getCardOrThrow(prelude);
-      switch (this.selectedCorporations.length === 1 ? this.selectedCorporations[0] : undefined) {
+      switch (corporation) {
       // For each step you increase the production of a resource ... you also gain that resource.
       case CardName.MANUTECH:
         return card.productionBox?.megacredits ?? 0;
@@ -296,23 +300,33 @@ export default defineComponent({
       }
     },
     getStartingMegacredits() {
-      if (this.selectedCorporations.length !== 1) {
+      if (!this.corporationsChosen) {
         return NaN;
       }
-      const corpName = this.selectedCorporations[0];
-      const corporation = getCardOrThrow(corpName);
       // The ?? 0 is only because ClientCard applies to _all_ cards.
+      const total = sum(this.selectedCorporations.map((name) => getCardOrThrow(name).startingMegaCredits ?? 0));
+      // Two corporations: half of their M€.
+      let starting = this.selectedCorporations.length === 2 ? Math.floor(total / 2) : total;
+      starting -= this.selectedCards.length * this.cardCost;
 
-      let starting = corporation.startingMegaCredits ?? 0;
-      const cardCost = corporation.cardCost === undefined ? constants.CARD_COST : corporation.cardCost;
-      starting -= this.selectedCards.length * cardCost;
-
-      if (corpName === CardName.SAGITTA_FRONTIER_SERVICES) {
+      if (this.selectedCorporations.includes(CardName.SAGITTA_FRONTIER_SERVICES)) {
         // Effect for playing itself.
         starting += 4;
       }
 
       return starting;
+    },
+    /** A click on a corporation: with 2 to pick, it is added or taken off (the oldest goes when full). */
+    toggleCorporation(name: CardName) {
+      if (this.corporationsToPick === 1) {
+        this.corporationChanged([name]);
+        return;
+      }
+      const chosen = this.selectedCorporations.filter((other) => other !== name);
+      if (chosen.length === this.selectedCorporations.length) {
+        chosen.push(name);
+      }
+      this.corporationChanged(chosen.slice(-this.corporationsToPick));
     },
     saveIfConfirmed() {
       const projectCards = this.selectedCards.filter((name) => getCard(name)?.type !== CardType.PRELUDE);
@@ -332,10 +346,10 @@ export default defineComponent({
         responses: [],
       };
 
-      if (this.selectedCorporations.length === 1) {
+      if (this.corporationsChosen) {
         result.responses.push({
           type: 'card',
-          cards: [this.selectedCorporations[0]],
+          cards: [...this.selectedCorporations],
         });
       }
       if (this.hasPrelude) {
@@ -366,11 +380,11 @@ export default defineComponent({
       this.validate();
     },
     corporationChanged(cards: Array<CardName>) {
-      const first = this.selectedCorporations.length === 0;
+      const first = !this.corporationsChosen;
       this.selectedCorporations = cards;
       this.validate();
       // The first corporation chosen moves on to the next step; changing it later does not.
-      if (first && this.nextStep !== undefined && !window.matchMedia?.('(max-width: 760px)').matches) {
+      if (first && this.corporationsChosen && this.nextStep !== undefined && !window.matchMedia?.('(max-width: 760px)').matches) {
         this.step = this.nextStep;
       }
     },
@@ -386,7 +400,11 @@ export default defineComponent({
         this.warning = 'Select a corporation';
         return false;
       }
-      if (this.selectedCorporations.length > 1) {
+      if (this.selectedCorporations.length < this.corporationsToPick) {
+        this.warning = 'Select 2 corporations';
+        return false;
+      }
+      if (this.selectedCorporations.length > this.corporationsToPick) {
         this.warning = 'You selected too many corporations';
         return false;
       }
@@ -423,7 +441,7 @@ export default defineComponent({
       this.saveData();
     },
     rememberSetup() {
-      rememberChoice(this.setupQuestion, {corporation: this.selectedCorporations[0], step: this.step});
+      rememberChoice(this.setupQuestion, {corporation: this.selectedCorporations[0], corporations: [...this.selectedCorporations], step: this.step});
     },
     getColony(colonyName: ColonyName): ColonyModel {
       return simpleColonyModel(colonyName);
@@ -432,8 +450,9 @@ export default defineComponent({
   computed: {
     steps(): Array<SetupStepItem> {
       const steps: Array<SetupStepItem> = [{
-        id: 'corporation', label: 'Corporation', done: this.selectedCorporations.length === 1,
-        status: this.selectedCorporations.length === 1 ? translateText(this.selectedCorporations[0]) : translateText('Choose 1'),
+        id: 'corporation', label: this.corporationsToPick === 2 ? 'Corporations' : 'Corporation', done: this.corporationsChosen,
+        status: this.corporationsChosen ? this.selectedCorporations.map((name) => translateText(name)).join(' + ') :
+          this.corporationsToPick === 2 ? `${this.selectedCorporations.length}/2` : translateText('Choose 1'),
       }];
       if (this.hasPrelude) {
         steps.push({id: 'prelude', label: 'Preludes', done: this.selectedPreludes.length === 2, status: `${this.selectedPreludes.length}/2`});
@@ -458,9 +477,19 @@ export default defineComponent({
     currentStepReady(): boolean {
       return this.steps.some((item) => item.id === this.step && item.done);
     },
+    /** The card price: with two corporations, the cheaper of the two. */
     cardCost(): number {
-      const corporation = this.selectedCorporations.length === 1 ? getCard(this.selectedCorporations[0]) : undefined;
-      return corporation?.cardCost ?? constants.CARD_COST;
+      if (!this.corporationsChosen) {
+        return constants.CARD_COST;
+      }
+      return Math.min(...this.selectedCorporations.map((name) => getCard(name)?.cardCost ?? constants.CARD_COST));
+    },
+    /** 2 in the two-corporations mode, else 1. */
+    corporationsToPick(): number {
+      return this.corpCardOption.max === 2 ? 2 : 1;
+    },
+    corporationsChosen(): boolean {
+      return this.selectedCorporations.length === this.corporationsToPick;
     },
     typedRefs(): Refs {
       return this.$refs as Refs;
@@ -497,9 +526,12 @@ export default defineComponent({
   },
   mounted() {
     // After a page reload: the corporation and the step chosen before it.
-    const saved = recallChoice<{corporation?: CardName, step?: SetupStep}>(this.setupQuestion);
-    if (saved?.corporation !== undefined && this.corpCardOption.cards.some((card) => card.name === saved.corporation && !card.isDisabled)) {
-      this.selectedCorporations = [saved.corporation];
+    const saved = recallChoice<{corporation?: CardName, corporations?: Array<CardName>, step?: SetupStep}>(this.setupQuestion);
+    const savedCorporations = (saved?.corporations ?? (saved?.corporation !== undefined ? [saved.corporation] : []))
+      .filter((name) => this.corpCardOption.cards.some((card) => card.name === name && !card.isDisabled))
+      .slice(0, this.corporationsToPick);
+    if (savedCorporations.length > 0) {
+      this.selectedCorporations = savedCorporations;
     }
     if (saved?.step !== undefined && this.steps.some((item) => item.id === saved.step)) {
       this.step = saved.step;

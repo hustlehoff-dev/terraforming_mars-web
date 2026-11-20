@@ -83,6 +83,8 @@ export type NewGameConfig = {
   altVenusBoard: boolean;
   escapeVelocity: EscapeVelocityOptions | undefined;
   twoCorpsVariant: boolean;
+  /** Each player picks 2 corporations and plays both; the starting M€ is half their sum. */
+  dualCorporations?: boolean;
   customCeos: ReadonlyArray<CardName>;
   startingCeos: number;
   startingPreludes: number;

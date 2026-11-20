@@ -88,6 +88,8 @@ export type GameOptions = {
   altVenusBoard: boolean;
   escapeVelocity?: EscapeVelocityOptions;
   twoCorpsVariant: boolean;
+  /** Each player picks 2 corporations and plays both; the starting M€ is half their sum. */
+  dualCorporations: boolean;
 }
 
 export const DEFAULT_GAME_OPTIONS: GameOptions = {
@@ -164,6 +166,7 @@ export const DEFAULT_GAME_OPTIONS: GameOptions = {
   undoOption: false,
   venusNextExtension: false,
   twoCorpsVariant: false,
+  dualCorporations: false,
 };
 
 /**

@@ -79,6 +79,8 @@ export interface IPlayer {
 
   // Used only during set-up
   pickedCorporationCard?: ICorporationCard;
+  /** Two-corporations mode: the other corporation picked, played together with the first. */
+  pickedSecondCorporationCard?: ICorporationCard;
 
   // Terraforming Rating
   hasIncreasedTerraformRatingThisGeneration: boolean;
@@ -354,7 +356,7 @@ export interface IPlayer {
   playCard(selectedCard: IProjectCard, payment?: Payment, cardAction?: CardAction): void;
   onCardPlayed(card: ICard): void;
   triggerOnNonCardTagAdded(tag: Tag): void;
-  playCorporationCard(corporationCard: ICorporationCard): void;
+  playCorporationCard(corporationCard: ICorporationCard, secondCorporation?: ICorporationCard): void;
   drawCard(count?: number, options?: DrawOptions): void;
   drawCardKeepSome(count: number, options: AllOptions): void;
   discardPlayedCard(card: IProjectCard): void;

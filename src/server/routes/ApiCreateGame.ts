@@ -192,7 +192,9 @@ export class ApiCreateGame extends Handler {
         startingPreludes: gameReq.startingPreludes,
         starWarsExpansion: gameReq.expansions.starwars,
         turmoilExtension: gameReq.expansions.turmoil,
-        twoCorpsVariant: gameReq.twoCorpsVariant,
+        // Two corporations already: no Merger on top.
+        twoCorpsVariant: gameReq.twoCorpsVariant && gameReq.dualCorporations !== true,
+        dualCorporations: gameReq.dualCorporations === true,
         underworldExpansion: gameReq.expansions.underworld,
         deltaProjectExpansion: gameReq.expansions.deltaProject,
         undoOption: gameReq.undoOption,

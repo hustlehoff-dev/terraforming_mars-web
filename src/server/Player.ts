@@ -106,6 +106,7 @@ export class Player implements IPlayer {
 
   // Used only during set-up
   public pickedCorporationCard?: ICorporationCard;
+  public pickedSecondCorporationCard?: ICorporationCard;
 
   // Terraforming Rating
   public terraformRating: number = 20;
@@ -1016,7 +1017,7 @@ export class Player implements IPlayer {
       });
   }
 
-  public playCorporationCard(corporationCard: ICorporationCard): void {
+  public playCorporationCard(corporationCard: ICorporationCard, secondCorporation?: ICorporationCard): void {
     const additionalCorp = this.playedCards.corporations().length > 0;
 
     this.playedCards.push(corporationCard);
@@ -1026,6 +1027,12 @@ export class Player implements IPlayer {
     // Update card cost.
     if (corporationCard.cardCost !== undefined) {
       this.cardCost += corporationCard.cardCost - constants.CARD_COST;
+    }
+    // Two corporations: the cheaper card price of the two.
+    const dualCardCost = secondCorporation === undefined ? undefined :
+      Math.min(corporationCard.cardCost ?? constants.CARD_COST, secondCorporation.cardCost ?? constants.CARD_COST);
+    if (dualCardCost !== undefined) {
+      this.cardCost = dualCardCost;
     }
 
     // Luna Trade Federation may pay with its starting titanium, which only arrives when the corp is played.
@@ -1059,6 +1066,16 @@ export class Player implements IPlayer {
     }
 
     this.onCardPlayed(corporationCard);
+
+    // Two corporations: the other one is played as well, and the starting M€ is half of the sum.
+    if (secondCorporation !== undefined && dualCardCost !== undefined) {
+      this.pickedSecondCorporationCard = undefined;
+      this.playCorporationCard(secondCorporation);
+      this.cardCost = dualCardCost;
+      const total = corporationCard.startingMegaCredits + secondCorporation.startingMegaCredits;
+      this.megaCredits -= total - Math.floor(total / 2);
+      this.game.log('${0} starts with half of the M€ of both corporations: ${1}', (b) => b.player(this).number(Math.floor(total / 2)));
+    }
 
     if (!additionalCorp) {
       this.game.playerIsFinishedWithResearchPhase(this);
@@ -1925,6 +1942,7 @@ export class Player implements IPlayer {
       user: this.user,
       // Used only during set-up
       pickedCorporationCard: this.pickedCorporationCard?.name,
+      pickedSecondCorporationCard: this.pickedSecondCorporationCard?.name,
       // Terraforming Rating
       terraformRating: this.terraformRating,
       hasIncreasedTerraformRatingThisGeneration: this.hasIncreasedTerraformRatingThisGeneration,
@@ -2075,6 +2093,9 @@ export class Player implements IPlayer {
     // Rebuild removed from play cards (Playwrights, Odyssey)
     player.removedFromPlayCards = cardsFromJSON(d.removedFromPlayCards);
 
+    if (d.pickedSecondCorporationCard !== undefined) {
+      player.pickedSecondCorporationCard = newCorporationCard(d.pickedSecondCorporationCard);
+    }
     if (d.pickedCorporationCard !== undefined) {
       player.pickedCorporationCard = newCorporationCard(d.pickedCorporationCard);
     }

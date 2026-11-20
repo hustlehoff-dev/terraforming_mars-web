@@ -57,6 +57,7 @@ export interface SerializedPlayer extends DeprecatedFields{
   oceanBonus: number;
   pendingInitialActions: Array<CardName> | undefined;
   pickedCorporationCard: CardName | undefined;
+  pickedSecondCorporationCard?: CardName;
   plantProduction: number;
   plants: number;
   plantsNeededForGreenery: number;

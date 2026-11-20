@@ -33,18 +33,21 @@ export class SelectInitialCards extends OptionsInput<undefined> {
     super('initialCards', '', []);
     const game = player.game;
     let corporation: ICorporationCard;
+    let secondCorporation: ICorporationCard | undefined;
+    const corporations = game.gameOptions.dualCorporations ? 2 : 1;
     this.title = ' ';
     this.buttonLabel = 'Start';
 
 
     this.push('corp',
       new SelectCard<ICorporationCard>(
-        titles.SELECT_CORPORATION_TITLE, undefined, player.dealtCorporationCards, {min: 1, max: 1}).andThen(
+        titles.SELECT_CORPORATION_TITLE, undefined, player.dealtCorporationCards, {min: corporations, max: corporations}).andThen(
         (cards) => {
-          if (cards.length !== 1) {
-            throw new InputError('Only select 1 corporation card');
+          if (cards.length !== corporations) {
+            throw new InputError(corporations === 2 ? 'Select 2 corporations' : 'Only select 1 corporation card');
           }
           corporation = cards[0];
+          secondCorporation = cards[1];
           return undefined;
         }),
     );
@@ -85,20 +88,26 @@ export class SelectInitialCards extends OptionsInput<undefined> {
         }),
     );
     this.andThen(() => {
-      this.completed(corporation);
+      this.completed(corporation, secondCorporation);
+      player.pickedSecondCorporationCard = secondCorporation;
       // TODO(kberg): This is probably broken. Stop subclassing AndOptions.
       cb(corporation);
       return undefined;
     });
   }
 
-  private completed(corporation: ICorporationCard) {
+  private completed(corporation: ICorporationCard, secondCorporation?: ICorporationCard) {
     const player = this.player;
     const game = player.game;
     // Check for negative M€
-    const cardCost = corporation.cardCost !== undefined ? corporation.cardCost : player.cardCost;
+    let cardCost = corporation.cardCost !== undefined ? corporation.cardCost : player.cardCost;
     let budget = corporation.startingMegaCredits;
-    if (corporation.name === CardName.LUNA_TRADE_FEDERATION) {
+    if (secondCorporation !== undefined) {
+      // Two corporations: half of their M€, and the cheaper card price.
+      budget = Math.floor((corporation.startingMegaCredits + secondCorporation.startingMegaCredits) / 2);
+      cardCost = Math.min(cardCost, secondCorporation.cardCost ?? player.cardCost);
+    }
+    if (corporation.name === CardName.LUNA_TRADE_FEDERATION || secondCorporation?.name === CardName.LUNA_TRADE_FEDERATION) {
       // Its 10 starting titanium is worth 2 M€ each.
       budget += 20;
     }
@@ -115,7 +124,7 @@ export class SelectInitialCards extends OptionsInput<undefined> {
     }
 
     for (const card of player.dealtCorporationCards) {
-      if (card.name !== corporation.name) {
+      if (card.name !== corporation.name && card.name !== secondCorporation?.name) {
         game.corporationDeck.discard(card);
       }
     }
