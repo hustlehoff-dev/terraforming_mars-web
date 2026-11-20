@@ -75,6 +75,7 @@
             </span>
             <span v-if="p.color === surrenderedColor" class="recap-badge recap-badge--gaveup" v-i18n>Surrendered</span>
             <span class="recap-ranking__score">{{ p.victoryPointsBreakdown.total }}</span>
+            <PlayerStartCards class="recap-ranking__cards" :player="p" />
           </li>
         </ol>
       </div>
@@ -328,6 +329,7 @@ import LogPanel from '@/client/components/logpanel/LogPanel.vue';
 import HomeLink from '@/client/components/common/HomeLink.vue';
 import VictoryPointChart, {DataSet} from '@/client/components/gameend/VictoryPointChart.vue';
 import GameEndScore from '@/client/components/gameend/GameEndScore.vue';
+import PlayerStartCards from '@/client/components/gameend/PlayerStartCards.vue';
 import MissionCardZoom from '@/client/components/board/MissionCardZoom.vue';
 import {Color} from '@/common/Color';
 import {CardType} from '@/common/cards/CardType';
@@ -602,6 +604,7 @@ export default defineComponent({
     DeltaProjectBoard,
     VictoryPointChart,
     GameEndScore,
+    PlayerStartCards,
     MissionCardZoom,
   },
   beforeUnmount() {
@@ -1051,7 +1054,8 @@ body:has(#game-end.recap) {
 .recap-top {
   display: grid;
   gap: 16px;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(200px, 280px) minmax(0, 1fr);
+  align-items: start;
   padding: 14px;
   border: 1px solid var(--recap-line);
   border-radius: 18px;
@@ -1061,9 +1065,11 @@ body:has(#game-end.recap) {
 
 .recap-winner {
   display: flex;
+  min-width: 0;
+  min-height: 160px;
   align-items: center;
-  gap: 18px;
-  padding: 24px;
+  gap: 12px;
+  padding: 18px;
   border-radius: 14px;
   background:
     linear-gradient(90deg, #4a2010f2, #4a201099 60%, #4a201040),
@@ -1073,8 +1079,9 @@ body:has(#game-end.recap) {
   h2 {
     margin: 0;
     color: #fff;
-    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-size: clamp(1.3rem, 2.4vw, 2rem);
     line-height: 1.1;
+    overflow-wrap: anywhere;
   }
 }
 
@@ -1089,7 +1096,7 @@ body:has(#game-end.recap) {
 }
 
 .recap-winner__crown {
-  font-size: 3.4rem;
+  font-size: 2.6rem;
   filter: drop-shadow(0 4px 10px #000a);
 }
 
@@ -1111,6 +1118,7 @@ body:has(#game-end.recap) {
 }
 
 .recap-ranking {
+  min-width: 0;
   padding: 8px 6px;
 
   ol {
@@ -1123,7 +1131,9 @@ body:has(#game-end.recap) {
   }
 
   li {
-    display: flex;
+    display: grid;
+    min-width: 0;
+    grid-template-columns: 26px 10px minmax(0, 1fr) max-content;
     align-items: center;
     gap: 10px;
     padding: 7px 12px;
@@ -1159,6 +1169,10 @@ body:has(#game-end.recap) {
   flex: 1;
   flex-direction: column;
 
+  b {
+    overflow-wrap: anywhere;
+  }
+
   small {
     overflow: hidden;
     color: var(--recap-muted);
@@ -1168,8 +1182,15 @@ body:has(#game-end.recap) {
 }
 
 .recap-ranking__score {
+  grid-column: 4;
+  grid-row: 1;
   font-size: 1.3rem;
   font-weight: 900;
+}
+
+.recap-ranking__cards,
+.recap-ranking .recap-badge--gaveup {
+  grid-column: 3 / -1;
 }
 
 .recap-tiles {
@@ -1588,6 +1609,10 @@ body:has(#game-end.recap) {
 }
 
 @media (max-width: 560px) {
+  .recap-ranking__cards {
+    grid-column: 1 / -1;
+  }
+
   .recap-hero__body {
     padding: 22px 18px;
   }
